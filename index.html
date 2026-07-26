@@ -820,8 +820,87 @@ input,select,textarea,button{max-width:100%}
   .profile-actions{grid-column:1/-1;justify-content:flex-end}
 }
 
+
+
+/* ==========================================================
+   HOMEBASE · APPLE POLISH 1.2 — CABECERA FIJA REAL + SWITCH
+   Ajuste exclusivamente visual. No modifica lógica ni datos.
+   ========================================================== */
+:root{--homebase-topbar-height:72px}
+
+/* En iOS, position:sticky puede soltarse al combinarse con ciertos
+   contenedores y el scroll del PWA. La cabecera pasa a ser fixed real. */
+.topbar{
+  position:fixed!important;
+  top:0!important;
+  left:50%!important;
+  transform:translateX(-50%);
+  z-index:80!important;
+  width:min(100%,980px)!important;
+  margin:0!important;
+  padding:calc(10px + env(safe-area-inset-top)) 16px 10px!important;
+  min-height:calc(var(--homebase-topbar-height) + env(safe-area-inset-top));
+  background:rgba(247,242,235,.88)!important;
+  border-bottom:1px solid rgba(60,60,67,.10)!important;
+  box-shadow:0 5px 18px rgba(24,34,48,.045)!important;
+  -webkit-backdrop-filter:saturate(180%) blur(24px)!important;
+  backdrop-filter:saturate(180%) blur(24px)!important;
+}
+.app{
+  padding-top:calc(18px + var(--homebase-topbar-height) + env(safe-area-inset-top))!important;
+}
+
+/* Evita que cualquier contenido asome por encima o detrás de forma rara. */
+body::before{
+  content:"";
+  position:fixed;
+  inset:0 0 auto 0;
+  height:env(safe-area-inset-top);
+  z-index:90;
+  background:rgba(247,242,235,.96);
+  pointer-events:none;
+}
+
+/* El interruptor de Todo el día usa el mismo componente iOS que el resto. */
+#allDayWrap>.switch-control{
+  display:inline-flex!important;
+  width:51px!important;
+  min-width:51px!important;
+  height:31px!important;
+  flex:0 0 51px!important;
+  padding:0!important;
+  margin:0!important;
+  overflow:visible!important;
+}
+#allDayWrap>.switch-control>input{
+  position:absolute!important;
+  inset:0!important;
+  width:100%!important;
+  height:100%!important;
+  min-height:0!important;
+  opacity:0!important;
+  margin:0!important;
+  padding:0!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+#allDayWrap>.switch-control>.switch-track{
+  display:block!important;
+}
+
+@media(max-width:700px){
+  .topbar{
+    width:100%!important;
+    padding-left:16px!important;
+    padding-right:16px!important;
+  }
+  .app{
+    padding-top:calc(14px + var(--homebase-topbar-height) + env(safe-area-inset-top))!important;
+  }
+}
+
 </style>
-<meta name="homebase-build" content="homebase-apple-polish-fase1-1-ios-fix">
+<meta name="homebase-build" content="homebase-apple-polish-fase1-2-fixed-header-switch">
 </head>
 <body>
 <div class="app">
@@ -959,7 +1038,7 @@ input,select,textarea,button{max-width:100%}
     </div>
     <div id="endDateWrap"><label>Termina</label><input id="endDate" type="date"></div>
   </div>
-  <label id="allDayWrap" class="switch-line"><span><strong>Dura todo el día</strong><small>Ideal para cumpleaños, aniversarios o días señalados</small></span><input id="allDay" type="checkbox"></label>
+  <label id="allDayWrap" class="switch-line"><span><strong>Dura todo el día</strong><small>Ideal para cumpleaños, aniversarios o días señalados</small></span><span class="switch-control"><input id="allDay" type="checkbox" aria-label="Dura todo el día"><span class="switch-track" aria-hidden="true"></span></span></label>
   <div class="form-row" id="timeRow"><div><label>Hora inicio</label><input id="startTime" type="time"></div><div><label>Hora final</label><input id="endTime" type="time"></div></div>
   <label>Para quién</label><div class="member-picks" id="personPicks"></div>
   <button type="button" class="more" id="moreOptions">Más opciones</button>

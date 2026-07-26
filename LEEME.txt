@@ -1,12 +1,14 @@
-HOMEBASE · APPLE POLISH FASE 1.1 · CORRECCIÓN iPHONE
+HOMEBASE · APPLE POLISH FASE 1.2
 
-Sube todos estos archivos a la raíz del repositorio de GitHub y reemplaza los anteriores.
+Correcciones visuales para iPhone:
+- Cabecera Homebase fija de verdad durante todo el scroll.
+- Respeta la zona segura de la barra de estado.
+- Interruptor “Dura todo el día” con diseño iOS limpio.
+- Se mantienen los selectores de miembros corregidos.
+- No se ha modificado la lógica, Firebase, roster ni datos.
 
-Cambios visuales:
-- Cabecera Homebase fija y translúcida al hacer scroll.
-- Formularios y diálogos ajustados exactamente al ancho del iPhone.
-- Eliminado el desplazamiento lateral accidental.
-- Esquinas superiores de los formularios corregidas en móvil.
-- Selectores de miembros rediseñados como círculos limpios con check azul.
-
-No se ha cambiado la lógica de eventos, calendario, roster, Firebase, sincronización, miembros ni repeticiones.
+SUBIDA A GITHUB
+1. Descomprime este ZIP.
+2. Reemplaza todos los archivos de la raíz del repositorio.
+3. Espera a que GitHub Pages publique.
+4. Cierra Homebase completamente en el iPhone y vuelve a abrirla.
