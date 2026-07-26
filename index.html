@@ -706,8 +706,122 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:rgba(223,118,21,.
   *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
 }
 
+
+
+/* ==========================================================
+   HOMEBASE · APPLE POLISH 1.1 — AJUSTES iPHONE
+   Correcciones visuales aisladas: cabecera fija, formularios
+   sin desbordamiento horizontal y selectores de miembros.
+   ========================================================== */
+html,body{width:100%;max-width:100%;overflow-x:hidden}
+.app{width:100%;max-width:980px;overflow-x:clip}
+
+/* Cabecera fija como la barra inferior. El contenido pasa por debajo. */
+.topbar{
+  position:sticky;
+  top:0;
+  z-index:45;
+  margin-left:-16px;
+  margin-right:-16px;
+  padding:10px 16px 12px;
+  background:rgba(250,250,252,.86);
+  border-bottom:1px solid rgba(60,60,67,.09);
+  box-shadow:0 4px 18px rgba(0,0,0,.035);
+  -webkit-backdrop-filter:saturate(180%) blur(24px);
+  backdrop-filter:saturate(180%) blur(24px);
+}
+
+/* Selector de miembros: círculo limpio, sin control nativo deformado. */
+.member-pick{min-width:0;overflow:hidden}
+.member-pick input[type="checkbox"]{
+  -webkit-appearance:none;
+  appearance:none;
+  width:26px;
+  height:26px;
+  min-width:26px;
+  min-height:26px;
+  flex:0 0 26px;
+  margin:0;
+  padding:0;
+  border:1.5px solid rgba(60,60,67,.30);
+  border-radius:50%;
+  background:#fff;
+  box-shadow:none;
+  display:grid;
+  place-items:center;
+  transition:background .15s ease,border-color .15s ease,transform .15s ease;
+}
+.member-pick input[type="checkbox"]::after{
+  content:"✓";
+  color:#fff;
+  font-size:18px;
+  font-weight:850;
+  line-height:1;
+  transform:scale(0);
+  transition:transform .14s ease;
+}
+.member-pick input[type="checkbox"]:checked{
+  background:var(--blue);
+  border-color:var(--blue);
+}
+.member-pick input[type="checkbox"]:checked::after{transform:scale(1)}
+.member-pick input[type="checkbox"]:focus{box-shadow:0 0 0 3px rgba(0,122,255,.15)}
+.member-pick span{min-width:0;overflow:hidden;text-overflow:ellipsis}
+
+/* Los diálogos ocupan exactamente el viewport y solo permiten scroll vertical. */
+dialog,.modal,dialog *{box-sizing:border-box}
+dialog{max-width:100%;overflow-x:hidden}
+.modal{width:100%;max-width:100%;overflow-x:hidden}
+.modal>*{max-width:100%}
+.form-row,.member-picks,.profile-list,.profile-row,.profile-actions{max-width:100%;min-width:0}
+input,select,textarea,button{max-width:100%}
+
+@media(max-width:700px){
+  .app{padding-left:12px;padding-right:12px}
+  .topbar{
+    top:0;
+    margin-left:-12px;
+    margin-right:-12px;
+    padding-left:12px;
+    padding-right:12px;
+  }
+  dialog{
+    inset:0!important;
+    width:100vw!important;
+    max-width:100vw!important;
+    height:100dvh!important;
+    max-height:100dvh!important;
+    margin:0!important;
+    padding:0!important;
+    border:0!important;
+    border-radius:0!important;
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+    overscroll-behavior-x:none;
+  }
+  .modal{
+    width:100%!important;
+    min-width:0!important;
+    min-height:100dvh;
+    padding:calc(18px + env(safe-area-inset-top)) 16px calc(34px + env(safe-area-inset-bottom));
+    border-radius:0!important;
+    overflow-x:hidden!important;
+  }
+  .modal-head{position:relative;z-index:1}
+  .member-picks{grid-template-columns:repeat(2,minmax(0,1fr));width:100%}
+  .member-pick{width:100%;padding:11px 12px}
+  .profile-row{grid-template-columns:48px minmax(0,1fr) auto;width:100%}
+  .profile-actions{display:flex;flex-wrap:nowrap}
+}
+
+@media(max-width:380px){
+  .member-picks{grid-template-columns:1fr}
+  .profile-row{grid-template-columns:44px minmax(0,1fr)}
+  .profile-actions{grid-column:1/-1;justify-content:flex-end}
+}
+
 </style>
-<meta name="homebase-build" content="homebase-apple-polish-fase1">
+<meta name="homebase-build" content="homebase-apple-polish-fase1-1-ios-fix">
 </head>
 <body>
 <div class="app">

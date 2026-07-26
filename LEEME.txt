@@ -1,20 +1,12 @@
-HOMEBASE · APPLE POLISH — FASE 1
+HOMEBASE · APPLE POLISH FASE 1.1 · CORRECCIÓN iPHONE
 
-Esta versión parte del rollback estable anterior a la pulsación larga.
+Sube todos estos archivos a la raíz del repositorio de GitHub y reemplaza los anteriores.
 
-Cambios realizados:
-- Paleta y tipografía más coherentes con iOS.
-- Tarjetas, sombras y espacios refinados.
-- Calendario visualmente más limpio.
-- Barra inferior translúcida.
-- Botón flotante + refinado.
-- Respuesta visual al pulsar botones y filas.
-- Formularios y diálogos pulidos sin cambiar su funcionamiento.
+Cambios visuales:
+- Cabecera Homebase fija y translúcida al hacer scroll.
+- Formularios y diálogos ajustados exactamente al ancho del iPhone.
+- Eliminado el desplazamiento lateral accidental.
+- Esquinas superiores de los formularios corregidas en móvil.
+- Selectores de miembros rediseñados como círculos limpios con check azul.
 
-No se ha añadido pulsación larga ni se ha modificado la lógica del calendario, Firebase, roster, eventos, pendientes o recurrencias.
-
-SUBIDA A GITHUB
-1. Descomprime el ZIP.
-2. Sustituye todos los archivos de la raíz del repositorio.
-3. Espera a que GitHub Pages publique.
-4. Cierra Homebase por completo en el iPhone y vuelve a abrirla.
+No se ha cambiado la lógica de eventos, calendario, roster, Firebase, sincronización, miembros ni repeticiones.
