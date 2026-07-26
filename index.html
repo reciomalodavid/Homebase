@@ -9,7 +9,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Homebase">
 <link rel="manifest" href="./manifest.webmanifest">
-<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png">
 <title>Homebase v5 · Familia y roster</title>
 <style>
 :root {
@@ -165,6 +167,20 @@ button{cursor:pointer}
 .dots{position:absolute;left:4px;right:4px;bottom:8px;display:flex;justify-content:center;gap:3px}
 .dot{width:6px;height:6px;border-radius:50%;background:var(--dot-color)}
 .day.selected .dot{outline:2px solid white}
+
+/* Indicadores discretos del roster: conviven con los puntos de otros eventos */
+.day-markers{position:absolute;left:5px;right:5px;bottom:6px;display:flex;align-items:center;justify-content:center;gap:4px;min-height:12px;pointer-events:none}
+.day.has-bands .day-markers{bottom:27px}
+.roster-mini{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;font-size:10px;line-height:1;font-weight:900;color:#4f78a7}
+.roster-mini.standby{border-radius:50%;background:#eee7ff;color:#6f58bd;font-size:8px}
+.roster-mini.off{color:#2e9c70;font-size:9px}
+.roster-mini.vacation{color:#d6842d;font-size:9px}
+.roster-mini.other-duty{color:#9a6b3d;font-size:9px}
+.event-mini-dots{display:flex;gap:3px;align-items:center}
+.event-mini-dots .dot{position:static;width:5px;height:5px}
+.day.selected .roster-mini{filter:brightness(0) invert(1)}
+.day.selected .roster-mini.standby{background:rgba(255,255,255,.28);color:white;filter:none}
+.day.selected .event-mini-dots .dot{outline:1.5px solid white}
 
 .selected-day-panel{margin-top:14px}
 .week-scroll{overflow:auto;padding-bottom:26px}
@@ -521,6 +537,7 @@ input,select,textarea{width:100%;padding:13px;border:1px solid var(--line);borde
  .roster-option-row{padding:14px}
 }
 </style>
+<meta name="homebase-build" content="beta-1.2-clean">
 </head>
 <body>
 <div class="app">
@@ -643,7 +660,7 @@ input,select,textarea{width:100%;padding:13px;border:1px solid var(--line);borde
   <button type="button" class="more" id="moreOptions">Más opciones</button>
   <div class="advanced" id="advanced">
     <label>Categoría</label><select id="category"><option>Familia</option><option>Colegio</option><option>Extraescolar</option><option>Viaje</option><option>Médico</option><option>Casa</option><option>Otro</option></select>
-    <div id="repeatWrap"><label>Repetición</label><select id="repeat"><option value="none">No se repite</option><option value="weekly">Cada semana</option></select>
+    <div id="repeatWrap"><label>Repetición</label><select id="repeat"><option value="none">No se repite</option><option value="weekly">Cada semana</option><option value="yearly">Cada año (cumpleaños, aniversario…)</option></select>
       <div id="repeatDaysWrap" style="display:none"><label>Días</label><div class="week-picks">
         <label><input type="checkbox" name="repeatDay" value="1">L</label><label><input type="checkbox" name="repeatDay" value="2">M</label><label><input type="checkbox" name="repeatDay" value="3">X</label><label><input type="checkbox" name="repeatDay" value="4">J</label><label><input type="checkbox" name="repeatDay" value="5">V</label><label><input type="checkbox" name="repeatDay" value="6">S</label><label><input type="checkbox" name="repeatDay" value="0">D</label>
       </div></div>
@@ -789,7 +806,7 @@ function load(){
   type:i.type||"event",
   title:i.title||"",
   date:i.date,
-  endDate:i.repeat==="weekly" ? i.date : (i.endDate||i.date),
+  endDate:(i.repeat==="weekly"||i.repeat==="yearly") ? i.date : (i.endDate||i.date),
   time:i.time||"",
   endTime:i.endTime||"",
   person:i.person||"Familia",
@@ -814,6 +831,11 @@ function matches(item,dateIso){
   const days=item.repeatDays.length?item.repeatDays:[parseDate(item.date).getDay()];
   return days.includes(parseDate(dateIso).getDay());
  }
+ if(item.repeat==="yearly"){
+  if(dateIso<item.date)return false;
+  const original=parseDate(item.date),candidate=parseDate(dateIso);
+  return original.getMonth()===candidate.getMonth()&&original.getDate()===candidate.getDate();
+ }
  return dateIso>=item.date&&dateIso<=(item.endDate||item.date);
 }
 function rosterItemVisible(i){if(i.source!=="roster")return true;if(!state.rosterVisible)return false;const k=i.rosterData?.kind;if(k==="off"&&!state.rosterSettings.showOffs)return false;if(k==="vacation"&&!state.rosterSettings.showVacations)return false;return true}
@@ -829,7 +851,7 @@ function eventRow(item,dateIso){
    return `<div class="event-row" data-id="${item.id}" data-date="${dateIso}" style="--person-color:#5d82ad"><div class="event-time">${time}</div><div class="event-bar"></div><div><div class="event-title">${esc(item.title)} <span class="roster-badge">ROSTER</span></div><div class="event-meta">${esc(meta)}</div></div><div style="display:flex;align-items:center;gap:7px"><span class="avatar" style="--person-color:#5d82ad">✈</span><button class="row-action" data-delete="${item.id}" data-date="${dateIso}">⋯</button></div></div>`;
  }
  return `<div class="event-row" data-id="${item.id}" data-date="${dateIso}" style="--person-color:${personColor(item.person)}">
- <div class="event-time">${time}</div><div class="event-bar"></div><div><div class="event-title">${esc(item.title)}</div><div class="event-meta">${esc(item.person)} · ${esc(item.category)}${item.repeat==="weekly"?" · Semanal":""}</div></div><div style="display:flex;align-items:center;gap:7px">${eventAvatarHtml(item)}<button class="row-action" data-delete="${item.id}" data-date="${dateIso}">⋯</button></div></div>`;
+ <div class="event-time">${time}</div><div class="event-bar"></div><div><div class="event-title">${esc(item.title)}</div><div class="event-meta">${esc(item.person)} · ${esc(item.category)}${item.repeat==="weekly"?" · Semanal":item.repeat==="yearly"?" · Anual":""}</div></div><div style="display:flex;align-items:center;gap:7px">${eventAvatarHtml(item)}<button class="row-action" data-delete="${item.id}" data-date="${dateIso}">⋯</button></div></div>`;
 }
 function taskRow(item){
  return `<div class="task-row" data-task="${item.id}"><button class="check ${item.done?"done":""}" data-check="${item.id}">${item.done?"✓":""}</button><div><div class="event-title task-title ${item.done?"done":""}">${esc(item.title)}</div><div class="event-meta">${esc(item.person)} · ${item.date ? fmtDate(parseDate(item.date)) : "Sin fecha límite"}</div></div>${avatarHtml(item.person)}</div>`;
@@ -868,14 +890,14 @@ function renderMonth(){
  const y=state.month.getFullYear(),m=state.month.getMonth(),first=new Date(y,m,1),start=addDays(first,-((first.getDay()+6)%7));
 
  const multiEvents=state.items
-   .filter(item=>item.type==="event"&&!item.deletedAt&&visible(item.person)&&rosterItemVisible(item)&&item.repeat!=="weekly"&&item.date&&(item.endDate||item.date)!==item.date)
+   .filter(item=>item.type==="event"&&!item.deletedAt&&visible(item.person)&&rosterItemVisible(item)&&item.repeat==="none"&&item.date&&(item.endDate||item.date)!==item.date)
    .sort((a,b)=>a.date.localeCompare(b.date)||a.title.localeCompare(b.title));
  const laneMap=new Map(multiEvents.map((item,index)=>[item.id,index%2]));
 
  let html="";
  for(let i=0;i<42;i++){
    const d=addDays(start,i),di=iso(d),ev=eventsOn(di);
-   const multi=ev.filter(item=>item.repeat!=="weekly"&&(item.endDate||item.date)!==item.date);
+   const multi=ev.filter(item=>item.repeat==="none"&&(item.endDate||item.date)!==item.date);
    const punctual=ev.filter(item=>!multi.includes(item));
    const weekday=(d.getDay()+6)%7;
    const bands=multi.slice(0,2).map(item=>{
@@ -891,8 +913,15 @@ function renderMonth(){
      return `<span class="month-band lane-${laneMap.get(item.id)||0} ${segment}" style="--band-color:${personColor(item.person)}" title="${esc(item.title)}">${showTitle?esc(shortTitle):""}</span>`;
    }).join("");
    const more=multi.length>2?`<span class="month-more">+${multi.length-2}</span>`:"";
-   const dots=punctual.length?`<div class="dots">${punctual.slice(0,4).map(e=>`<span class="dot" style="--dot-color:${personColor(e.person)}"></span>`).join("")}</div>`:"";
-   html+=`<button class="day ${multi.length?"has-bands":""} ${d.getMonth()!==m?"other":""} ${di===iso(new Date())?"today":""} ${state.selectedDate&&di===iso(state.selectedDate)?"selected":""}" data-day="${di}"><span class="day-number">${d.getDate()}</span>${dots}${bands?`<div class="month-bands">${bands}${more}</div>`:""}</button>`;
+   const rosterEvents=punctual.filter(e=>e.source==="roster");
+   const normalEvents=punctual.filter(e=>e.source!=="roster");
+   const rosterKinds=[...new Set(rosterEvents.map(e=>e.rosterData?.kind||"other"))];
+   const priority=["flight","standby","off","vacation","training","other"];
+   rosterKinds.sort((a,b)=>priority.indexOf(a)-priority.indexOf(b));
+   const rosterIcons=rosterKinds.slice(0,2).map(kind=>kind==="flight"?`<span class="roster-mini" title="Vuelo">✈</span>`:kind==="standby"?`<span class="roster-mini standby" title="Standby">S</span>`:kind==="off"?`<span class="roster-mini off" title="Día libre">●</span>`:kind==="vacation"?`<span class="roster-mini vacation" title="Vacaciones">◆</span>`:`<span class="roster-mini other-duty" title="Otro duty">■</span>`).join("");
+   const normalDots=normalEvents.slice(0,3).map(e=>`<span class="dot" style="--dot-color:${personColor(e.person)}"></span>`).join("");
+   const markers=(rosterIcons||normalDots)?`<div class="day-markers">${rosterIcons}${normalDots?`<span class="event-mini-dots">${normalDots}</span>`:""}</div>`:"";
+   html+=`<button class="day ${multi.length?"has-bands":""} ${d.getMonth()!==m?"other":""} ${di===iso(new Date())?"today":""} ${state.selectedDate&&di===iso(state.selectedDate)?"selected":""}" data-day="${di}"><span class="day-number">${d.getDate()}</span>${markers}${bands?`<div class="month-bands">${bands}${more}</div>`:""}</button>`;
  }
  $("monthGrid").innerHTML=html;
  const panel=$("selectedDayPanel");
@@ -1258,7 +1287,7 @@ function resetEditor(type="event"){
 }
 function toggleType(type){
  const event=type==="event";
- const recurring=event && $("repeat").value==="weekly";
+ const recurring=event && ["weekly","yearly"].includes($("repeat").value);
  $("endDateWrap").style.display=event && !recurring?"block":"none";
  $("timeRow").style.display=event?"grid":"none";
  $("repeatWrap").style.display=event?"block":"none";
@@ -1273,7 +1302,7 @@ function openEdit(item){
  $("startDate").disabled=$("noDeadline").checked;
  $("startDate").required=!$("noDeadline").checked;
  $("startDate").value=item.date||"";
- $("endDate").value=item.endDate||item.date||"";$("startTime").value=item.time;$("endTime").value=item.endTime;$("personSelect").value=item.person;$("category").value=item.category;$("repeat").value=item.repeat;$("repeatUntil").value=item.repeatUntil;$("notes").value=item.notes;document.querySelectorAll("[name=repeatDay]").forEach(x=>x.checked=item.repeatDays.includes(Number(x.value)));const rep=item.repeat==="weekly";
+ $("endDate").value=item.endDate||item.date||"";$("startTime").value=item.time;$("endTime").value=item.endTime;$("personSelect").value=item.person;$("category").value=item.category;$("repeat").value=item.repeat;$("repeatUntil").value=item.repeatUntil;$("notes").value=item.notes;document.querySelectorAll("[name=repeatDay]").forEach(x=>x.checked=item.repeatDays.includes(Number(x.value)));const rep=item.repeat==="weekly",annual=item.repeat==="yearly";
  if(rep){
    if(item.endDate && item.endDate!==item.date && !item.repeatUntil){
      item.repeatUntil=item.endDate;
@@ -1284,6 +1313,7 @@ function openEdit(item){
  }
  $("repeatDaysWrap").style.display=rep?"block":"none";
  $("repeatUntilWrap").style.display=rep?"block":"none";
+ if(annual){$("endDate").value=item.date;$("endDateWrap").style.display="none";}
  $("advanced").classList.add("open");
  $("detailDialog").close();
  $("editorDialog").showModal()
@@ -1314,6 +1344,10 @@ function openDetail(id,dateIso){
    rows+=detailRow("Comienza",fmtDate(parseDate(item.date)));
    rows+=detailRow("Horario",item.time?`${item.time}${item.endTime?"–"+item.endTime:""}`:"Todo el día");
    rows+=detailRow("Repetición",item.repeatUntil?`Cada semana hasta ${fmtDate(parseDate(item.repeatUntil))}`:"Cada semana");
+ }else if(item.repeat==="yearly"){
+   rows+=detailRow("Fecha",fmtDate(parseDate(item.date)));
+   rows+=detailRow("Horario",item.time?`${item.time}${item.endTime?"–"+item.endTime:""}`:"Todo el día");
+   rows+=detailRow("Repetición","Cada año");
  }else{
    rows+=detailRow("Fecha",item.date===(item.endDate||item.date)?fmtDate(parseDate(item.date)):`${fmtDate(parseDate(item.date))} → ${fmtDate(parseDate(item.endDate))}`);
    rows+=detailRow("Horario",item.time?`${item.time}${item.endTime?"–"+item.endTime:""}`:"Todo el día");
@@ -1323,7 +1357,7 @@ function openDetail(id,dateIso){
 }
 function ask(title,text,buttons){$("confirmTitle").textContent=title;$("confirmText").textContent=text;$("confirmActions").innerHTML=buttons.map(b=>`<button class="${b.cls}" data-confirm="${b.key}">${b.label}</button>`).join("");$("confirmDialog").showModal();document.querySelectorAll("[data-confirm]").forEach(b=>b.onclick=()=>{$("confirmDialog").close();state.confirmAction?.(b.dataset.confirm)})}
 function confirmComplete(item){state.confirmAction=key=>{if(key==="yes"){item.done=true;item.completedAt=Date.now();save()}};ask("¿Marcar como completada?",`Se marcará "${item.title}" como completada.`,[{key:"no",label:"Cancelar",cls:"cancel-btn"},{key:"yes",label:"Sí, completada",cls:"complete-btn"}])}
-function confirmDelete(item,dateIso){state.confirmAction=key=>{if(key==="one"){item.exceptions.push(dateIso);save()}if(key==="all"){item.deletedAt=Date.now();save()}};const recurring=item.repeat==="weekly";ask(recurring?"¿Qué quieres borrar?":"¿Borrar elemento?",recurring?`"${item.title}" forma parte de una serie.`:`"${item.title}" irá a la papelera.`,recurring?[{key:"one",label:"Solo este día",cls:"edit-btn"},{key:"all",label:"Toda la serie",cls:"delete-btn"}]:[{key:"no",label:"Cancelar",cls:"cancel-btn"},{key:"all",label:"Borrar",cls:"delete-btn"}])}
+function confirmDelete(item,dateIso){state.confirmAction=key=>{if(key==="one"){item.exceptions.push(dateIso);save()}if(key==="all"){item.deletedAt=Date.now();save()}};const recurring=["weekly","yearly"].includes(item.repeat);ask(recurring?"¿Qué quieres borrar?":"¿Borrar elemento?",recurring?`"${item.title}" forma parte de una serie.`:`"${item.title}" irá a la papelera.`,recurring?[{key:"one",label:"Solo este día",cls:"edit-btn"},{key:"all",label:"Toda la serie",cls:"delete-btn"}]:[{key:"no",label:"Cancelar",cls:"cancel-btn"},{key:"all",label:"Borrar",cls:"delete-btn"}])}
 
 
 const RosterParser=(()=>{
@@ -1662,21 +1696,16 @@ function updateRosterEnvironmentStatus(){
 
 $("editorForm").onsubmit=e=>{e.preventDefault();const type=$("itemType").value,values={type,title:$("titleInput").value.trim(),date:type==="task"&&$("noDeadline").checked?"":$("startDate").value,
  endDate:type==="event"
-   ? ($("repeat").value==="weekly" ? $("startDate").value : ($("endDate").value||$("startDate").value))
+   ? (["weekly","yearly"].includes($("repeat").value) ? $("startDate").value : ($("endDate").value||$("startDate").value))
    : (type==="task"&&$("noDeadline").checked?"":$("startDate").value),time:type==="event"?$("startTime").value:"",endTime:type==="event"?$("endTime").value:"",person:$("personSelect").value,category:$("category").value,repeat:type==="event"?$("repeat").value:"none",repeatDays:type==="event"?[...document.querySelectorAll("[name=repeatDay]:checked")].map(x=>Number(x.value)):[],repeatUntil:type==="event"?$("repeatUntil").value:"",notes:$("notes").value.trim()};if(state.editingId)Object.assign(state.items.find(i=>i.id===state.editingId),values);else state.items.push({id:crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random()}`,...values,exceptions:[],done:false,completedAt:null,deletedAt:null});$("editorDialog").close();save()};
 document.querySelectorAll("[data-type]").forEach(b=>b.onclick=()=>{$("itemType").value=b.dataset.type;document.querySelectorAll("[data-type]").forEach(x=>x.classList.toggle("active",x===b));toggleType(b.dataset.type)});
 $("moreOptions").onclick=()=>$("advanced").classList.toggle("open");
 $("repeat").onchange=()=>{
- const on=$("repeat").value==="weekly";
- $("repeatDaysWrap").style.display=on?"block":"none";
- $("repeatUntilWrap").style.display=on?"block":"none";
-
- if(on){
-   // A recurring event is a series of one-day occurrences.
-   // If the user had put a later "Termina" date, use it as series end.
-   if($("endDate").value && $("endDate").value !== $("startDate").value && !$("repeatUntil").value){
-     $("repeatUntil").value=$("endDate").value;
-   }
+ const mode=$("repeat").value,weekly=mode==="weekly",recurring=weekly||mode==="yearly";
+ $("repeatDaysWrap").style.display=weekly?"block":"none";
+ $("repeatUntilWrap").style.display=weekly?"block":"none";
+ if(recurring){
+   if(weekly && $("endDate").value && $("endDate").value!==$("startDate").value && !$("repeatUntil").value) $("repeatUntil").value=$("endDate").value;
    $("endDate").value=$("startDate").value;
    $("endDateWrap").style.display="none";
  }else{
@@ -1686,7 +1715,7 @@ $("repeat").onchange=()=>{
 };
 $("startTime").onchange=()=>{if($("startTime").value)$("endTime").value=plusHour($("startTime").value)};
 $("startDate").onchange=()=>{
- if($("repeat").value==="weekly"){
+ if(["weekly","yearly"].includes($("repeat").value)){
    $("endDate").value=$("startDate").value;
  }else if(!$("endDate").value||$("endDate").value<$("startDate").value){
    $("endDate").value=$("startDate").value;

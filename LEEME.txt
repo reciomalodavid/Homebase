@@ -1,0 +1,29 @@
+HOMEBASE BETA 1.2 LIMPIA — REEMPLAZO EN GITHUB
+
+CONTENIDO (sin carpetas ni iconos duplicados):
+- index.html
+- manifest.webmanifest
+- service-worker.js
+- apple-touch-icon.png
+- icon-192.png
+- icon-512.png
+
+PASOS:
+1. Descomprime este ZIP.
+2. En el repositorio Homebase, sube estos 6 archivos.
+3. Confirma reemplazar los archivos que ya existen.
+4. Borra del repositorio la carpeta antigua icons/ y el archivo homebase-icon-180.png si siguen apareciendo.
+5. Haz Commit changes.
+6. Espera 2–3 minutos.
+7. En el iPhone, elimina el acceso directo antiguo, abre la web en Safari y usa Compartir > Añadir a pantalla de inicio.
+
+INCLUIDO:
+- Icono de iPhone mediante apple-touch-icon.png.
+- Manifest con iconos 192 y 512.
+- Caché renovada beta 1.2.
+- Repetición anual para cumpleaños y aniversarios.
+- Microiconos discretos del roster en el calendario.
+- Importación del roster conservada.
+
+NOTA:
+La lectura del PDF se carga desde internet en la web publicada. No hay un pdf.min.js local en este paquete.
