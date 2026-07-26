@@ -19,3 +19,9 @@ ACTUALIZACIÓN: BOTÓN + FLOTANTE
 - Si no hay una selección útil, crea el evento con la fecha de hoy.
 
 NOVEDAD: mantén pulsado un día del calendario unos 0,6 segundos para abrir las opciones Crear evento / Crear pendiente con esa fecha ya seleccionada. El gesto se cancela si empiezas a desplazar el calendario.
+
+
+CORRECCIÓN iPHONE:
+- Desactivado el menú nativo de seleccionar/copiar en los días.
+- Pulsación larga reducida a 0,43 s.
+- Menú Crear evento / Crear pendiente compatible con Safari y PWA iOS.
