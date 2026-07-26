@@ -464,6 +464,10 @@ input,select,textarea{width:100%;padding:13px;border:1px solid var(--line);borde
  }
 }
 
+
+/* Sincronización familiar */
+.sync-card{padding:16px;display:grid;gap:12px}.sync-status{display:flex;align-items:center;gap:9px}.sync-dot{width:9px;height:9px;border-radius:50%;background:#9aa3af}.sync-dot.ok{background:#31a36b}.sync-dot.wait{background:#d4932f}.sync-dot.error{background:#d85c58}.sync-code{font:700 20px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:2px;background:rgba(90,105,125,.08);padding:11px 12px;border-radius:12px;text-align:center}.sync-actions{display:flex;gap:8px;flex-wrap:wrap}.sync-actions button{border:0;border-radius:11px;padding:10px 13px;font-weight:700;background:rgba(72,92,120,.1);color:var(--text)}.sync-actions button.primary{background:var(--accent);color:white}.sync-link-row{display:grid;grid-template-columns:1fr auto;gap:8px}.sync-link-row input{min-width:0;border:1px solid rgba(90,105,125,.18);border-radius:11px;padding:11px 12px;font-size:16px;text-transform:uppercase;background:var(--card);color:var(--text)}
+
 /* Roster v4 */
 [hidden]{display:none!important}
 .roster-card{overflow:hidden}
@@ -600,13 +604,24 @@ input,select,textarea{width:100%;padding:13px;border:1px solid var(--line);borde
     </section>
 
     <section id="morePage" class="page">
-      <div class="hero-row"><div><h1>Más</h1><div class="hero-date">Homebase · versión 0.4</div></div></div>
+      <div class="hero-row"><div><h1>Más</h1><div class="hero-date">Homebase · sincronización familiar</div></div></div>
       <div class="section">
         <div class="section-head">
           <h2>Pendientes</h2>
           <span id="morePendingCount">0</span>
         </div>
         <div class="card list-card" id="morePendingTasks"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><h2>Sincronización familiar</h2><span id="syncBadge">Sin vincular</span></div>
+        <div class="card sync-card">
+          <div class="sync-status"><span class="sync-dot" id="syncDot"></span><div><div class="event-title" id="syncStatusTitle">Guardado solo en este dispositivo</div><div class="event-meta" id="syncStatusText">Crea un código o introduce el de otro dispositivo.</div></div></div>
+          <div class="sync-code" id="syncCodeDisplay" hidden></div>
+          <div class="sync-actions" id="syncCreateActions"><button class="primary" id="createSyncCode" type="button">Crear código</button></div>
+          <div class="sync-link-row" id="syncLinkRow"><input id="syncCodeInput" maxlength="12" autocomplete="off" placeholder="Código de otro dispositivo"><button class="roster-primary" id="linkSyncCode" type="button">Vincular</button></div>
+          <div class="sync-actions" id="syncLinkedActions" hidden><button id="copySyncCode" type="button">Copiar código</button><button id="syncNow" type="button">Sincronizar ahora</button><button id="unlinkSync" type="button">Desvincular</button></div>
+        </div>
       </div>
 
       <div class="section">
@@ -750,6 +765,8 @@ input,select,textarea{width:100%;padding:13px;border:1px solid var(--line);borde
 
 <dialog id="trashDialog"><div class="modal"><div class="modal-head"><h2>Papelera</h2><button class="close" id="closeTrash">×</button></div><p class="event-meta">Los elementos se conservan durante 30 días.</p><div id="trashList"></div></div></dialog>
 
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
 <script>
 const PEOPLE=[
  {name:"Familia",color:"#3a7be0"},
@@ -776,7 +793,11 @@ const state={
  rosterVisible:JSON.parse(localStorage.getItem("homebase_roster_visible")||"true"),
  rosterSettings:JSON.parse(localStorage.getItem("homebase_roster_settings")||'{"showOffs":true,"showVacations":true,"showHotels":true}'),
  rosterMeta:JSON.parse(localStorage.getItem("homebase_roster_meta")||"null"),
- pendingRosterImport:null
+ pendingRosterImport:null,
+ syncCode:localStorage.getItem("homebase_sync_code")||"",
+ syncStatus:"idle",
+ syncUnsubscribe:null,
+ applyingRemote:false
 };
 // Beta 1.3.1: todas las opciones del roster quedan activadas por defecto.
 // Esta migración se ejecuta una sola vez también en instalaciones que heredaron OFF desactivado.
@@ -829,12 +850,16 @@ function load(){
   repeatDays:Array.isArray(i.repeatDays)?i.repeatDays:[],
   repeatUntil:i.repeatUntil||i.repeatEnd||((i.repeat==="weekly"&&i.endDate&&i.endDate!==i.date)?i.endDate:""),
  notes:i.notes||"",exceptions:Array.isArray(i.exceptions)?i.exceptions:[],
-  done:!!i.done,completedAt:i.completedAt||null,deletedAt:i.deletedAt||null,source:i.source||"manual",rosterData:i.rosterData||null
+  done:!!i.done,completedAt:i.completedAt||null,deletedAt:i.deletedAt||null,source:i.source||"manual",rosterData:i.rosterData||null,updatedAt:i.updatedAt||0
  }));
  purgeTrash();
  localStorage.setItem("homebase_v2_items",JSON.stringify(state.items));
 }
-function save(){localStorage.setItem("homebase_v2_items",JSON.stringify(state.items));render();}
+function save(){
+ localStorage.setItem("homebase_v2_items",JSON.stringify(state.items));
+ render();
+ if(!state.applyingRemote) scheduleCloudSave();
+}
 function purgeTrash(){const limit=Date.now()-30*86400000;state.items=state.items.filter(i=>!i.deletedAt||i.deletedAt>limit)}
 function matches(item,dateIso){
  if(item.deletedAt)return false;
@@ -1164,6 +1189,7 @@ function renderProfiles(){
        const dataUrl=await prepareProfileImage(file);
        profilePhotos[input.dataset.profileFile]=dataUrl;
        localStorage.setItem("homebase_profile_photos",JSON.stringify(profilePhotos));
+       scheduleCloudSave();
        renderProfiles();
        render();
      }catch(error){
@@ -1178,6 +1204,7 @@ function renderProfiles(){
    button.onclick=()=>{
      delete profilePhotos[button.dataset.removePhoto];
      localStorage.setItem("homebase_profile_photos",JSON.stringify(profilePhotos));
+     scheduleCloudSave();
      renderProfiles();render();
    };
  });
@@ -1219,6 +1246,7 @@ function renderRosterControls(){
  if($("rosterOptionsPanel")) $("rosterOptionsPanel").hidden=!has;
 }
 function render(){
+ renderSyncControls();
  renderRosterControls();
  document.querySelectorAll(".page").forEach(p=>p.classList.toggle("active",p.id===state.page));
  document.querySelectorAll(".nav-btn").forEach(b=>b.classList.toggle("active",b.dataset.page===state.page));
@@ -1385,8 +1413,77 @@ function openDetail(id,dateIso){
 }
 function ask(title,text,buttons){$("confirmTitle").textContent=title;$("confirmText").textContent=text;$("confirmActions").innerHTML=buttons.map(b=>`<button class="${b.cls}" data-confirm="${b.key}">${b.label}</button>`).join("");$("confirmDialog").showModal();document.querySelectorAll("[data-confirm]").forEach(b=>b.onclick=()=>{$("confirmDialog").close();state.confirmAction?.(b.dataset.confirm)})}
 function confirmComplete(item){state.confirmAction=key=>{if(key==="yes"){item.done=true;item.completedAt=Date.now();save()}};ask("¿Marcar como completada?",`Se marcará "${item.title}" como completada.`,[{key:"no",label:"Cancelar",cls:"cancel-btn"},{key:"yes",label:"Sí, completada",cls:"complete-btn"}])}
-function confirmDelete(item,dateIso){state.confirmAction=key=>{if(key==="one"){item.exceptions.push(dateIso);save()}if(key==="all"){item.deletedAt=Date.now();save()}};const recurring=["weekly","yearly"].includes(item.repeat);ask(recurring?"¿Qué quieres borrar?":"¿Borrar elemento?",recurring?`"${item.title}" forma parte de una serie.`:`"${item.title}" irá a la papelera.`,recurring?[{key:"one",label:"Solo este día",cls:"edit-btn"},{key:"all",label:"Toda la serie",cls:"delete-btn"}]:[{key:"no",label:"Cancelar",cls:"cancel-btn"},{key:"all",label:"Borrar",cls:"delete-btn"}])}
+function confirmDelete(item,dateIso){state.confirmAction=key=>{if(key==="one"){item.exceptions.push(dateIso);save()}if(key==="all"){item.deletedAt=Date.now();item.updatedAt=Date.now();save()}};const recurring=["weekly","yearly"].includes(item.repeat);ask(recurring?"¿Qué quieres borrar?":"¿Borrar elemento?",recurring?`"${item.title}" forma parte de una serie.`:`"${item.title}" irá a la papelera.`,recurring?[{key:"one",label:"Solo este día",cls:"edit-btn"},{key:"all",label:"Toda la serie",cls:"delete-btn"}]:[{key:"no",label:"Cancelar",cls:"cancel-btn"},{key:"all",label:"Borrar",cls:"delete-btn"}])}
 
+
+
+const firebaseConfig={
+ apiKey:"AIzaSyBkupxh_fJIqX7ThvSnjIL9cxEZXYzU1WQ",
+ authDomain:"homebase-85f2b.firebaseapp.com",
+ projectId:"homebase-85f2b",
+ storageBucket:"homebase-85f2b.firebasestorage.app",
+ messagingSenderId:"1048601280766",
+ appId:"1:1048601280766:web:e4ae47e07b0ef0ad0065af"
+};
+let cloudDb=null,cloudSaveTimer=null;
+try{
+ if(window.firebase){firebase.initializeApp(firebaseConfig);cloudDb=firebase.firestore();cloudDb.enablePersistence({synchronizeTabs:true}).catch(()=>{});}
+}catch(error){console.error("Firebase init",error)}
+function cleanSyncCode(value){return (value||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,12)}
+function createCode(){const alphabet="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";let code="HB";for(let i=0;i<8;i++)code+=alphabet[Math.floor(Math.random()*alphabet.length)];return code}
+function syncDoc(code=state.syncCode){return cloudDb?.collection("homebaseSyncs").doc(code)}
+function cloudPayload(){return {version:1,items:state.items,rosterMeta:state.rosterMeta||null,profilePhotos:{...profilePhotos},updatedAt:Date.now()}}
+function mergeItems(localItems,remoteItems){const map=new Map();for(const item of [...(localItems||[]),...(remoteItems||[])]){const prev=map.get(item.id);if(!prev||(item.updatedAt||0)>=(prev.updatedAt||0))map.set(item.id,item)}return [...map.values()]}
+function setSyncStatus(status,text){state.syncStatus=status;state.syncStatusText=text||"";renderSyncControls()}
+function renderSyncControls(){
+ const linked=!!state.syncCode,dot=$("syncDot");if(!dot)return;
+ $("syncBadge").textContent=linked?state.syncCode:"Sin vincular";
+ $("syncCodeDisplay").hidden=!linked;$("syncCodeDisplay").textContent=state.syncCode;
+ $("syncCreateActions").hidden=linked;$("syncLinkRow").hidden=linked;$("syncLinkedActions").hidden=!linked;
+ dot.className="sync-dot"+(state.syncStatus==="ok"?" ok":state.syncStatus==="saving"?" wait":state.syncStatus==="error"?" error":"");
+ $("syncStatusTitle").textContent=!linked?"Guardado solo en este dispositivo":state.syncStatus==="saving"?"Sincronizando…":state.syncStatus==="error"?"No se ha podido sincronizar":"Sincronización activa";
+ $("syncStatusText").textContent=!linked?"Crea un código o introduce el de otro dispositivo.":(state.syncStatusText||"Los cambios se comparten automáticamente.");
+}
+async function writeCloud(){
+ if(!cloudDb||!state.syncCode)return;
+ setSyncStatus("saving","Guardando los últimos cambios…");
+ try{await syncDoc().set(cloudPayload(),{merge:true});setSyncStatus("ok","Últimos cambios sincronizados.")}catch(error){console.error(error);setSyncStatus("error","Comprueba la conexión y las reglas de Firestore.")}
+}
+function scheduleCloudSave(){if(!state.syncCode||state.applyingRemote)return;clearTimeout(cloudSaveTimer);cloudSaveTimer=setTimeout(writeCloud,500)}
+function startCloudListener(){
+ if(state.syncUnsubscribe)state.syncUnsubscribe();if(!cloudDb||!state.syncCode)return;
+ state.syncUnsubscribe=syncDoc().onSnapshot(snap=>{
+  if(!snap.exists)return;
+  const data=snap.data()||{};
+  state.applyingRemote=true;
+  state.items=mergeItems(state.items,data.items||[]);
+  if(data.rosterMeta)state.rosterMeta=data.rosterMeta;
+  if(data.profilePhotos)Object.assign(profilePhotos,data.profilePhotos);
+  localStorage.setItem("homebase_v2_items",JSON.stringify(state.items));
+  localStorage.setItem("homebase_roster_meta",JSON.stringify(state.rosterMeta));
+  localStorage.setItem("homebase_profile_photos",JSON.stringify(profilePhotos));
+  state.applyingRemote=false;setSyncStatus("ok","Actualizado desde la familia.");render();
+ },error=>{console.error(error);setSyncStatus("error","No se puede conectar con Firestore.")});
+}
+async function createFamilySync(){
+ if(!cloudDb){alert("Firebase no ha cargado. Comprueba que tienes internet.");return}
+ state.syncCode=createCode();localStorage.setItem("homebase_sync_code",state.syncCode);
+ for(const item of state.items)if(!item.updatedAt)item.updatedAt=Date.now();
+ await writeCloud();startCloudListener();render();
+}
+async function linkFamilySync(){
+ if(!cloudDb){alert("Firebase no ha cargado. Comprueba que tienes internet.");return}
+ const code=cleanSyncCode($("syncCodeInput").value);if(code.length<6){alert("Introduce el código completo.");return}
+ setSyncStatus("saving","Buscando la familia…");
+ try{
+  const ref=syncDoc(code),snap=await ref.get();if(!snap.exists){alert("No existe ninguna familia con ese código.");setSyncStatus("idle","");return}
+  const data=snap.data()||{};state.syncCode=code;localStorage.setItem("homebase_sync_code",code);
+  state.items=mergeItems(state.items,data.items||[]);if(data.rosterMeta)state.rosterMeta=data.rosterMeta;if(data.profilePhotos)Object.assign(profilePhotos,data.profilePhotos);
+  localStorage.setItem("homebase_v2_items",JSON.stringify(state.items));localStorage.setItem("homebase_roster_meta",JSON.stringify(state.rosterMeta));localStorage.setItem("homebase_profile_photos",JSON.stringify(profilePhotos));
+  await writeCloud();startCloudListener();render();
+ }catch(error){console.error(error);setSyncStatus("error","No se pudo vincular el dispositivo.")}
+}
+function unlinkFamilySync(){if(!confirm("¿Desvincular este dispositivo? Los datos locales no se borrarán."))return;if(state.syncUnsubscribe)state.syncUnsubscribe();state.syncUnsubscribe=null;state.syncCode="";localStorage.removeItem("homebase_sync_code");state.syncStatus="idle";render()}
 
 const RosterParser=(()=>{
 const AIRPORT_TZ={
@@ -1712,7 +1809,7 @@ async function prepareRosterFile(file){
  catch(err){console.error(err);status.className="roster-status error";status.textContent=err.message||"No se ha podido leer este roster.";resetRosterPreview()}
 }
 function applyPendingRoster(){
- const plan=state.pendingRosterImport;if(!plan)return;state.items=[...plan.manual,...plan.outside,...plan.incoming];state.rosterMeta={period:plan.parsed.period,periodStart:plan.parsed.periodStart,periodEnd:plan.parsed.periodEnd,fileName:plan.fileName,updatedAt:Date.now(),parserVersion:"5.0",counts:plan.result};localStorage.setItem("homebase_roster_meta",JSON.stringify(state.rosterMeta));save();
+ const plan=state.pendingRosterImport;if(!plan)return;state.items=[...plan.manual,...plan.outside,...plan.incoming.map(i=>({...i,updatedAt:Date.now()}))];state.rosterMeta={period:plan.parsed.period,periodStart:plan.parsed.periodStart,periodEnd:plan.parsed.periodEnd,fileName:plan.fileName,updatedAt:Date.now(),parserVersion:"5.0",counts:plan.result};localStorage.setItem("homebase_roster_meta",JSON.stringify(state.rosterMeta));save();
  const r=plan.result;resetRosterPreview();$("rosterImportStatus").className="roster-status ok";$("rosterImportStatus").textContent=`Roster aplicado: ${r.added} nuevos, ${r.changed} modificados y ${r.removed} retirados. El PDF no se ha guardado.`;renderRosterControls();
 }
 function updateRosterEnvironmentStatus(){
@@ -1725,7 +1822,7 @@ function updateRosterEnvironmentStatus(){
 $("editorForm").onsubmit=e=>{e.preventDefault();const type=$("itemType").value,values={type,title:$("titleInput").value.trim(),date:type==="task"&&$("noDeadline").checked?"":$("startDate").value,
  endDate:type==="event"
    ? (["weekly","yearly"].includes($("repeat").value) ? $("startDate").value : ($("endDate").value||$("startDate").value))
-   : (type==="task"&&$("noDeadline").checked?"":$("startDate").value),allDay:type==="event"?$("allDay").checked:false,time:type==="event"&&!$("allDay").checked?$("startTime").value:"",endTime:type==="event"&&!$("allDay").checked?$("endTime").value:"",person:$("personSelect").value,category:$("category").value,repeat:type==="event"?$("repeat").value:"none",repeatDays:type==="event"?[...document.querySelectorAll("[name=repeatDay]:checked")].map(x=>Number(x.value)):[],repeatUntil:type==="event"?$("repeatUntil").value:"",notes:$("notes").value.trim()};if(state.editingId)Object.assign(state.items.find(i=>i.id===state.editingId),values);else state.items.push({id:crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random()}`,...values,exceptions:[],done:false,completedAt:null,deletedAt:null});$("editorDialog").close();save()};
+   : (type==="task"&&$("noDeadline").checked?"":$("startDate").value),allDay:type==="event"?$("allDay").checked:false,time:type==="event"&&!$("allDay").checked?$("startTime").value:"",endTime:type==="event"&&!$("allDay").checked?$("endTime").value:"",person:$("personSelect").value,category:$("category").value,repeat:type==="event"?$("repeat").value:"none",repeatDays:type==="event"?[...document.querySelectorAll("[name=repeatDay]:checked")].map(x=>Number(x.value)):[],repeatUntil:type==="event"?$("repeatUntil").value:"",notes:$("notes").value.trim()};if(state.editingId)Object.assign(state.items.find(i=>i.id===state.editingId),values,{updatedAt:Date.now()});else state.items.push({id:crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random()}`,...values,exceptions:[],done:false,completedAt:null,deletedAt:null,updatedAt:Date.now()});$("editorDialog").close();save()};
 document.querySelectorAll("[data-type]").forEach(b=>b.onclick=()=>{$("itemType").value=b.dataset.type;document.querySelectorAll("[data-type]").forEach(x=>x.classList.toggle("active",x===b));toggleType(b.dataset.type)});
 $("moreOptions").onclick=()=>$("advanced").classList.toggle("open");
 $("repeat").onchange=()=>{
@@ -1772,6 +1869,15 @@ $("filterBtn").onclick=()=>{renderFilters();$("filterDialog").showModal();bindDy
 $("trashBtn").onclick=()=>{renderTrash();$("trashDialog").showModal();bindDynamic()};
 $("openTrashRow").onclick=$("trashBtn").onclick;
 $("openProfilesRow").onclick=()=>{renderProfiles();$("profilesDialog").showModal()};
+
+
+$("createSyncCode").onclick=createFamilySync;
+$("linkSyncCode").onclick=linkFamilySync;
+$("syncCodeInput").oninput=e=>e.target.value=cleanSyncCode(e.target.value);
+$("copySyncCode").onclick=async()=>{try{await navigator.clipboard.writeText(state.syncCode);alert("Código copiado: "+state.syncCode)}catch{prompt("Copia este código",state.syncCode)}};
+$("syncNow").onclick=writeCloud;
+$("unlinkSync").onclick=unlinkFamilySync;
+if(state.syncCode)startCloudListener();
 
 function openRosterDialog(){
  resetRosterPreview();updateRosterEnvironmentStatus();renderRosterControls();

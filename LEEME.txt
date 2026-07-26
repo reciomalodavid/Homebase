@@ -1,22 +1,8 @@
-HOMEBASE · PACK DE ACTUALIZACIÓN
+HOMEBASE · SINCRONIZACIÓN FAMILIAR
 
-Sustituye en GitHub los archivos anteriores por todos los de esta carpeta.
-No hace falta borrar datos ni volver a importar el roster.
+1. Sube todos estos archivos a la raíz del repositorio y reemplaza los anteriores.
+2. Espera 2-3 minutos y cierra/abre Homebase.
+3. En Más > Sincronización familiar, pulsa Crear código en el dispositivo principal.
+4. En el segundo dispositivo, escribe ese código y pulsa Vincular.
 
-CAMBIOS
-- Nuevo selector «Dura todo el día» en los eventos.
-- Los eventos de todo el día aparecen compactos encima de los eventos con hora en la vista semanal.
-- La repetición anual se mantiene para cumpleaños y aniversarios.
-- Microiconos del roster rediseñados: vuelo, standby, libre, vacaciones y otros duties.
-- Los días OFF quedan ocultos por defecto. Se pueden mostrar desde Más > Roster.
-- Se mantiene el botón para ocultar o mostrar todo el roster.
-- Se mantiene el icono correcto de Homebase para iPhone.
-
-ACTUALIZACIÓN
-1. Sube todos los archivos a la raíz del repositorio Homebase.
-2. Confirma el reemplazo de los archivos existentes.
-3. Haz el commit y espera uno o dos minutos.
-4. Cierra y vuelve a abrir Homebase. Si conserva la versión anterior, ciérrala por completo y ábrela otra vez.
-
-
-BETA 1.3.1: Mostrar días libres, vacaciones y hoteles está activado por defecto.
+Se sincronizan eventos, pendientes, perfiles y roster convertido. El PDF original nunca se sube.
