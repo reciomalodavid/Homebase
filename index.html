@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#fbf7f1">
+<meta name="theme-color" content="#f5f5f7">
 <meta name="description" content="Calendario familiar privado con importación local del roster.">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -585,8 +585,129 @@ button:active,.sync-summary:active{transform:scale(.985)}
 .event-fab[hidden]{display:none}
 @media(min-width:780px){.event-fab{right:calc((100vw - 760px)/2 + 18px)}}
 
+
+
+/* ==========================================================
+   HOMEBASE · APPLE POLISH — FASE 1
+   Capa exclusivamente visual. No modifica calendario, datos,
+   Firebase, roster, formularios ni comportamiento de botones.
+   ========================================================== */
+:root{
+  --bg:#f5f5f7;
+  --surface:rgba(255,255,255,.90);
+  --surface-2:#f2f2f7;
+  --text:#1c1c1e;
+  --muted:#8e8e93;
+  --line:rgba(60,60,67,.14);
+  --accent:#df7615;
+  --accent-soft:rgba(223,118,21,.12);
+  --danger:#ff3b30;
+  --green:#34c759;
+  --purple:#af52de;
+  --orange:#ff9500;
+  --pink:#ff2d55;
+  --blue:#007aff;
+  --selected:#df7615;
+  --shadow:0 8px 28px rgba(0,0,0,.055);
+  --radius:22px;
+}
+html{background:var(--bg);scroll-behavior:smooth}
+html,body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display","Helvetica Neue",sans-serif}
+body{background:linear-gradient(180deg,#faf9f7 0%,#f5f5f7 46%,#f2f2f7 100%);letter-spacing:-.01em}
+.app{padding-top:max(18px,env(safe-area-inset-top));}
+
+/* Cabecera */
+.topbar{margin-bottom:20px}
+.brand img{border-radius:13px;box-shadow:0 5px 17px rgba(0,0,0,.11)}
+.brand-title{font-size:22px;font-weight:780;letter-spacing:-.55px}
+.brand-sub{font-size:12px;letter-spacing:0}
+.icon-btn{background:rgba(255,255,255,.78);border:1px solid rgba(255,255,255,.90);box-shadow:0 4px 18px rgba(0,0,0,.06);-webkit-backdrop-filter:saturate(160%) blur(18px);backdrop-filter:saturate(160%) blur(18px);transition:transform .15s ease,background .15s ease}
+.icon-btn:active{transform:scale(.92);background:rgba(235,235,240,.88)}
+.badge{border-color:#f8f8fa}
+
+/* Tipografía y jerarquía */
+.hero-row{margin-top:10px;margin-bottom:20px}
+.hero-row h1{font-size:36px;font-weight:780;letter-spacing:-1.35px;line-height:1.04}
+.hero-date{font-size:15px;letter-spacing:-.1px;text-transform:none}
+.section{margin-top:22px}
+.section-head{margin-bottom:11px}
+.section-head h2{font-size:21px;font-weight:750;letter-spacing:-.45px}
+.section-head span{font-size:13px}
+
+/* Botones */
+.new-btn{border:1px solid rgba(223,118,21,.48);background:rgba(255,255,255,.72);color:var(--accent);padding:10px 16px;box-shadow:0 3px 14px rgba(0,0,0,.035);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);transition:transform .15s ease,background .15s ease}
+.new-btn:active{transform:scale(.96);background:var(--accent-soft)}
+.row-action,.close{background:rgba(118,118,128,.11);color:#3a3a3c;transition:transform .14s ease,background .14s ease}
+.row-action:active,.close:active{transform:scale(.90);background:rgba(118,118,128,.20)}
+.save,.edit-btn,.delete-btn,.complete-btn,.cancel-btn,.more{transition:transform .15s ease,filter .15s ease}
+.save:active,.edit-btn:active,.delete-btn:active,.complete-btn:active,.cancel-btn:active{transform:scale(.98);filter:brightness(.97)}
+
+/* Tarjetas */
+.card,.calendar-shell,.roster-card{background:var(--surface);border:1px solid rgba(255,255,255,.92);box-shadow:var(--shadow);-webkit-backdrop-filter:saturate(145%) blur(16px);backdrop-filter:saturate(145%) blur(16px)}
+.list-card{padding-left:15px;padding-right:15px}
+.event-row,.task-row{transition:background .15s ease,transform .15s ease}
+.event-row:active,.task-row:active{background:rgba(118,118,128,.065);transform:scale(.994)}
+.empty{padding:31px 24px}.empty strong{font-size:17px;font-weight:720}
+.profile-row{background:rgba(242,242,247,.82);border:1px solid rgba(60,60,67,.055)}
+
+/* Avatares */
+.avatar{border:2px solid rgba(255,255,255,.98);box-shadow:0 3px 10px rgba(0,0,0,.12)}
+.avatar-stack .avatar{margin-left:-10px}
+
+/* Calendario: misma estructura y lógica, acabado más limpio */
+.calendar-shell{padding:15px}
+.calendar-top>button{background:rgba(118,118,128,.09);color:var(--accent);transition:transform .14s ease,background .14s ease}
+.calendar-top>button:active{transform:scale(.91);background:rgba(118,118,128,.16)}
+.calendar-title{font-size:18px;font-weight:730;letter-spacing:-.35px}
+.mode-switch{width:max-content;margin:13px auto;background:rgba(118,118,128,.11);border-radius:11px;padding:3px;gap:0}
+.mode-switch button{min-width:84px;padding:7px 15px;border-radius:8px;font-size:13px;font-weight:700;transition:background .16s ease,color .16s ease,box-shadow .16s ease}
+.mode-switch button.active{background:#fff;color:var(--text);box-shadow:0 2px 7px rgba(0,0,0,.11)}
+.today-jump{font-size:15px}
+.weekdays,.month-grid{gap:7px}
+.weekdays div{font-size:11px;padding:6px 0;text-transform:none}
+.day{background:rgba(255,255,255,.77);border:1px solid rgba(60,60,67,.035);box-shadow:none;transition:transform .17s ease,background .17s ease,border-color .17s ease,box-shadow .17s ease}
+.day:active{transform:scale(.94)}
+.day.today{background:rgba(223,118,21,.09);outline:0;border-color:rgba(223,118,21,.35);box-shadow:inset 0 0 0 1px rgba(223,118,21,.06)}
+.day.selected{background:var(--accent);color:#fff;outline:0;border-color:var(--accent);box-shadow:0 7px 18px rgba(223,118,21,.25)}
+.day.other{opacity:.28}
+.month-band{height:9px;line-height:9px;border-radius:5px;box-shadow:none;opacity:.95}
+.month-band.start{border-radius:5px 0 0 5px}.month-band.end{border-radius:0 5px 5px 0}.month-band.single{border-radius:5px}
+.roster-mini{filter:none}
+.selected-day-panel{margin-top:16px}
+.week-board{border:1px solid rgba(60,60,67,.07);box-shadow:0 5px 20px rgba(0,0,0,.035)}
+
+/* Pendientes */
+.check{border-radius:50%;transition:transform .18s ease,background .18s ease,border-color .18s ease}
+.check.done{background:var(--green);border-color:var(--green)}
+
+/* Barra inferior translúcida, sin cambiar destinos ni eventos */
+.bottom-nav{bottom:0;background:rgba(250,250,252,.82);-webkit-backdrop-filter:saturate(180%) blur(24px);backdrop-filter:saturate(180%) blur(24px);border-top:1px solid rgba(60,60,67,.12);box-shadow:0 -5px 24px rgba(0,0,0,.035);padding-top:7px}
+.nav-btn{min-height:50px;border-radius:15px;font-size:11px;transition:transform .14s ease,color .14s ease,background .14s ease}
+.nav-btn span{font-size:20px;line-height:21px}
+.nav-btn:active{transform:scale(.92)}
+.nav-btn.active{color:var(--accent);background:rgba(223,118,21,.075)}
+
+/* Botón flotante: misma función, acabado más contenido */
+.event-fab{width:57px;height:57px;right:18px;bottom:calc(84px + env(safe-area-inset-bottom));background:rgba(223,118,21,.94);border:1px solid rgba(255,255,255,.68);font-size:31px;font-weight:300;box-shadow:0 11px 27px rgba(190,91,8,.25),inset 0 1px 0 rgba(255,255,255,.32);-webkit-backdrop-filter:saturate(160%) blur(15px);backdrop-filter:saturate(160%) blur(15px);transition:transform .16s ease,box-shadow .16s ease}
+.event-fab:active{transform:scale(.89);box-shadow:0 5px 15px rgba(190,91,8,.22)}
+
+/* Formularios y diálogos: sólo acabado */
+dialog{border-radius:26px;background:rgba(252,252,253,.97);box-shadow:0 25px 80px rgba(0,0,0,.25)}
+dialog::backdrop{background:rgba(20,20,25,.32);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+.modal{padding:21px}
+.modal-head h2{font-size:22px;font-weight:760;letter-spacing:-.5px}
+input,select,textarea{min-height:47px;border-color:rgba(60,60,67,.15);background:rgba(255,255,255,.94);transition:border-color .15s ease,box-shadow .15s ease}
+input:focus,select:focus,textarea:focus{outline:0;border-color:rgba(223,118,21,.72);box-shadow:0 0 0 3px rgba(223,118,21,.12)}
+.type-switch{background:rgba(118,118,128,.11);border-radius:12px}.type-switch button{border-radius:9px}.type-switch button.active{box-shadow:0 2px 7px rgba(0,0,0,.10)}
+.switch-line,.detail-row{border-color:rgba(60,60,67,.10)}
+
+/* Accesibilidad: nada de movimientos si el usuario los reduce */
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+}
+
 </style>
-<meta name="homebase-build" content="homebase-fab-selected-date">
+<meta name="homebase-build" content="homebase-apple-polish-fase1">
 </head>
 <body>
 <div class="app">
