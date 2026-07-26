@@ -1,0 +1,13 @@
+HOMEBASE v5 — PUBLICACIÓN
+
+1. Sube TODO el contenido de esta carpeta al repositorio (no el ZIP).
+2. El archivo principal debe llamarse index.html.
+3. Activa GitHub Pages desde la rama main y /root.
+4. Abre la dirección https://.../homebase/ en el iPhone.
+5. Prueba Abrir > Elegir PDF.
+
+Cambios v5:
+- Icono visible incluso al abrir index.html suelto.
+- Botón Abrir y fila completa con apertura robusta del diálogo.
+- Selector de visibilidad claramente desactivado hasta importar un roster.
+- En modo archivo local permite elegir PDF para comprobar el flujo, aunque la lectura puede fallar por restricciones del navegador.
