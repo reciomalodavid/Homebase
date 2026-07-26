@@ -171,12 +171,10 @@ button{cursor:pointer}
 /* Microiconos del roster: visibles pero secundarios respecto a los eventos familiares */
 .day-markers{position:absolute;left:4px;right:4px;bottom:5px;display:flex;align-items:center;justify-content:center;gap:3px;min-height:15px;pointer-events:none}
 .day.has-bands .day-markers{bottom:27px}
-.roster-mini{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:5px;background:#edf4fc;color:#416f9f;box-shadow:inset 0 0 0 1px rgba(65,111,159,.13)}
-.roster-mini svg{width:10px;height:10px;display:block;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.roster-mini.standby{background:#f1edff;color:#7059b7}
-.roster-mini.off{background:#edf8f2;color:#32825f}
-.roster-mini.vacation{background:#fff3e4;color:#c97825}
-.roster-mini.other-duty{background:#f6efe8;color:#8a6241}
+.roster-mini{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;color:#3974ad;filter:drop-shadow(0 1px 1px rgba(20,40,70,.12))}
+.roster-mini svg{width:14px;height:14px;display:block;overflow:visible}
+.roster-mini.flight svg{width:15px;height:15px}
+.roster-mini.standby{color:#7458b5}.roster-mini.off{color:#2f9a6b}.roster-mini.vacation{color:#df8422}.roster-mini.other-duty{color:#8b6545}
 .event-mini-dots{display:flex;gap:3px;align-items:center;margin-left:1px}
 .event-mini-dots .dot{position:static;width:5px;height:5px}
 .day.selected .roster-mini{background:rgba(255,255,255,.22);color:white;box-shadow:inset 0 0 0 1px rgba(255,255,255,.28)}
@@ -467,6 +465,7 @@ input,select,textarea{width:100%;padding:13px;border:1px solid var(--line);borde
 
 /* Sincronización familiar */
 .sync-card{padding:16px;display:grid;gap:12px}.sync-status{display:flex;align-items:center;gap:9px}.sync-dot{width:9px;height:9px;border-radius:50%;background:#9aa3af}.sync-dot.ok{background:#31a36b}.sync-dot.wait{background:#d4932f}.sync-dot.error{background:#d85c58}.sync-code{font:700 20px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:2px;background:rgba(90,105,125,.08);padding:11px 12px;border-radius:12px;text-align:center}.sync-actions{display:flex;gap:8px;flex-wrap:wrap}.sync-actions button{border:0;border-radius:11px;padding:10px 13px;font-weight:700;background:rgba(72,92,120,.1);color:var(--text)}.sync-actions button.primary{background:var(--accent);color:white}.sync-link-row{display:grid;grid-template-columns:1fr auto;gap:8px}.sync-link-row input{min-width:0;border:1px solid rgba(90,105,125,.18);border-radius:11px;padding:11px 12px;font-size:16px;text-transform:uppercase;background:var(--card);color:var(--text)}
+.sync-section{margin-top:26px;margin-bottom:6px}.sync-summary{width:100%;border:0;background:transparent;padding:14px 16px;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:11px;text-align:left;color:var(--text)}.sync-summary-icon{width:34px;height:34px;border-radius:11px;background:#eaf7ef;color:#2f9a63;display:grid;place-items:center}.sync-summary-icon svg{width:20px;height:20px;fill:currentColor}.sync-summary-main{min-width:0}.sync-summary-title{display:block;font-size:15px;font-weight:850}.sync-summary-sub{display:block;font-size:12px;color:#2f9a63;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}.sync-chevron{font-size:20px;color:var(--muted);transition:transform .2s}.sync-section.open .sync-chevron{transform:rotate(180deg)}.sync-details{display:none;border-top:1px solid var(--line);padding:14px 16px 16px}.sync-section.open .sync-details{display:grid;gap:12px}.sync-section .sync-code{font-size:17px;padding:9px}.sync-section .sync-actions button{padding:9px 11px}.sync-section .sync-link-row input{font-size:15px}
 
 /* Roster v4 */
 [hidden]{display:none!important}
@@ -614,17 +613,6 @@ input,select,textarea{width:100%;padding:13px;border:1px solid var(--line);borde
       </div>
 
       <div class="section">
-        <div class="section-head"><h2>Sincronización familiar</h2><span id="syncBadge">Sin vincular</span></div>
-        <div class="card sync-card">
-          <div class="sync-status"><span class="sync-dot" id="syncDot"></span><div><div class="event-title" id="syncStatusTitle">Guardado solo en este dispositivo</div><div class="event-meta" id="syncStatusText">Crea un código o introduce el de otro dispositivo.</div></div></div>
-          <div class="sync-code" id="syncCodeDisplay" hidden></div>
-          <div class="sync-actions" id="syncCreateActions"><button class="primary" id="createSyncCode" type="button">Crear código</button></div>
-          <div class="sync-link-row" id="syncLinkRow"><input id="syncCodeInput" maxlength="12" autocomplete="off" placeholder="Código de otro dispositivo"><button class="roster-primary" id="linkSyncCode" type="button">Vincular</button></div>
-          <div class="sync-actions" id="syncLinkedActions" hidden><button id="copySyncCode" type="button">Copiar código</button><button id="syncNow" type="button">Sincronizar ahora</button><button id="unlinkSync" type="button">Desvincular</button></div>
-        </div>
-      </div>
-
-      <div class="section">
         <div class="section-head"><h2>Roster de David</h2><span id="rosterPeriodLabel">Sin cargar</span></div>
         <div class="card roster-card">
           <div class="roster-row" id="openRosterRow">
@@ -646,6 +634,24 @@ input,select,textarea{width:100%;padding:13px;border:1px solid var(--line);borde
         <div class="event-row" id="openProfilesRow"><div class="event-time">◉</div><div class="event-bar" style="--person-color:var(--purple)"></div><div><div class="event-title">Perfiles</div><div class="event-meta">Fotos e identidad de cada persona</div></div><div>›</div></div>
         <div class="event-row" id="openTrashRow"><div class="event-time">🗑</div><div class="event-bar" style="--person-color:var(--danger)"></div><div><div class="event-title">Papelera</div><div class="event-meta">Restaurar elementos borrados</div></div><div>›</div></div>
       </div>
+      </div>
+
+      <div class="section sync-section" id="syncSection">
+        <div class="card">
+          <button class="sync-summary" id="syncSummary" type="button" aria-expanded="false">
+            <span class="sync-summary-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.7 18.5h9.1a4.2 4.2 0 0 0 .5-8.4A5.8 5.8 0 0 0 6.2 8.8 4.9 4.9 0 0 0 7.7 18.5Zm3.5-7.1h1.7v2.1H15v1.7h-2.1v2.1h-1.7v-2.1H9.1v-1.7h2.1v-2.1Z"/></svg></span>
+            <span class="sync-summary-main"><span class="sync-summary-title">Sincronización familiar</span><span class="sync-summary-sub" id="syncSummaryText">Guardado solo en este dispositivo</span></span>
+            <span class="sync-chevron">⌄</span>
+          </button>
+          <div class="sync-details">
+            <div class="sync-status"><span class="sync-dot" id="syncDot"></span><div><div class="event-title" id="syncStatusTitle">Guardado solo en este dispositivo</div><div class="event-meta" id="syncStatusText">Crea un código o introduce el de otro dispositivo.</div></div></div>
+            <div class="sync-code" id="syncCodeDisplay" hidden></div>
+            <div class="sync-actions" id="syncCreateActions"><button class="primary" id="createSyncCode" type="button">Crear código</button></div>
+            <div class="sync-link-row" id="syncLinkRow"><input id="syncCodeInput" maxlength="12" autocomplete="off" placeholder="Código de otro dispositivo"><button class="roster-primary" id="linkSyncCode" type="button">Vincular</button></div>
+            <div class="sync-actions" id="syncLinkedActions" hidden><button id="copySyncCode" type="button">Copiar código</button><button id="syncNow" type="button">Sincronizar ahora</button><button id="unlinkSync" type="button">Desvincular</button></div>
+            <span id="syncBadge" hidden>Sin vincular</span>
+          </div>
+        </div>
       </div>
     </section>
   </main>
@@ -925,15 +931,16 @@ function renderTasks(){
 }
 function rosterMiniIcon(kind){
  const icons={
-  flight:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 8l12-5-3 5 3 5-12-5zm4.2-1.7L5 3.5m1.2 6.2L5 12.5"/></svg>',
-  standby:'<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><path d="M8 4.8V8l2.4 1.5"/></svg>',
-  off:'<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><path d="M5.2 8.1l1.8 1.8 3.8-4"/></svg>',
-  vacation:'<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M12.6 3.4l-1.4 1.4M4.8 11.2l-1.4 1.4"/></svg>',
-  other:'<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="5" width="10" height="8" rx="1.5"/><path d="M6 5V3.5h4V5M3 8h10"/></svg>'
+  flight:'<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M21.6 11.2 14.3 8V3.7c0-.9-.7-1.7-1.7-1.7s-1.7.8-1.7 1.7V8L3.6 11.2c-.5.2-.8.7-.8 1.2s.3 1 .8 1.2l7.3 3.2v3.5l-2.1 1.4v1.1l3.8-1.1 3.8 1.1v-1.1l-2.1-1.4v-3.5l7.3-3.2c.5-.2.8-.7.8-1.2s-.3-1-.8-1.2Z"/></svg>',
+  standby:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="currentColor" opacity=".16"/><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><text x="12" y="15.2" text-anchor="middle" font-size="9.5" font-family="-apple-system,BlinkMacSystemFont,Arial" font-weight="800" fill="currentColor">S</text></svg>',
+  off:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="currentColor" opacity=".16"/><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m8.2 12.1 2.4 2.5 5.3-5.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  vacation:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="17.5" cy="6.5" r="3" fill="currentColor" opacity=".9"/><path d="M7.5 21c.8-5.2 1.8-9.1 4.7-12.1M11.8 9c-2.4-.4-4.1.2-5.4 2M12.2 9c1.8-1.8 3.7-2.3 5.8-1.4M12 9.2c.2-2.3-.7-3.9-2.5-5M12.1 9.2c2.1-1.1 3.3-2.7 3.5-4.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M4 21h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+  other:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="7" width="16" height="12" rx="2.2" fill="currentColor" opacity=".18"/><rect x="4" y="7" width="16" height="12" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9 7V5.5h6V7M4 11.5h16M10.5 11.5v1.7h3v-1.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>'
  };
- const cls=kind==="flight"?"":kind==="standby"?" standby":kind==="off"?" off":kind==="vacation"?" vacation":" other-duty";
- const label=kind==="flight"?"Vuelo":kind==="standby"?"Standby":kind==="off"?"Día libre":kind==="vacation"?"Vacaciones":"Otro duty";
- return `<span class="roster-mini${cls}" title="${label}">${icons[kind]||icons.other}</span>`;
+ const normalized=(kind==="training"||kind==="ground")?"other":kind;
+ const cls=normalized==="flight"?" flight":normalized==="standby"?" standby":normalized==="off"?" off":normalized==="vacation"?" vacation":" other-duty";
+ const label=normalized==="flight"?"Vuelo":normalized==="standby"?"Standby":normalized==="off"?"Día libre":normalized==="vacation"?"Vacaciones":"Otro duty";
+ return `<span class="roster-mini${cls}" title="${label}" aria-label="${label}">${icons[normalized]||icons.other}</span>`;
 }
 
 function renderMonth(){
@@ -1443,6 +1450,7 @@ function renderSyncControls(){
  dot.className="sync-dot"+(state.syncStatus==="ok"?" ok":state.syncStatus==="saving"?" wait":state.syncStatus==="error"?" error":"");
  $("syncStatusTitle").textContent=!linked?"Guardado solo en este dispositivo":state.syncStatus==="saving"?"Sincronizando…":state.syncStatus==="error"?"No se ha podido sincronizar":"Sincronización activa";
  $("syncStatusText").textContent=!linked?"Crea un código o introduce el de otro dispositivo.":(state.syncStatusText||"Los cambios se comparten automáticamente.");
+ if($("syncSummaryText")) $("syncSummaryText").textContent=!linked?"Sin vincular":state.syncStatus==="saving"?"Sincronizando…":state.syncStatus==="error"?"Error de sincronización":"Sincronización activa";
 }
 async function writeCloud(){
  if(!cloudDb||!state.syncCode)return;
