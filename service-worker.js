@@ -1,5 +1,5 @@
-const SHELL_CACHE="homebase-apple-polish-fase1-2-ios-20260726";
-const RUNTIME_CACHE="homebase-calendar-update-17";
+const SHELL_CACHE="homebase-apple-calendar-polish-1-3-20260726";
+const RUNTIME_CACHE="homebase-calendar-update-18";
 const SHELL=["./","./index.html","./manifest.webmanifest","./apple-touch-icon.png","./icon-192.png","./icon-512.png"];
 self.addEventListener("install",e=>e.waitUntil(caches.open(SHELL_CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));
 self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith("homebase-")&&![SHELL_CACHE,RUNTIME_CACHE].includes(k)).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));

@@ -1,14 +1,10 @@
-HOMEBASE · APPLE POLISH FASE 1.2
+HOMEBASE — APPLE CALENDAR POLISH 1.3
 
-Correcciones visuales para iPhone:
-- Cabecera Homebase fija de verdad durante todo el scroll.
-- Respeta la zona segura de la barra de estado.
-- Interruptor “Dura todo el día” con diseño iOS limpio.
-- Se mantienen los selectores de miembros corregidos.
-- No se ha modificado la lógica, Firebase, roster ni datos.
+Cambios visuales seguros:
+- calendario mensual con más aire
+- números e iconos separados
+- barras de varios días más limpias
+- título del mes con capitalización correcta
+- sin cambios en Firebase, roster, eventos ni datos
 
-SUBIDA A GITHUB
-1. Descomprime este ZIP.
-2. Reemplaza todos los archivos de la raíz del repositorio.
-3. Espera a que GitHub Pages publique.
-4. Cierra Homebase completamente en el iPhone y vuelve a abrirla.
+Sube todos estos archivos a la raíz del repositorio de GitHub y reemplaza los anteriores.

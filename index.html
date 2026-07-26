@@ -899,6 +899,158 @@ body::before{
   }
 }
 
+
+
+/* ==========================================================
+   APPLE CALENDAR POLISH 1.3
+   Ajuste visual seguro: más aire, números e iconos separados,
+   barras de varios días más limpias y jerarquía iOS.
+   ========================================================== */
+.calendar-shell{
+  width:100%;
+  max-width:100%;
+  box-sizing:border-box;
+  padding:16px 12px 20px;
+  border-radius:24px;
+  overflow:hidden;
+}
+.calendar-top{
+  grid-template-columns:44px minmax(0,1fr) 44px;
+  gap:10px;
+  padding:0 2px;
+}
+.calendar-top>button{
+  width:44px;
+  height:44px;
+  border-radius:14px;
+  font-size:27px;
+  line-height:1;
+}
+.calendar-title{
+  min-width:0;
+  font-size:20px;
+  line-height:1.15;
+  font-weight:760;
+  letter-spacing:-.45px;
+  text-transform:none;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.mode-switch{margin:15px auto 14px}
+.calendar-roster-toggle{margin:0 0 15px}
+.calendar-roster-toggle button{
+  min-height:38px;
+  padding:8px 13px;
+  border-radius:19px;
+  font-size:13px;
+}
+.today-jump{margin-bottom:14px}
+.weekdays,.month-grid{gap:7px 6px}
+.weekdays{padding:0 1px}
+.weekdays div{
+  padding:6px 0 7px;
+  font-size:10px;
+  line-height:1.1;
+  letter-spacing:-.1px;
+  white-space:nowrap;
+  overflow:hidden;
+}
+.day{
+  min-width:0;
+  min-height:98px;
+  padding:0;
+  border-radius:17px;
+  overflow:visible;
+  isolation:isolate;
+}
+.day-number{
+  position:absolute;
+  top:13px;
+  left:2px;
+  right:2px;
+  z-index:6;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  height:25px;
+  font-size:17px;
+  line-height:25px;
+  font-weight:520;
+  letter-spacing:-.3px;
+}
+.day.today .day-number{
+  font-weight:760;
+  color:var(--accent);
+}
+.day.selected .day-number{color:#fff;font-weight:760}
+.day-markers{
+  left:3px;
+  right:3px;
+  bottom:15px;
+  min-height:19px;
+  gap:3px;
+  z-index:5;
+  flex-wrap:nowrap;
+}
+.day.has-bands .day-markers{bottom:33px}
+.roster-mini{
+  width:17px;
+  height:17px;
+  flex:0 0 17px;
+}
+.roster-mini svg,.roster-mini.flight svg{
+  width:16px;
+  height:16px;
+}
+.event-mini-dots{gap:3px;margin-left:0}
+.event-mini-dots .dot{width:5px;height:5px}
+.month-bands{
+  left:0;
+  right:0;
+  bottom:7px;
+  height:20px;
+  z-index:4;
+}
+.month-band{
+  height:8px;
+  line-height:8px;
+  padding:0 4px;
+  font-size:6px;
+  border-radius:4px;
+}
+.month-band.lane-0{bottom:10px}
+.month-band.lane-1{bottom:0}
+.month-band.start{left:4px}
+.month-band.end{right:4px}
+.month-band.single{left:4px;right:4px}
+.month-band.start:not(.end){right:-3px}
+.month-band.end:not(.start){left:-3px}
+.month-band.middle{left:-3px;right:-3px}
+.month-more{right:4px;bottom:0;font-size:7px}
+.day.other{opacity:.24}
+.day.selected{
+  box-shadow:0 8px 20px rgba(223,118,21,.22);
+}
+.selected-day-panel{margin-top:22px}
+
+@media(max-width:430px){
+  .calendar-shell{padding-left:10px;padding-right:10px}
+  .weekdays,.month-grid{gap:6px 5px}
+  .day{min-height:94px;border-radius:16px}
+  .day-number{top:12px;font-size:16px}
+  .roster-mini{width:16px;height:16px;flex-basis:16px}
+  .roster-mini svg,.roster-mini.flight svg{width:15px;height:15px}
+}
+@media(max-width:370px){
+  .calendar-shell{padding-left:7px;padding-right:7px}
+  .weekdays,.month-grid{gap:5px 4px}
+  .weekdays div{font-size:9px}
+  .day{min-height:90px;border-radius:15px}
+  .day-number{font-size:15px}
+  .day-markers{gap:1px}
+}
+
 </style>
 <meta name="homebase-build" content="homebase-apple-polish-fase1-2-fixed-header-switch">
 </head>
@@ -1321,7 +1473,7 @@ function rosterMiniIcon(kind){
 }
 
 function renderMonth(){
- $("periodTitle").textContent=new Intl.DateTimeFormat("es-ES",{month:"long",year:"numeric"}).format(state.month);
+ const periodLabel=new Intl.DateTimeFormat("es-ES",{month:"long",year:"numeric"}).format(state.month); $("periodTitle").textContent=periodLabel.charAt(0).toUpperCase()+periodLabel.slice(1);
  $("weekdays").innerHTML=["lunes","martes","miércoles","jueves","viernes","sábado","domingo"].map(x=>`<div>${x}</div>`).join("");
  const y=state.month.getFullYear(),m=state.month.getMonth(),first=new Date(y,m,1),start=addDays(first,-((first.getDay()+6)%7));
 
