@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
 <link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png">
-<title>Homebase v5 · Familia y roster</title>
+<title>Homebase · Familia y roster</title>
 <style>
 :root {
   --bg:#f7f2eb;
@@ -168,18 +168,18 @@ button{cursor:pointer}
 .dot{width:6px;height:6px;border-radius:50%;background:var(--dot-color)}
 .day.selected .dot{outline:2px solid white}
 
-/* Indicadores discretos del roster: conviven con los puntos de otros eventos */
-.day-markers{position:absolute;left:5px;right:5px;bottom:6px;display:flex;align-items:center;justify-content:center;gap:4px;min-height:12px;pointer-events:none}
+/* Microiconos del roster: visibles pero secundarios respecto a los eventos familiares */
+.day-markers{position:absolute;left:4px;right:4px;bottom:5px;display:flex;align-items:center;justify-content:center;gap:3px;min-height:15px;pointer-events:none}
 .day.has-bands .day-markers{bottom:27px}
-.roster-mini{display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;font-size:10px;line-height:1;font-weight:900;color:#4f78a7}
-.roster-mini.standby{border-radius:50%;background:#eee7ff;color:#6f58bd;font-size:8px}
-.roster-mini.off{color:#2e9c70;font-size:9px}
-.roster-mini.vacation{color:#d6842d;font-size:9px}
-.roster-mini.other-duty{color:#9a6b3d;font-size:9px}
-.event-mini-dots{display:flex;gap:3px;align-items:center}
+.roster-mini{display:inline-flex;align-items:center;justify-content:center;width:15px;height:15px;border-radius:5px;background:#edf4fc;color:#416f9f;box-shadow:inset 0 0 0 1px rgba(65,111,159,.13)}
+.roster-mini svg{width:10px;height:10px;display:block;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.roster-mini.standby{background:#f1edff;color:#7059b7}
+.roster-mini.off{background:#edf8f2;color:#32825f}
+.roster-mini.vacation{background:#fff3e4;color:#c97825}
+.roster-mini.other-duty{background:#f6efe8;color:#8a6241}
+.event-mini-dots{display:flex;gap:3px;align-items:center;margin-left:1px}
 .event-mini-dots .dot{position:static;width:5px;height:5px}
-.day.selected .roster-mini{filter:brightness(0) invert(1)}
-.day.selected .roster-mini.standby{background:rgba(255,255,255,.28);color:white;filter:none}
+.day.selected .roster-mini{background:rgba(255,255,255,.22);color:white;box-shadow:inset 0 0 0 1px rgba(255,255,255,.28)}
 .day.selected .event-mini-dots .dot{outline:1.5px solid white}
 
 .selected-day-panel{margin-top:14px}
@@ -192,9 +192,9 @@ button{cursor:pointer}
 .week-name{font-size:11px;font-weight:800;text-transform:capitalize}
 .week-num{font-size:18px;font-weight:850;margin-top:2px}
 .all-day{display:grid;grid-template-columns:58px repeat(7,1fr);border-bottom:1px solid var(--line);background:#fbfaf7}
-.all-day>div{min-height:42px;padding:4px;border-right:1px solid var(--line)}
-.all-day-label{font-size:9px;color:var(--muted);text-align:center;padding-top:10px!important}
-.all-day-item{font-size:10px;font-weight:800;border-left:4px solid var(--person-color);background:white;border-radius:8px;padding:5px;cursor:pointer}
+.all-day>div{min-height:36px;padding:3px;border-right:1px solid var(--line)}
+.all-day-label{font-size:8px;color:var(--muted);text-align:center;padding-top:8px!important}
+.all-day-item{font-size:9px;font-weight:800;border-left:3px solid var(--person-color);background:white;border-radius:7px;padding:4px 5px;line-height:1.15;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .timeline{display:grid;grid-template-columns:58px repeat(7,1fr);height:1020px;background:repeating-linear-gradient(to bottom,transparent 0,transparent 59px,var(--line) 59px,var(--line) 60px)}
 .time-col,.day-col{position:relative;border-right:1px solid var(--line)}
 .time-label{position:absolute;right:7px;transform:translateY(-7px);font-size:9px;color:var(--muted)}
@@ -227,6 +227,8 @@ input,select,textarea{width:100%;padding:13px;border:1px solid var(--line);borde
 .week-picks label{margin:0;padding:9px 0;text-align:center;border:1px solid var(--line);border-radius:10px;background:white}
 .week-picks input{display:none}
 .week-picks label:has(input:checked){background:var(--accent);color:white;border-color:var(--accent)}
+.switch-line{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:12px 0 2px;padding:11px 12px;border:1px solid var(--line);border-radius:13px;background:var(--surface-2);cursor:pointer}
+.switch-line span{display:grid;gap:2px}.switch-line strong{font-size:14px}.switch-line small{font-size:11px;color:var(--muted);font-weight:500;line-height:1.3}.switch-line input{width:20px;min-height:20px;margin:0;flex:0 0 auto}
 .save{width:100%;margin-top:18px;border:0;border-radius:14px;background:var(--accent);color:white;padding:14px;font-weight:850}
 .detail-grid{display:grid;gap:9px}
 .detail-row{background:var(--surface-2);padding:13px;border-radius:14px}
@@ -321,9 +323,12 @@ input,select,textarea{width:100%;padding:13px;border:1px solid var(--line);borde
 }
 
 .mobile-day-all-day .all-day-item {
-  margin:6px 0;
-  padding:9px 10px;
-  font-size:12px;
+  display:inline-flex;
+  max-width:100%;
+  margin:3px 5px 3px 0;
+  padding:6px 8px;
+  font-size:11px;
+  vertical-align:top;
 }
 .mobile-day-scroll {
   max-height:58vh;
@@ -655,6 +660,7 @@ input,select,textarea{width:100%;padding:13px;border:1px solid var(--line);borde
     </div>
     <div id="endDateWrap"><label>Termina</label><input id="endDate" type="date"></div>
   </div>
+  <label id="allDayWrap" class="switch-line"><span><strong>Dura todo el día</strong><small>Ideal para cumpleaños, aniversarios o días señalados</small></span><input id="allDay" type="checkbox"></label>
   <div class="form-row" id="timeRow"><div><label>Hora inicio</label><input id="startTime" type="time"></div><div><label>Hora final</label><input id="endTime" type="time"></div></div>
   <label>Para quién</label><select id="personSelect"></select>
   <button type="button" class="more" id="moreOptions">Más opciones</button>
@@ -727,7 +733,7 @@ input,select,textarea{width:100%;padding:13px;border:1px solid var(--line);borde
   <div class="roster-options" id="rosterOptionsPanel" hidden>
     <div class="roster-options-title">Opciones de visualización</div>
     <label class="roster-option-row">
-      <span class="roster-option-copy"><strong>Mostrar días libres</strong><span>Ocultos por defecto para no llenar el calendario</span></span>
+      <span class="roster-option-copy"><strong>Mostrar días libres</strong><span>Aparecen en el calendario; puedes ocultarlos cuando quieras</span></span>
       <span class="switch-control"><input id="toggleRosterOffs" type="checkbox"><span class="switch-track" aria-hidden="true"></span></span>
     </label>
     <label class="roster-option-row">
@@ -768,10 +774,17 @@ const state={
  trashDetailId:null,
  confirmAction:null,
  rosterVisible:JSON.parse(localStorage.getItem("homebase_roster_visible")||"true"),
- rosterSettings:JSON.parse(localStorage.getItem("homebase_roster_settings")||'{"showOffs":false,"showVacations":true,"showHotels":true}'),
+ rosterSettings:JSON.parse(localStorage.getItem("homebase_roster_settings")||'{"showOffs":true,"showVacations":true,"showHotels":true}'),
  rosterMeta:JSON.parse(localStorage.getItem("homebase_roster_meta")||"null"),
  pendingRosterImport:null
 };
+// Beta 1.3.1: todas las opciones del roster quedan activadas por defecto.
+// Esta migración se ejecuta una sola vez también en instalaciones que heredaron OFF desactivado.
+if(!localStorage.getItem("homebase_roster_all_on_v131")){
+ state.rosterSettings={...state.rosterSettings,showOffs:true,showVacations:true,showHotels:true};
+ localStorage.setItem("homebase_roster_settings",JSON.stringify(state.rosterSettings));
+ localStorage.setItem("homebase_roster_all_on_v131","1");
+}
 const $=id=>document.getElementById(id);
 const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 const parseDate=s=>{const [y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d)};
@@ -807,8 +820,9 @@ function load(){
   title:i.title||"",
   date:i.date,
   endDate:(i.repeat==="weekly"||i.repeat==="yearly") ? i.date : (i.endDate||i.date),
-  time:i.time||"",
-  endTime:i.endTime||"",
+  allDay:i.allDay!==undefined?!!i.allDay:!i.time,
+  time:i.allDay?"":(i.time||""),
+  endTime:i.allDay?"":(i.endTime||""),
   person:i.person||"Familia",
   category:i.category||"Familia",
   repeat:i.repeat||"none",
@@ -884,6 +898,19 @@ function renderTasks(){
  fillList($("doneList"),done.map(taskRow).join(""),"No hay completadas","Las tareas terminadas aparecerán aquí.");
  $("taskCount").textContent=`${pending.length}`; $("doneCount").textContent=`${done.length}`;
 }
+function rosterMiniIcon(kind){
+ const icons={
+  flight:'<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 8l12-5-3 5 3 5-12-5zm4.2-1.7L5 3.5m1.2 6.2L5 12.5"/></svg>',
+  standby:'<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><path d="M8 4.8V8l2.4 1.5"/></svg>',
+  off:'<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="5.5"/><path d="M5.2 8.1l1.8 1.8 3.8-4"/></svg>',
+  vacation:'<svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M12.6 3.4l-1.4 1.4M4.8 11.2l-1.4 1.4"/></svg>',
+  other:'<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="5" width="10" height="8" rx="1.5"/><path d="M6 5V3.5h4V5M3 8h10"/></svg>'
+ };
+ const cls=kind==="flight"?"":kind==="standby"?" standby":kind==="off"?" off":kind==="vacation"?" vacation":" other-duty";
+ const label=kind==="flight"?"Vuelo":kind==="standby"?"Standby":kind==="off"?"Día libre":kind==="vacation"?"Vacaciones":"Otro duty";
+ return `<span class="roster-mini${cls}" title="${label}">${icons[kind]||icons.other}</span>`;
+}
+
 function renderMonth(){
  $("periodTitle").textContent=new Intl.DateTimeFormat("es-ES",{month:"long",year:"numeric"}).format(state.month);
  $("weekdays").innerHTML=["lunes","martes","miércoles","jueves","viernes","sábado","domingo"].map(x=>`<div>${x}</div>`).join("");
@@ -918,7 +945,7 @@ function renderMonth(){
    const rosterKinds=[...new Set(rosterEvents.map(e=>e.rosterData?.kind||"other"))];
    const priority=["flight","standby","off","vacation","training","other"];
    rosterKinds.sort((a,b)=>priority.indexOf(a)-priority.indexOf(b));
-   const rosterIcons=rosterKinds.slice(0,2).map(kind=>kind==="flight"?`<span class="roster-mini" title="Vuelo">✈</span>`:kind==="standby"?`<span class="roster-mini standby" title="Standby">S</span>`:kind==="off"?`<span class="roster-mini off" title="Día libre">●</span>`:kind==="vacation"?`<span class="roster-mini vacation" title="Vacaciones">◆</span>`:`<span class="roster-mini other-duty" title="Otro duty">■</span>`).join("");
+   const rosterIcons=rosterKinds.slice(0,2).map(rosterMiniIcon).join("");
    const normalDots=normalEvents.slice(0,3).map(e=>`<span class="dot" style="--dot-color:${personColor(e.person)}"></span>`).join("");
    const markers=(rosterIcons||normalDots)?`<div class="day-markers">${rosterIcons}${normalDots?`<span class="event-mini-dots">${normalDots}</span>`:""}</div>`:"";
    html+=`<button class="day ${multi.length?"has-bands":""} ${d.getMonth()!==m?"other":""} ${di===iso(new Date())?"today":""} ${state.selectedDate&&di===iso(state.selectedDate)?"selected":""}" data-day="${di}"><span class="day-number">${d.getDate()}</span>${markers}${bands?`<div class="month-bands">${bands}${more}</div>`:""}</button>`;
@@ -929,13 +956,13 @@ function renderMonth(){
  const di=iso(state.selectedDate),ev=eventsOn(di);panel.innerHTML=`<div class="section-head"><h2>${fmtDate(state.selectedDate)}</h2><span>${ev.length}</span></div><div class="card list-card">${ev.length?ev.map(i=>eventRow(i,di)).join(""):`<div class="empty"><strong>Sin eventos</strong>Pulsa Nuevo para añadir uno.</div>`}</div>`;
 }
 function isAllDayEvent(item){
-  if(!item.time) return true;
+  if(item.allDay===true || !item.time) return true;
   if(item.repeat==="weekly") return false;
   return (item.endDate||item.date)!==item.date;
 }
 
 function isTimedEvent(item){
-  return !!item.time && !isAllDayEvent(item);
+  return !item.allDay && !!item.time && !isAllDayEvent(item);
 }
 
 function renderWeek(){
@@ -1280,7 +1307,7 @@ function setPeople(){$("personSelect").innerHTML=PEOPLE.map(p=>`<option>${p.name
 function nowRounded(){const n=new Date(),mins=Math.ceil((n.getHours()*60+n.getMinutes())/15)*15;return `${String(Math.floor((mins%1440)/60)).padStart(2,"0")}:${String(mins%60).padStart(2,"0")}`}
 function plusHour(t){const [h,m]=t.split(":").map(Number),v=(h*60+m+60)%1440;return `${String(Math.floor(v/60)).padStart(2,"0")}:${String(v%60).padStart(2,"0")}`}
 function resetEditor(type="event"){
- state.editingId=null;$("editorForm").reset();$("itemType").value=type;$("editorTitle").textContent="Nuevo";document.querySelectorAll("[data-type]").forEach(b=>b.classList.toggle("active",b.dataset.type===type));toggleType(type);$("advanced").classList.remove("open");const today=iso(new Date()),time=nowRounded();$("startDate").value=today;$("endDate").value=today;$("startTime").value=time;$("endTime").value=plusHour(time);document.querySelectorAll("[name=repeatDay]").forEach(x=>x.checked=false);
+ state.editingId=null;$("editorForm").reset();$("itemType").value=type;$("editorTitle").textContent="Nuevo";document.querySelectorAll("[data-type]").forEach(b=>b.classList.toggle("active",b.dataset.type===type));toggleType(type);$("advanced").classList.remove("open");const today=iso(new Date()),time=nowRounded();$("startDate").value=today;$("endDate").value=today;$("allDay").checked=false;$("timeRow").style.display=type==="event"?"grid":"none";$("startTime").value=time;$("endTime").value=plusHour(time);document.querySelectorAll("[name=repeatDay]").forEach(x=>x.checked=false);
  $("noDeadline").checked=false;
  $("startDate").disabled=false;
  $("startDate").required=true;
@@ -1289,7 +1316,8 @@ function toggleType(type){
  const event=type==="event";
  const recurring=event && ["weekly","yearly"].includes($("repeat").value);
  $("endDateWrap").style.display=event && !recurring?"block":"none";
- $("timeRow").style.display=event?"grid":"none";
+ $("allDayWrap").style.display=event?"flex":"none";
+ $("timeRow").style.display=event&&!$("allDay").checked?"grid":"none";
  $("repeatWrap").style.display=event?"block":"none";
  $("noDeadlineWrap").style.display=event?"none":"block";
  $("startDateLabel").textContent=event?"Empieza":"Fecha límite";
@@ -1302,7 +1330,7 @@ function openEdit(item){
  $("startDate").disabled=$("noDeadline").checked;
  $("startDate").required=!$("noDeadline").checked;
  $("startDate").value=item.date||"";
- $("endDate").value=item.endDate||item.date||"";$("startTime").value=item.time;$("endTime").value=item.endTime;$("personSelect").value=item.person;$("category").value=item.category;$("repeat").value=item.repeat;$("repeatUntil").value=item.repeatUntil;$("notes").value=item.notes;document.querySelectorAll("[name=repeatDay]").forEach(x=>x.checked=item.repeatDays.includes(Number(x.value)));const rep=item.repeat==="weekly",annual=item.repeat==="yearly";
+ $("endDate").value=item.endDate||item.date||"";$("allDay").checked=!!item.allDay||!item.time;$("timeRow").style.display=$("allDay").checked?"none":"grid";$("startTime").value=item.time;$("endTime").value=item.endTime;$("personSelect").value=item.person;$("category").value=item.category;$("repeat").value=item.repeat;$("repeatUntil").value=item.repeatUntil;$("notes").value=item.notes;document.querySelectorAll("[name=repeatDay]").forEach(x=>x.checked=item.repeatDays.includes(Number(x.value)));const rep=item.repeat==="weekly",annual=item.repeat==="yearly";
  if(rep){
    if(item.endDate && item.endDate!==item.date && !item.repeatUntil){
      item.repeatUntil=item.endDate;
@@ -1658,7 +1686,7 @@ function planRosterSync(parsed,fileName){
   const r=typeof structuredClone==="function"?structuredClone(original):JSON.parse(JSON.stringify(original));let uid=r.rosterUid;const n=(seen.get(uid)||0)+1;seen.set(uid,n);if(n>1){uid=`${uid}|${n}`;r.rosterUid=uid}
   const prev=oldMap.get(uid),status=!prev?"new":rosterSignature(prev.rosterData)===rosterSignature(r)?"same":"changed";
   if(status==="new")added++;else if(status==="changed")changed++;else unchanged++;
-  const item={id:prev?.id||(crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random()}`),type:"event",title:r.title,date:r.date,endDate:r.endDate||r.date,time:r.time||"",endTime:r.endTime||"",person:"David",category:"Trabajo",repeat:"none",repeatDays:[],repeatUntil:"",notes:prev?.notes||"",exceptions:[],done:false,completedAt:null,deletedAt:null,source:"roster",rosterData:r};
+  const item={id:prev?.id||(crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random()}`),type:"event",title:r.title,date:r.date,endDate:r.endDate||r.date,allDay:!r.time,time:r.time||"",endTime:r.endTime||"",person:"David",category:"Trabajo",repeat:"none",repeatDays:[],repeatUntil:"",notes:prev?.notes||"",exceptions:[],done:false,completedAt:null,deletedAt:null,source:"roster",rosterData:r};
   incoming.push(item);preview.push({item,status});if(prev)oldMap.delete(uid);
  }
  const removedItems=[...oldMap.values()],removed=removedItems.length;
@@ -1697,7 +1725,7 @@ function updateRosterEnvironmentStatus(){
 $("editorForm").onsubmit=e=>{e.preventDefault();const type=$("itemType").value,values={type,title:$("titleInput").value.trim(),date:type==="task"&&$("noDeadline").checked?"":$("startDate").value,
  endDate:type==="event"
    ? (["weekly","yearly"].includes($("repeat").value) ? $("startDate").value : ($("endDate").value||$("startDate").value))
-   : (type==="task"&&$("noDeadline").checked?"":$("startDate").value),time:type==="event"?$("startTime").value:"",endTime:type==="event"?$("endTime").value:"",person:$("personSelect").value,category:$("category").value,repeat:type==="event"?$("repeat").value:"none",repeatDays:type==="event"?[...document.querySelectorAll("[name=repeatDay]:checked")].map(x=>Number(x.value)):[],repeatUntil:type==="event"?$("repeatUntil").value:"",notes:$("notes").value.trim()};if(state.editingId)Object.assign(state.items.find(i=>i.id===state.editingId),values);else state.items.push({id:crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random()}`,...values,exceptions:[],done:false,completedAt:null,deletedAt:null});$("editorDialog").close();save()};
+   : (type==="task"&&$("noDeadline").checked?"":$("startDate").value),allDay:type==="event"?$("allDay").checked:false,time:type==="event"&&!$("allDay").checked?$("startTime").value:"",endTime:type==="event"&&!$("allDay").checked?$("endTime").value:"",person:$("personSelect").value,category:$("category").value,repeat:type==="event"?$("repeat").value:"none",repeatDays:type==="event"?[...document.querySelectorAll("[name=repeatDay]:checked")].map(x=>Number(x.value)):[],repeatUntil:type==="event"?$("repeatUntil").value:"",notes:$("notes").value.trim()};if(state.editingId)Object.assign(state.items.find(i=>i.id===state.editingId),values);else state.items.push({id:crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random()}`,...values,exceptions:[],done:false,completedAt:null,deletedAt:null});$("editorDialog").close();save()};
 document.querySelectorAll("[data-type]").forEach(b=>b.onclick=()=>{$("itemType").value=b.dataset.type;document.querySelectorAll("[data-type]").forEach(x=>x.classList.toggle("active",x===b));toggleType(b.dataset.type)});
 $("moreOptions").onclick=()=>$("advanced").classList.toggle("open");
 $("repeat").onchange=()=>{
@@ -1712,6 +1740,11 @@ $("repeat").onchange=()=>{
    $("endDateWrap").style.display=$("itemType").value==="event"?"block":"none";
    if(!$("endDate").value)$("endDate").value=$("startDate").value;
  }
+};
+$("allDay").onchange=()=>{
+ const on=$("allDay").checked;
+ $("timeRow").style.display=on?"none":"grid";
+ if(!on&&!$("startTime").value){const time=nowRounded();$("startTime").value=time;$("endTime").value=plusHour(time)}
 };
 $("startTime").onchange=()=>{if($("startTime").value)$("endTime").value=plusHour($("startTime").value)};
 $("startDate").onchange=()=>{
