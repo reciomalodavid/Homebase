@@ -1,4 +1,4 @@
-const SHELL_CACHE="homebase-calendar-update-14";
+const SHELL_CACHE="homebase-fab-selected-date-20260726";
 const RUNTIME_CACHE="homebase-calendar-update-14";
 const SHELL=["./","./index.html","./manifest.webmanifest","./apple-touch-icon.png","./icon-192.png","./icon-512.png"];
 self.addEventListener("install",e=>e.waitUntil(caches.open(SHELL_CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));

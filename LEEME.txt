@@ -12,3 +12,8 @@ Cambios incluidos:
 - Se conserva Firebase, el código familiar y la sincronización automática.
 
 Tras subirlos, espera unos minutos, cierra Homebase completamente y vuelve a abrirla.
+
+ACTUALIZACIÓN: BOTÓN + FLOTANTE
+- El botón + queda fijo sobre la barra inferior en Hoy y Calendario.
+- En Calendario usa como fecha inicial el día seleccionado.
+- Si no hay una selección útil, crea el evento con la fecha de hoy.

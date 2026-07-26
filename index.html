@@ -573,8 +573,20 @@ button:active,.sync-summary:active{transform:scale(.985)}
 .roster-mini{width:16px;height:16px;filter:none}.roster-mini svg{width:15px;height:15px}.roster-mini.flight{color:#3478b8}.roster-mini.standby{color:#7756b5}.roster-mini.off{color:#299765}.roster-mini.vacation{color:#e48a18}.roster-mini.other-duty{color:#82654e}
 .day.selected .roster-mini{background:transparent;box-shadow:none}
 
+/* Botón flotante para crear eventos */
+.event-fab{
+ position:fixed;right:max(18px,calc((100vw - 760px)/2 + 18px));bottom:calc(78px + env(safe-area-inset-bottom));
+ width:56px;height:56px;border:0;border-radius:50%;background:var(--accent);color:#fff;
+ display:grid;place-items:center;font-size:34px;font-weight:400;line-height:1;z-index:70;
+ box-shadow:0 10px 26px rgba(210,108,20,.28),0 2px 7px rgba(0,0,0,.12);
+ transition:transform .14s ease,opacity .18s ease,box-shadow .18s ease;
+}
+.event-fab:active{transform:scale(.94)}
+.event-fab[hidden]{display:none}
+@media(min-width:780px){.event-fab{right:calc((100vw - 760px)/2 + 18px)}}
+
 </style>
-<meta name="homebase-build" content="beta-1.2-clean">
+<meta name="homebase-build" content="homebase-fab-selected-date">
 </head>
 <body>
 <div class="app">
@@ -685,6 +697,8 @@ button:active,.sync-summary:active{transform:scale(.985)}
     </section>
   </main>
 </div>
+
+<button class="event-fab" id="eventFab" type="button" aria-label="Crear nuevo evento" title="Nuevo evento">＋</button>
 
 <nav class="bottom-nav">
   <button class="nav-btn active" data-page="todayPage"><span>⌂</span>Hoy</button>
@@ -1306,6 +1320,7 @@ function render(){
  renderRosterControls();
  document.querySelectorAll(".page").forEach(p=>p.classList.toggle("active",p.id===state.page));
  document.querySelectorAll(".nav-btn").forEach(b=>b.classList.toggle("active",b.dataset.page===state.page));
+ if($("eventFab")) $("eventFab").hidden=!["todayPage","calendarPage"].includes(state.page);
  if($("filterBadge")) $("filterBadge").textContent=state.visiblePeople.length;
  renderToday();
  renderTasks();
@@ -1392,8 +1407,8 @@ function setPeople(){
 }
 function nowRounded(){const n=new Date(),mins=Math.ceil((n.getHours()*60+n.getMinutes())/15)*15;return `${String(Math.floor((mins%1440)/60)).padStart(2,"0")}:${String(mins%60).padStart(2,"0")}`}
 function plusHour(t){const [h,m]=t.split(":").map(Number),v=(h*60+m+60)%1440;return `${String(Math.floor(v/60)).padStart(2,"0")}:${String(v%60).padStart(2,"0")}`}
-function resetEditor(type="event"){
- state.editingId=null;$("editorForm").reset();$("itemType").value=type;$("editorTitle").textContent="Nuevo";document.querySelectorAll("[data-type]").forEach(b=>b.classList.toggle("active",b.dataset.type===type));toggleType(type);$("advanced").classList.remove("open");const today=iso(new Date()),time=nowRounded();$("startDate").value=today;$("endDate").value=today;$("allDay").checked=false;$("timeRow").style.display=type==="event"?"grid":"none";$("startTime").value=time;$("endTime").value=plusHour(time);document.querySelectorAll("[name=repeatDay]").forEach(x=>x.checked=false);document.querySelectorAll("[name=eventPerson]").forEach(x=>x.checked=x.value==="Familia");document.querySelectorAll("[name=eventColor]").forEach(x=>x.checked=x.value==="#3a7be0");
+function resetEditor(type="event",preferredDate=null){
+ state.editingId=null;$("editorForm").reset();$("itemType").value=type;$("editorTitle").textContent="Nuevo";document.querySelectorAll("[data-type]").forEach(b=>b.classList.toggle("active",b.dataset.type===type));toggleType(type);$("advanced").classList.remove("open");const chosenDate=preferredDate instanceof Date&&!Number.isNaN(preferredDate.getTime())?iso(preferredDate):iso(new Date()),time=nowRounded();$("startDate").value=chosenDate;$("endDate").value=chosenDate;$("allDay").checked=false;$("timeRow").style.display=type==="event"?"grid":"none";$("startTime").value=time;$("endTime").value=plusHour(time);document.querySelectorAll("[name=repeatDay]").forEach(x=>x.checked=false);document.querySelectorAll("[name=eventPerson]").forEach(x=>x.checked=x.value==="Familia");document.querySelectorAll("[name=eventColor]").forEach(x=>x.checked=x.value==="#3a7be0");
  $("noDeadline").checked=false;
  $("startDate").disabled=false;
  $("startDate").required=true;
@@ -1409,7 +1424,7 @@ function toggleType(type){
  $("startDateLabel").textContent=event?"Empieza":"Fecha límite";
  $("startDate").required=event || !$("noDeadline").checked;
 }
-function openEditor(type="event"){resetEditor(type);$("editorDialog").showModal()}
+function openEditor(type="event",preferredDate=null){resetEditor(type,preferredDate);$("editorDialog").showModal()}
 function openEdit(item){
  state.editingId=item.id;$("editorTitle").textContent=item.type==="event"?"Editar evento":"Editar pendiente";$("itemType").value=item.type;document.querySelectorAll("[data-type]").forEach(b=>b.classList.toggle("active",b.dataset.type===item.type));toggleType(item.type);$("titleInput").value=item.title;
  $("noDeadline").checked=item.type==="task"&&!item.date;
@@ -1959,7 +1974,11 @@ document.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>{const t=new D
 $("prevPeriod").onclick=()=>{if(state.mode==="month")state.month=new Date(state.month.getFullYear(),state.month.getMonth()-1,1);else state.weekAnchor=addDays(state.weekAnchor,-7);renderCalendar();bindDynamic()};
 $("nextPeriod").onclick=()=>{if(state.mode==="month")state.month=new Date(state.month.getFullYear(),state.month.getMonth()+1,1);else state.weekAnchor=addDays(state.weekAnchor,7);renderCalendar();bindDynamic()};
 $("goToday").onclick=()=>{const t=new Date();state.month=new Date(t.getFullYear(),t.getMonth(),1);state.weekAnchor=t;state.selectedDate=t;state.mobileDayIndex=(t.getDay()+6)%7;renderCalendar();bindDynamic()};
-$("newToday").onclick=()=>openEditor("event");$("newCalendar").onclick=()=>openEditor("event");$("newTask").onclick=()=>openEditor("task");
+const preferredEventDate=()=>state.page==="calendarPage"&&state.selectedDate?new Date(state.selectedDate):new Date();
+$("newToday").onclick=()=>openEditor("event",new Date());
+$("newCalendar").onclick=()=>openEditor("event",preferredEventDate());
+$("eventFab").onclick=()=>openEditor("event",preferredEventDate());
+$("newTask").onclick=()=>openEditor("task");
 $("filterBtn").onclick=()=>{renderFilters();$("filterDialog").showModal();bindDynamic()};$("openFiltersRow").onclick=$("filterBtn").onclick;
 $("trashBtn").onclick=()=>{renderTrash();$("trashDialog").showModal();bindDynamic()};
 $("openTrashRow").onclick=$("trashBtn").onclick;
