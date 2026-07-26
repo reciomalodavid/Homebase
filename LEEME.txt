@@ -1,8 +1,13 @@
-HOMEBASE · SINCRONIZACIÓN FAMILIAR
+HOMEBASE — ACTUALIZACIÓN APPLE + SINCRONIZACIÓN AUTOMÁTICA
 
-1. Sube todos estos archivos a la raíz del repositorio y reemplaza los anteriores.
-2. Espera 2-3 minutos y cierra/abre Homebase.
-3. En Más > Sincronización familiar, pulsa Crear código en el dispositivo principal.
-4. En el segundo dispositivo, escribe ese código y pulsa Vincular.
+1. Sube todos estos archivos a la raíz del repositorio de GitHub.
+2. Reemplaza los archivos existentes y confirma el commit.
+3. Espera 2–3 minutos, cierra Homebase por completo y vuelve a abrirla.
 
-Se sincronizan eventos, pendientes, perfiles y roster convertido. El PDF original nunca se sube.
+Cambios:
+- Sincronización familiar minimizada y desplegable corregido.
+- Listener en tiempo real conservado.
+- Actualización automática al volver a la app, recuperar internet y cada 30 segundos mientras está abierta.
+- Botón «Actualizar y sincronizar» para forzar una comprobación inmediata.
+- Iconos del roster refinados; vacaciones ahora usa un sol claro.
+- Ajustes visuales y animaciones más próximos a iOS.

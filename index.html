@@ -544,6 +544,20 @@ input,select,textarea{width:100%;padding:13px;border:1px solid var(--line);borde
  .roster-actions{grid-template-columns:1fr}
  .roster-option-row{padding:14px}
 }
+
+/* Pulido Apple y sincronización automática */
+:root{--apple-blue:#0a84ff;--apple-green:#30d158;--apple-red:#ff453a;--apple-gray:#8e8e93}
+.section,.card,.roster-card{box-shadow:0 8px 24px rgba(55,45,35,.055);border-color:rgba(90,72,54,.09)}
+button,.nav-btn,.sync-summary{-webkit-tap-highlight-color:transparent}
+button:active,.sync-summary:active{transform:scale(.985)}
+.sync-summary{border-radius:18px;transition:background .18s ease,transform .12s ease}.sync-summary:hover{background:rgba(120,110,100,.045)}
+.sync-details{animation:syncReveal .2s ease both}.sync-section.open .sync-details{display:grid}
+@keyframes syncReveal{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.sync-actions button{min-height:42px;background:rgba(120,120,128,.12);font-weight:750}.sync-actions button.primary{background:var(--apple-blue)}
+#syncNow{background:rgba(10,132,255,.12);color:#0876df}#unlinkSync{color:var(--apple-red)}
+.roster-mini{width:16px;height:16px;filter:none}.roster-mini svg{width:15px;height:15px}.roster-mini.flight{color:#3478b8}.roster-mini.standby{color:#7756b5}.roster-mini.off{color:#299765}.roster-mini.vacation{color:#e48a18}.roster-mini.other-duty{color:#82654e}
+.day.selected .roster-mini{background:transparent;box-shadow:none}
+
 </style>
 <meta name="homebase-build" content="beta-1.2-clean">
 </head>
@@ -648,7 +662,7 @@ input,select,textarea{width:100%;padding:13px;border:1px solid var(--line);borde
             <div class="sync-code" id="syncCodeDisplay" hidden></div>
             <div class="sync-actions" id="syncCreateActions"><button class="primary" id="createSyncCode" type="button">Crear código</button></div>
             <div class="sync-link-row" id="syncLinkRow"><input id="syncCodeInput" maxlength="12" autocomplete="off" placeholder="Código de otro dispositivo"><button class="roster-primary" id="linkSyncCode" type="button">Vincular</button></div>
-            <div class="sync-actions" id="syncLinkedActions" hidden><button id="copySyncCode" type="button">Copiar código</button><button id="syncNow" type="button">Sincronizar ahora</button><button id="unlinkSync" type="button">Desvincular</button></div>
+            <div class="sync-actions" id="syncLinkedActions" hidden><button id="copySyncCode" type="button">Copiar código</button><button id="syncNow" type="button">Actualizar y sincronizar</button><button id="unlinkSync" type="button">Desvincular</button></div>
             <span id="syncBadge" hidden>Sin vincular</span>
           </div>
         </div>
@@ -934,7 +948,7 @@ function rosterMiniIcon(kind){
   flight:'<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M21.6 11.2 14.3 8V3.7c0-.9-.7-1.7-1.7-1.7s-1.7.8-1.7 1.7V8L3.6 11.2c-.5.2-.8.7-.8 1.2s.3 1 .8 1.2l7.3 3.2v3.5l-2.1 1.4v1.1l3.8-1.1 3.8 1.1v-1.1l-2.1-1.4v-3.5l7.3-3.2c.5-.2.8-.7.8-1.2s-.3-1-.8-1.2Z"/></svg>',
   standby:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="currentColor" opacity=".16"/><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><text x="12" y="15.2" text-anchor="middle" font-size="9.5" font-family="-apple-system,BlinkMacSystemFont,Arial" font-weight="800" fill="currentColor">S</text></svg>',
   off:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="currentColor" opacity=".16"/><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m8.2 12.1 2.4 2.5 5.3-5.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-  vacation:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="17.5" cy="6.5" r="3" fill="currentColor" opacity=".9"/><path d="M7.5 21c.8-5.2 1.8-9.1 4.7-12.1M11.8 9c-2.4-.4-4.1.2-5.4 2M12.2 9c1.8-1.8 3.7-2.3 5.8-1.4M12 9.2c.2-2.3-.7-3.9-2.5-5M12.1 9.2c2.1-1.1 3.3-2.7 3.5-4.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M4 21h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+  vacation:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="currentColor" opacity=".18"/><circle cx="12" cy="12" r="3.7" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M18.5 5.5l-1.7 1.7M7.2 16.8l-1.7 1.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
   other:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="7" width="16" height="12" rx="2.2" fill="currentColor" opacity=".18"/><rect x="4" y="7" width="16" height="12" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9 7V5.5h6V7M4 11.5h16M10.5 11.5v1.7h3v-1.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>'
  };
  const normalized=(kind==="training"||kind==="ground")?"other":kind;
@@ -1419,7 +1433,7 @@ function openDetail(id,dateIso){
 }else rows+=detailRow("Fecha límite",item.date?fmtDate(parseDate(item.date)):"Sin fecha límite");rows+=detailRow("Estado",item.done?"Completada":"Pendiente");if(item.notes)rows+=detailRow("Notas",item.notes);$("detailGrid").innerHTML=rows;$("detailDialog").showModal()
 }
 function ask(title,text,buttons){$("confirmTitle").textContent=title;$("confirmText").textContent=text;$("confirmActions").innerHTML=buttons.map(b=>`<button class="${b.cls}" data-confirm="${b.key}">${b.label}</button>`).join("");$("confirmDialog").showModal();document.querySelectorAll("[data-confirm]").forEach(b=>b.onclick=()=>{$("confirmDialog").close();state.confirmAction?.(b.dataset.confirm)})}
-function confirmComplete(item){state.confirmAction=key=>{if(key==="yes"){item.done=true;item.completedAt=Date.now();save()}};ask("¿Marcar como completada?",`Se marcará "${item.title}" como completada.`,[{key:"no",label:"Cancelar",cls:"cancel-btn"},{key:"yes",label:"Sí, completada",cls:"complete-btn"}])}
+function confirmComplete(item){state.confirmAction=key=>{if(key==="yes"){item.done=true;item.completedAt=Date.now();item.updatedAt=Date.now();save()}};ask("¿Marcar como completada?",`Se marcará "${item.title}" como completada.`,[{key:"no",label:"Cancelar",cls:"cancel-btn"},{key:"yes",label:"Sí, completada",cls:"complete-btn"}])}
 function confirmDelete(item,dateIso){state.confirmAction=key=>{if(key==="one"){item.exceptions.push(dateIso);save()}if(key==="all"){item.deletedAt=Date.now();item.updatedAt=Date.now();save()}};const recurring=["weekly","yearly"].includes(item.repeat);ask(recurring?"¿Qué quieres borrar?":"¿Borrar elemento?",recurring?`"${item.title}" forma parte de una serie.`:`"${item.title}" irá a la papelera.`,recurring?[{key:"one",label:"Solo este día",cls:"edit-btn"},{key:"all",label:"Toda la serie",cls:"delete-btn"}]:[{key:"no",label:"Cancelar",cls:"cancel-btn"},{key:"all",label:"Borrar",cls:"delete-btn"}])}
 
 
@@ -1450,7 +1464,7 @@ function renderSyncControls(){
  dot.className="sync-dot"+(state.syncStatus==="ok"?" ok":state.syncStatus==="saving"?" wait":state.syncStatus==="error"?" error":"");
  $("syncStatusTitle").textContent=!linked?"Guardado solo en este dispositivo":state.syncStatus==="saving"?"Sincronizando…":state.syncStatus==="error"?"No se ha podido sincronizar":"Sincronización activa";
  $("syncStatusText").textContent=!linked?"Crea un código o introduce el de otro dispositivo.":(state.syncStatusText||"Los cambios se comparten automáticamente.");
- if($("syncSummaryText")) $("syncSummaryText").textContent=!linked?"Sin vincular":state.syncStatus==="saving"?"Sincronizando…":state.syncStatus==="error"?"Error de sincronización":"Sincronización activa";
+ if($("syncSummaryText")) $("syncSummaryText").textContent=!linked?"Sin vincular":state.syncStatus==="saving"?"Sincronizando…":state.syncStatus==="error"?"Error de sincronización":"Sincronización activa · automática";
 }
 async function writeCloud(){
  if(!cloudDb||!state.syncCode)return;
@@ -1458,6 +1472,33 @@ async function writeCloud(){
  try{await syncDoc().set(cloudPayload(),{merge:true});setSyncStatus("ok","Últimos cambios sincronizados.")}catch(error){console.error(error);setSyncStatus("error","Comprueba la conexión y las reglas de Firestore.")}
 }
 function scheduleCloudSave(){if(!state.syncCode||state.applyingRemote)return;clearTimeout(cloudSaveTimer);cloudSaveTimer=setTimeout(writeCloud,500)}
+async function refreshFromCloud(showStatus=true){
+ if(!cloudDb||!state.syncCode)return;
+ if(showStatus)setSyncStatus("saving","Buscando cambios de la familia…");
+ try{
+  const snap=await syncDoc().get({source:"server"});
+  if(!snap.exists){if(showStatus)setSyncStatus("ok","No hay datos nuevos.");return}
+  const data=snap.data()||{};
+  state.applyingRemote=true;
+  const before=JSON.stringify(state.items);
+  state.items=mergeItems(state.items,data.items||[]);
+  if(data.rosterMeta)state.rosterMeta=data.rosterMeta;
+  if(data.profilePhotos)Object.assign(profilePhotos,data.profilePhotos);
+  localStorage.setItem("homebase_v2_items",JSON.stringify(state.items));
+  localStorage.setItem("homebase_roster_meta",JSON.stringify(state.rosterMeta));
+  localStorage.setItem("homebase_profile_photos",JSON.stringify(profilePhotos));
+  state.applyingRemote=false;
+  if(JSON.stringify(state.items)!==before)render();
+  if(showStatus)setSyncStatus("ok","Actualizado ahora mismo.");
+ }catch(error){console.error(error);state.applyingRemote=false;if(showStatus)setSyncStatus("error","No se pudo actualizar. Comprueba la conexión.")}
+}
+let autoRefreshTimer=null;
+function startAutoRefresh(){
+ clearInterval(autoRefreshTimer);
+ autoRefreshTimer=setInterval(()=>{if(document.visibilityState==="visible"&&navigator.onLine&&state.syncCode)refreshFromCloud(false)},30000);
+}
+function refreshWhenActive(){if(document.visibilityState==="visible"&&navigator.onLine&&state.syncCode)refreshFromCloud(false)}
+
 function startCloudListener(){
  if(state.syncUnsubscribe)state.syncUnsubscribe();if(!cloudDb||!state.syncCode)return;
  state.syncUnsubscribe=syncDoc().onSnapshot(snap=>{
@@ -1883,9 +1924,14 @@ $("createSyncCode").onclick=createFamilySync;
 $("linkSyncCode").onclick=linkFamilySync;
 $("syncCodeInput").oninput=e=>e.target.value=cleanSyncCode(e.target.value);
 $("copySyncCode").onclick=async()=>{try{await navigator.clipboard.writeText(state.syncCode);alert("Código copiado: "+state.syncCode)}catch{prompt("Copia este código",state.syncCode)}};
-$("syncNow").onclick=writeCloud;
+$("syncNow").onclick=async()=>{await refreshFromCloud(true);await writeCloud()};
 $("unlinkSync").onclick=unlinkFamilySync;
-if(state.syncCode)startCloudListener();
+$("syncSummary").onclick=()=>{const section=$("syncSection"),open=!section.classList.contains("open");section.classList.toggle("open",open);$("syncSummary").setAttribute("aria-expanded",String(open))};
+document.addEventListener("visibilitychange",refreshWhenActive);
+window.addEventListener("focus",refreshWhenActive);
+window.addEventListener("online",refreshWhenActive);
+startAutoRefresh();
+if(state.syncCode){startCloudListener();refreshWhenActive()}
 
 function openRosterDialog(){
  resetRosterPreview();updateRosterEnvironmentStatus();renderRosterControls();
@@ -1912,7 +1958,7 @@ $("deleteItem").onclick=()=>{const item=state.items.find(i=>i.id===state.detailI
 $("restoreFromTrashDetail").onclick=()=>{
  const item=state.items.find(i=>i.id===state.trashDetailId);
  if(!item)return;
- item.deletedAt=null;
+ item.deletedAt=null;item.updatedAt=Date.now();
  $("trashDetailDialog").close();
  save();
 };
