@@ -1,13 +1,14 @@
-HOMEBASE — ACTUALIZACIÓN APPLE + SINCRONIZACIÓN AUTOMÁTICA
+HOMEBASE · ACTUALIZACIÓN DE CALENDARIO
 
-1. Sube todos estos archivos a la raíz del repositorio de GitHub.
-2. Reemplaza los archivos existentes y confirma el commit.
-3. Espera 2–3 minutos, cierra Homebase por completo y vuelve a abrirla.
+Sube todos estos archivos a la raíz del repositorio de GitHub y reemplaza los existentes.
 
-Cambios:
-- Sincronización familiar minimizada y desplegable corregido.
-- Listener en tiempo real conservado.
-- Actualización automática al volver a la app, recuperar internet y cada 30 segundos mientras está abierta.
-- Botón «Actualizar y sincronizar» para forzar una comprobación inmediata.
-- Iconos del roster refinados; vacaciones ahora usa un sol claro.
-- Ajustes visuales y animaciones más próximos a iOS.
+Cambios incluidos:
+- Los iconos del roster mantienen una posición fija aunque haya barras de eventos de varios días.
+- Los eventos de varios días permiten escoger el color de su barra.
+- Un evento puede asignarse a varios miembros de la familia.
+- Al volver a Calendario o cambiar entre Mes y Semana se regresa al periodo actual.
+- Nueva repetición mensual en el mismo día del mes.
+- Se mantienen la repetición semanal por días concretos y la repetición anual.
+- Se conserva Firebase, el código familiar y la sincronización automática.
+
+Tras subirlos, espera unos minutos, cierra Homebase completamente y vuelve a abrirla.
