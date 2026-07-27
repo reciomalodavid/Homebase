@@ -1413,6 +1413,22 @@ function matches(item,dateIso){
  return dateIso>=item.date&&dateIso<=(item.endDate||item.date);
 }
 function rosterItemVisible(i){if(i.source!=="roster")return true;if(!state.rosterVisible)return false;const k=i.rosterData?.kind;if(k==="off"&&!state.rosterSettings.showOffs)return false;if(k==="vacation"&&!state.rosterSettings.showVacations)return false;return true}
+function rosterRouteFromData(r){
+ const flights=(r?.flights||[]).filter(f=>!f.dh);
+ const usable=flights.length?flights:(r?.flights||[]);
+ if(!usable.length)return r?.route||"";
+ const first=usable[0];
+ if(usable.length===1)return `${first.dep||""} → ${first.arr||""}`.trim();
+ const last=usable.at(-1);
+ if(usable.length===2&&last?.arr===first?.dep)return `${first.dep} ⇄ ${first.arr}`;
+ const sequence=[first.dep,...usable.map(f=>f.arr)].filter(Boolean);
+ return sequence.join(" → ");
+}
+function rosterDisplayTitle(itemOrRoster,fallback=""){
+ const r=itemOrRoster?.rosterData||itemOrRoster||{};
+ if(r.kind==="flight"||r.flights?.length){const route=rosterRouteFromData(r);return route?`✈ ${route}`:(fallback||"✈ Duty de vuelo");}
+ return fallback||itemOrRoster?.title||r.title||"Roster";
+}
 function eventsOn(dateIso){return state.items.filter(i=>i.type==="event"&&itemVisible(i)&&rosterItemVisible(i)&&matches(i,dateIso)).sort((a,b)=>(a.time||"23:59").localeCompare(b.time||"23:59"))}
 function tasksVisible(){return state.items.filter(i=>i.type==="task"&&!i.deletedAt&&itemVisible(i))}
 
@@ -1422,7 +1438,7 @@ function eventRow(item,dateIso){
  if(item.source==="roster"){
    const r=item.rosterData||{};
    const meta=r.kind==="flight"?(r.route||"Duty de vuelo"):r.kind==="standby"?"Disponibilidad":r.kind==="vacation"?"Vacaciones":r.kind==="off"?"Día libre":r.kind==="training"?(r.code||"Formación"):"Roster";
-   return `<div class="event-row" data-id="${item.id}" data-date="${dateIso}" style="--person-color:#5d82ad"><div class="event-time">${time}</div><div class="event-bar"></div><div><div class="event-title">${esc(item.title)} <span class="roster-badge">ROSTER</span></div><div class="event-meta">${esc(meta)}</div></div><div style="display:flex;align-items:center;gap:7px"><span class="avatar" style="--person-color:#5d82ad">✈</span><button class="row-action" data-delete="${item.id}" data-date="${dateIso}">⋯</button></div></div>`;
+   return `<div class="event-row" data-id="${item.id}" data-date="${dateIso}" style="--person-color:#5d82ad"><div class="event-time">${time}</div><div class="event-bar"></div><div><div class="event-title">${esc(rosterDisplayTitle(item,item.title))} <span class="roster-badge">ROSTER</span></div><div class="event-meta">${esc(meta)}</div></div><div style="display:flex;align-items:center;gap:7px"><span class="avatar" style="--person-color:#5d82ad">✈</span><button class="row-action" data-delete="${item.id}" data-date="${dateIso}">⋯</button></div></div>`;
  }
  return `<div class="event-row" data-id="${item.id}" data-date="${dateIso}" style="--person-color:${itemColor(item)}">
  <div class="event-time">${time}</div><div class="event-bar"></div><div><div class="event-title">${esc(item.title)}</div><div class="event-meta">${esc(itemPeopleLabel(item))} · ${esc(item.category)}${item.repeat==="weekly"?" · Semanal":item.repeat==="monthly"?" · Mensual":item.repeat==="yearly"?" · Anual":""}</div></div><div style="display:flex;align-items:center;gap:7px">${eventAvatarHtml(item)}<button class="row-action" data-delete="${item.id}" data-date="${dateIso}">⋯</button></div></div>`;
@@ -1915,7 +1931,7 @@ function openEdit(item){
 }
 function detailRow(label,val){return `<div class="detail-row"><div class="detail-label">${label}</div><div class="detail-value">${esc(val)}</div></div>`}
 function openDetail(id,dateIso){
- const item=state.items.find(i=>i.id===id);if(!item)return;state.detailId=id;state.detailDate=dateIso;$("detailTitle").textContent=item.title;let rows="";
+ const item=state.items.find(i=>i.id===id);if(!item)return;state.detailId=id;state.detailDate=dateIso;$("detailTitle").textContent=item.source==="roster"?rosterDisplayTitle(item,item.title):item.title;let rows="";
  if(item.source==="roster"){
    const r=item.rosterData||{};
    rows+=detailRow("Fecha",item.date===(item.endDate||item.date)?fmtDate(parseDate(item.date)):`${fmtDate(parseDate(item.date))} → ${fmtDate(parseDate(item.endDate))}`);
@@ -2075,7 +2091,7 @@ async function linkFamilySync(){
 }
 function unlinkFamilySync(){if(!confirm("¿Desvincular este dispositivo? Los datos locales no se borrarán."))return;if(state.syncUnsubscribe)state.syncUnsubscribe();state.syncUnsubscribe=null;state.syncCode="";localStorage.removeItem("homebase_sync_code");state.syncStatus="idle";render()}
 
-window.HOMEBASE_VERSION="1.4.2";
+window.HOMEBASE_VERSION="1.4.4";
 const RosterParser=(()=>{
 const AIRPORT_TZ={
 PMI:'Europe/Madrid',BCN:'Europe/Madrid',MAD:'Europe/Madrid',AGP:'Europe/Madrid',ALC:'Europe/Madrid',VLC:'Europe/Madrid',SVQ:'Europe/Madrid',BIO:'Europe/Madrid',IBZ:'Europe/Madrid',MAH:'Europe/Madrid',GRO:'Europe/Madrid',REU:'Europe/Madrid',SCQ:'Europe/Madrid',OVD:'Europe/Madrid',VGO:'Europe/Madrid',ZAZ:'Europe/Madrid',XRY:'Europe/Madrid',LEI:'Europe/Madrid',SDR:'Europe/Madrid',RMU:'Europe/Madrid',
@@ -2446,8 +2462,8 @@ function renderPendingRoster(plan,doc){
  $("rosterPreview").hidden=false;$("rosterPreviewPeriod").textContent=p.period;
  $("rosterSummary").innerHTML=`<div class="roster-stat"><strong>${r.total}</strong><span>Duties</span></div><div class="roster-stat"><strong>${work}</strong><span>Trabajo</span></div><div class="roster-stat"><strong>${rest}</strong><span>Libres/vac.</span></div><div class="roster-stat"><strong>${r.changes}</strong><span>Cambios</span></div>`;
  const labels={new:"NUEVO",changed:"CAMBIO",same:"IGUAL"};
- $("rosterPreviewList").innerHTML=plan.preview.map(({item,status})=>{const d=item.rosterData;return `<div class="roster-preview-duty"><div class="roster-preview-date">${esc(formatRosterPreviewDate(item.date))}</div><div><div class="roster-preview-title">${esc(item.title)}</div><div class="roster-preview-meta">${esc(rosterPreviewMeta(d))}</div><span class="sync-pill ${status}">${labels[status]}</span></div><div class="roster-preview-time">${esc(item.time||"Todo el día")}${item.endTime?`–${esc(item.endTime)}`:""}</div></div>`}).join("");
- const diag=[`Homebase: ${window.HOMEBASE_VERSION} · Parser 5.4`,`Archivo: ${plan.fileName}`,`Páginas leídas: ${doc.pageCount}`,`Periodo: ${p.period}`,`Duties detectados: ${r.total}`,`Líneas no interpretadas: ${p.unrecognized.length}`,`Aeropuertos sin zona horaria conocida: ${p.unknownAirports.length?p.unknownAirports.join(", "):"ninguno"}`,`Cambios previstos: ${r.added} nuevos · ${r.changed} modificados · ${r.removed} retirados · ${r.unchanged} iguales`];if(p.unrecognized.length)diag.push("","Líneas a revisar:",...p.unrecognized);
+ $("rosterPreviewList").innerHTML=plan.preview.map(({item,status})=>{const d=item.rosterData;return `<div class="roster-preview-duty"><div class="roster-preview-date">${esc(formatRosterPreviewDate(item.date))}</div><div><div class="roster-preview-title">${esc(rosterDisplayTitle(item,item.title))}</div><div class="roster-preview-meta">${esc(rosterPreviewMeta(d))}</div><span class="sync-pill ${status}">${labels[status]}</span></div><div class="roster-preview-time">${esc(item.time||"Todo el día")}${item.endTime?`–${esc(item.endTime)}`:""}</div></div>`}).join("");
+ const diag=[`Homebase: ${window.HOMEBASE_VERSION} · Parser 5.5`,`Archivo: ${plan.fileName}`,`Páginas leídas: ${doc.pageCount}`,`Periodo: ${p.period}`,`Duties detectados: ${r.total}`,`Líneas no interpretadas: ${p.unrecognized.length}`,`Aeropuertos sin zona horaria conocida: ${p.unknownAirports.length?p.unknownAirports.join(", "):"ninguno"}`,`Cambios previstos: ${r.added} nuevos · ${r.changed} modificados · ${r.removed} retirados · ${r.unchanged} iguales`];if(p.unrecognized.length)diag.push("","Líneas a revisar:",...p.unrecognized);
  $("rosterDiagnosticsBody").textContent=diag.join("\n");$("applyRosterImport").textContent=r.changes?`Aplicar ${r.changes} cambios al calendario`:"Confirmar roster sin cambios";$("applyRosterImport").disabled=false;
 }
 function resetRosterPreview(){state.pendingRosterImport=null;$("rosterPreview").hidden=true;$("rosterSummary").innerHTML="";$("rosterPreviewList").innerHTML="";$("rosterDiagnosticsBody").textContent=""}
@@ -2466,7 +2482,7 @@ function applyPendingRoster(){
  const tombstoneMap=new Map();
  for(const t of [...(plan.tombstones||[]),...removedTombstones]){const key=t.id||rosterUidOf(t);const prev=tombstoneMap.get(key);if(!prev||Number(t.updatedAt||t.deletedAt||0)>Number(prev.updatedAt||prev.deletedAt||0))tombstoneMap.set(key,t)}
  state.items=[...plan.manual,...plan.outside,...tombstoneMap.values(),...incoming];
- state.rosterMeta={period:plan.parsed.period,periodStart:plan.parsed.periodStart,periodEnd:plan.parsed.periodEnd,fileName:plan.fileName,updatedAt:now,parserVersion:"5.3",appVersion:window.HOMEBASE_VERSION,activeRosterUids:incoming.map(rosterUidOf),counts:plan.result};
+ state.rosterMeta={period:plan.parsed.period,periodStart:plan.parsed.periodStart,periodEnd:plan.parsed.periodEnd,fileName:plan.fileName,updatedAt:now,parserVersion:"5.5",appVersion:window.HOMEBASE_VERSION,activeRosterUids:incoming.map(rosterUidOf),counts:plan.result};
  localStorage.setItem("homebase_roster_meta",JSON.stringify(state.rosterMeta));save();
  const r=plan.result;resetRosterPreview();$("rosterImportStatus").className="roster-status ok";$("rosterImportStatus").textContent=`Roster aplicado: ${r.added} nuevos, ${r.changed} modificados y ${r.removed} retirados. Los cambios se sincronizarán con los demás dispositivos. El PDF no se ha guardado.`;renderRosterControls();
 }
