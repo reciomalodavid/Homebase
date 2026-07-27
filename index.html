@@ -2192,8 +2192,14 @@ function parseRosterDocument(doc){
   }
   if(r.kind==='flight'){
    const first=r.flights[0],last=r.flights.at(-1);
-   if(r.flights.length===2&&first&&last&&last.arr===first.dep)r.route=`${first.dep} ⇄ ${first.arr}`;
-   else if(first&&last)r.route=`${first.dep} → ${last.arr}`;
+   if(r.flights.length===2&&first&&last&&last.arr===first.dep){
+    r.route=`${first.dep} ⇄ ${first.arr}`;
+   }else if(r.flights.length>1&&first){
+    // Para duties con varios sectores mostramos la secuencia completa, no solo el destino final.
+    // Ejemplo: PMI → SCN → PMI → FMO.
+    const sequence=[first.dep,...r.flights.map(f=>f.arr)].filter(Boolean);
+    r.route=sequence.join(' → ');
+   }else if(first&&last)r.route=`${first.dep} → ${last.arr}`;
    else r.route='Duty de vuelo';
    const extra=r.activityLabels.length?` · ${r.activityLabels.join(' + ')}`:'';
    r.title=`✈ ${r.route}${extra}`;
@@ -2441,7 +2447,7 @@ function renderPendingRoster(plan,doc){
  $("rosterSummary").innerHTML=`<div class="roster-stat"><strong>${r.total}</strong><span>Duties</span></div><div class="roster-stat"><strong>${work}</strong><span>Trabajo</span></div><div class="roster-stat"><strong>${rest}</strong><span>Libres/vac.</span></div><div class="roster-stat"><strong>${r.changes}</strong><span>Cambios</span></div>`;
  const labels={new:"NUEVO",changed:"CAMBIO",same:"IGUAL"};
  $("rosterPreviewList").innerHTML=plan.preview.map(({item,status})=>{const d=item.rosterData;return `<div class="roster-preview-duty"><div class="roster-preview-date">${esc(formatRosterPreviewDate(item.date))}</div><div><div class="roster-preview-title">${esc(item.title)}</div><div class="roster-preview-meta">${esc(rosterPreviewMeta(d))}</div><span class="sync-pill ${status}">${labels[status]}</span></div><div class="roster-preview-time">${esc(item.time||"Todo el día")}${item.endTime?`–${esc(item.endTime)}`:""}</div></div>`}).join("");
- const diag=[`Homebase: ${window.HOMEBASE_VERSION} · Parser 5.3`,`Archivo: ${plan.fileName}`,`Páginas leídas: ${doc.pageCount}`,`Periodo: ${p.period}`,`Duties detectados: ${r.total}`,`Líneas no interpretadas: ${p.unrecognized.length}`,`Aeropuertos sin zona horaria conocida: ${p.unknownAirports.length?p.unknownAirports.join(", "):"ninguno"}`,`Cambios previstos: ${r.added} nuevos · ${r.changed} modificados · ${r.removed} retirados · ${r.unchanged} iguales`];if(p.unrecognized.length)diag.push("","Líneas a revisar:",...p.unrecognized);
+ const diag=[`Homebase: ${window.HOMEBASE_VERSION} · Parser 5.4`,`Archivo: ${plan.fileName}`,`Páginas leídas: ${doc.pageCount}`,`Periodo: ${p.period}`,`Duties detectados: ${r.total}`,`Líneas no interpretadas: ${p.unrecognized.length}`,`Aeropuertos sin zona horaria conocida: ${p.unknownAirports.length?p.unknownAirports.join(", "):"ninguno"}`,`Cambios previstos: ${r.added} nuevos · ${r.changed} modificados · ${r.removed} retirados · ${r.unchanged} iguales`];if(p.unrecognized.length)diag.push("","Líneas a revisar:",...p.unrecognized);
  $("rosterDiagnosticsBody").textContent=diag.join("\n");$("applyRosterImport").textContent=r.changes?`Aplicar ${r.changes} cambios al calendario`:"Confirmar roster sin cambios";$("applyRosterImport").disabled=false;
 }
 function resetRosterPreview(){state.pendingRosterImport=null;$("rosterPreview").hidden=true;$("rosterSummary").innerHTML="";$("rosterPreviewList").innerHTML="";$("rosterDiagnosticsBody").textContent=""}

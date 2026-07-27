@@ -1,5 +1,5 @@
-const SHELL_CACHE="homebase-1-4-2-shell-20260727";
-const RUNTIME_CACHE="homebase-1-4-2-runtime-20260727";
+const SHELL_CACHE="homebase-1-4-3-shell-20260727";
+const RUNTIME_CACHE="homebase-1-4-3-runtime-20260727";
 const SHELL=["./","./index.html","./manifest.webmanifest","./apple-touch-icon.png","./icon-192.png","./icon-512.png"];
 self.addEventListener("install",e=>e.waitUntil(caches.open(SHELL_CACHE).then(c=>c.addAll(SHELL.map(u=>new Request(u,{cache:"reload"})))).then(()=>self.skipWaiting())));
 self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith("homebase-")&&![SHELL_CACHE,RUNTIME_CACHE].includes(k)).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));

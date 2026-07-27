@@ -1,6 +1,5 @@
-Homebase 1.4.2 — corrección real de parser, comparación y caché
+Homebase 1.4.3
 
-- Ignora DT/BT/DP/FDP en títulos.
-- Recupera sectores que el PDF deja como línea residual.
-- Los tombstones no cuentan como cambios al reimportar.
-- Fuerza actualización del service worker.
+Cambio: los duties de varios sectores muestran la secuencia completa de aeropuertos en el título.
+Ejemplo: PMI → SCN → PMI → FMO.
+No se modifica la sincronización, Firebase ni el resto de la lógica.
