@@ -1,4 +1,4 @@
-Homebase 1.5.0 — Roster Parser 6.0
+Homebase 1.5.1 — Roster Parser 6.0
 
 Sube estos 7 archivos a la raíz del repositorio y reemplaza los anteriores.
-Después cierra la PWA por completo y vuelve a abrirla. En el diagnóstico debe aparecer: Homebase 1.5.0 · Parser 6.0.
+Después cierra la PWA por completo y vuelve a abrirla. En el diagnóstico debe aparecer: Homebase 1.5.1 · Parser 6.0.

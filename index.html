@@ -1993,7 +1993,26 @@ function cleanSyncCode(value){return (value||"").toUpperCase().replace(/[^A-Z0-9
 function createCode(){const alphabet="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";let code="HB";for(let i=0;i<8;i++)code+=alphabet[Math.floor(Math.random()*alphabet.length)];return code}
 function syncDoc(code=state.syncCode){return cloudDb?.collection("homebaseSyncs").doc(code)}
 function cloudPayload(){return {version:1,items:state.items,rosterMeta:state.rosterMeta||null,profilePhotos:{...profilePhotos},updatedAt:Date.now()}}
-function mergeItems(localItems,remoteItems){const map=new Map();for(const item of [...(localItems||[]),...(remoteItems||[])]){const prev=map.get(item.id);if(!prev||(item.updatedAt||0)>=(prev.updatedAt||0))map.set(item.id,item)}return [...map.values()]}
+function rosterCanonicalKey(item){
+ const r=item?.rosterData||{},date=r.sourceDate||item?.date||"",kind=r.kind||"ground";
+ const flights=(r.flights||[]).map(f=>`${f.number||""}:${f.dep||""}-${f.arr||""}`).join(">");
+ if(flights)return `${date}|${kind}|${flights}`;
+ const activities=(r.activities||[]).map(a=>`${a.code||""}:${a.airport||""}:${a.startUtc||""}-${a.endUtc||""}`).join(">");
+ if(activities)return `${date}|${kind}|${activities}`;
+ return `${date}|${kind}|${r.code||""}|${r.ciUtc||r.startUtc||""}|${r.coUtc||r.endUtc||""}`;
+}
+function dedupeRosterItems(items){
+ const manual=[],rosterMap=new Map();
+ for(const item of items||[]){
+  if(item?.source!=="roster"){manual.push(item);continue}
+  const key=rosterCanonicalKey(item),prev=rosterMap.get(key);
+  const itemStamp=Number(item.updatedAt||item.deletedAt||0),prevStamp=Number(prev?.updatedAt||prev?.deletedAt||0);
+  if(!prev||itemStamp>prevStamp||(itemStamp===prevStamp&&!item.deletedAt&&prev.deletedAt))rosterMap.set(key,item);
+ }
+ return [...manual,...rosterMap.values()];
+}
+function hasRosterDuplicates(items){const seen=new Set();for(const item of items||[]){if(item?.source!=="roster")continue;const key=rosterCanonicalKey(item);if(seen.has(key))return true;seen.add(key)}return false}
+function mergeItems(localItems,remoteItems){const map=new Map();for(const item of [...(localItems||[]),...(remoteItems||[])]){const prev=map.get(item.id);if(!prev||(item.updatedAt||0)>=(prev.updatedAt||0))map.set(item.id,item)}return dedupeRosterItems([...map.values()])}
 function reconcileRosterSnapshot(items,meta){
  const active=Array.isArray(meta?.activeRosterUids)?new Set(meta.activeRosterUids):null;
  if(!active||!meta?.periodStart||!meta?.periodEnd)return items;
@@ -2039,7 +2058,7 @@ async function refreshFromCloud(showStatus=true){
  try{
   const snap=await syncDoc().get({source:"server"});
   if(!snap.exists){if(showStatus)setSyncStatus("ok","No hay datos nuevos.");return}
-  const data=snap.data()||{};
+  const data=snap.data()||{},cloudHadRosterDuplicates=hasRosterDuplicates(data.items||[]);
   state.applyingRemote=true;
   const before=JSON.stringify(state.items);
   applyRemotePayload(data);
@@ -2048,7 +2067,8 @@ async function refreshFromCloud(showStatus=true){
   localStorage.setItem("homebase_profile_photos",JSON.stringify(profilePhotos));
   state.applyingRemote=false;
   if(JSON.stringify(state.items)!==before)render();
-  if(showStatus)setSyncStatus("ok","Actualizado ahora mismo.");
+  if(cloudHadRosterDuplicates)scheduleCloudSave();
+  if(showStatus)setSyncStatus("ok",cloudHadRosterDuplicates?"Duplicados del roster corregidos y sincronizados.":"Actualizado ahora mismo.");
  }catch(error){console.error(error);state.applyingRemote=false;if(showStatus)setSyncStatus("error","No se pudo actualizar. Comprueba la conexión.")}
 }
 let autoRefreshTimer=null;
@@ -2062,13 +2082,13 @@ function startCloudListener(){
  if(state.syncUnsubscribe)state.syncUnsubscribe();if(!cloudDb||!state.syncCode)return;
  state.syncUnsubscribe=syncDoc().onSnapshot(snap=>{
   if(!snap.exists)return;
-  const data=snap.data()||{};
+  const data=snap.data()||{},cloudHadRosterDuplicates=hasRosterDuplicates(data.items||[]);
   state.applyingRemote=true;
   applyRemotePayload(data);
   localStorage.setItem("homebase_v2_items",JSON.stringify(state.items));
   localStorage.setItem("homebase_roster_meta",JSON.stringify(state.rosterMeta));
   localStorage.setItem("homebase_profile_photos",JSON.stringify(profilePhotos));
-  state.applyingRemote=false;setSyncStatus("ok","Actualizado desde la familia.");render();
+  state.applyingRemote=false;if(cloudHadRosterDuplicates)scheduleCloudSave();setSyncStatus("ok",cloudHadRosterDuplicates?"Duplicados del roster corregidos y sincronizados.":"Actualizado desde la familia.");render();
  },error=>{console.error(error);setSyncStatus("error","No se puede conectar con Firestore.")});
 }
 async function createFamilySync(){
@@ -2091,7 +2111,7 @@ async function linkFamilySync(){
 }
 function unlinkFamilySync(){if(!confirm("¿Desvincular este dispositivo? Los datos locales no se borrarán."))return;if(state.syncUnsubscribe)state.syncUnsubscribe();state.syncUnsubscribe=null;state.syncCode="";localStorage.removeItem("homebase_sync_code");state.syncStatus="idle";render()}
 
-window.HOMEBASE_VERSION="1.5.0";
+window.HOMEBASE_VERSION="1.5.1";
 const RosterParser=(()=>{
 const AIRPORT_TZ={
 PMI:'Europe/Madrid',BCN:'Europe/Madrid',MAD:'Europe/Madrid',AGP:'Europe/Madrid',ALC:'Europe/Madrid',VLC:'Europe/Madrid',SVQ:'Europe/Madrid',BIO:'Europe/Madrid',IBZ:'Europe/Madrid',MAH:'Europe/Madrid',GRO:'Europe/Madrid',REU:'Europe/Madrid',SCQ:'Europe/Madrid',OVD:'Europe/Madrid',VGO:'Europe/Madrid',ZAZ:'Europe/Madrid',XRY:'Europe/Madrid',LEI:'Europe/Madrid',SDR:'Europe/Madrid',RMU:'Europe/Madrid',
