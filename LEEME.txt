@@ -1,9 +1,6 @@
-Homebase 1.4.1 — estabilidad de roster
+Homebase 1.4.2 — corrección real de parser, comparación y caché
 
-Correcciones:
-- Las métricas DT/BT/DP/FDP ya no aparecen en el título.
-- Lectura más tolerante del último sector de un duty.
-- Comparación canónica: reimportar el mismo mes solo marca cambios reales.
-- Se conserva la sincronización de eliminaciones entre dispositivos.
-
-Sube todos los archivos a la raíz de GitHub y reemplaza los existentes.
+- Ignora DT/BT/DP/FDP en títulos.
+- Recupera sectores que el PDF deja como línea residual.
+- Los tombstones no cuentan como cambios al reimportar.
+- Fuerza actualización del service worker.
