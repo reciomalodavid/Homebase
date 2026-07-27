@@ -1,3 +1,4 @@
-Homebase 1.4.4
+Homebase 1.5.0 — Roster Parser 6.0
 
-Corrección del título de roster: la secuencia se calcula dinámicamente desde rosterData.flights, incluso para eventos ya guardados. No requiere volver a importar el PDF.
+Sube estos 7 archivos a la raíz del repositorio y reemplaza los anteriores.
+Después cierra la PWA por completo y vuelve a abrirla. En el diagnóstico debe aparecer: Homebase 1.5.0 · Parser 6.0.

@@ -2091,7 +2091,7 @@ async function linkFamilySync(){
 }
 function unlinkFamilySync(){if(!confirm("¿Desvincular este dispositivo? Los datos locales no se borrarán."))return;if(state.syncUnsubscribe)state.syncUnsubscribe();state.syncUnsubscribe=null;state.syncCode="";localStorage.removeItem("homebase_sync_code");state.syncStatus="idle";render()}
 
-window.HOMEBASE_VERSION="1.4.4";
+window.HOMEBASE_VERSION="1.5.0";
 const RosterParser=(()=>{
 const AIRPORT_TZ={
 PMI:'Europe/Madrid',BCN:'Europe/Madrid',MAD:'Europe/Madrid',AGP:'Europe/Madrid',ALC:'Europe/Madrid',VLC:'Europe/Madrid',SVQ:'Europe/Madrid',BIO:'Europe/Madrid',IBZ:'Europe/Madrid',MAH:'Europe/Madrid',GRO:'Europe/Madrid',REU:'Europe/Madrid',SCQ:'Europe/Madrid',OVD:'Europe/Madrid',VGO:'Europe/Madrid',ZAZ:'Europe/Madrid',XRY:'Europe/Madrid',LEI:'Europe/Madrid',SDR:'Europe/Madrid',RMU:'Europe/Madrid',
@@ -2191,15 +2191,7 @@ function parseRosterDocument(doc){
   const r=ensureArrays(current);
   // NetLine añade métricas como DT/BT/DP/FDP después del C/O. Nunca son actividades ni parte del título.
   r.activityLabels=r.activityLabels.filter(x=>!["DT","BT","DP","FDP"].includes(String(x||"").toUpperCase()));
-  // Recuperación defensiva: algunos PDF dejan un sector completo en notes por restos gráficos o separación de columnas.
-  // Se vuelve a intentar con una expresión más tolerante antes de cerrar el duty.
-  for(const note of [...r.notes]){
-   const m=String(note||'').match(/(?:^|[^A-Z0-9])((?:DH\/)?[A-Z0-9]{2,3})\s*[-·:]?\s*(\d{3,4}[A-Z]?)\s+([A-Z]{3})\s+(\d{4})\s+(\d{4})\s+([A-Z]{3})(?:\s+([A-Z0-9]{1,8}))?/i);
-   if(!m)continue;
-   const carrier=m[1].toUpperCase(),number=`${carrier.replace(/^DH\//,'')} ${m[2]}`;
-   const exists=r.flights.some(f=>f.number===number&&f.depUtc===m[4]&&f.arrUtc===m[5]);
-   if(!exists)r.flights.push({number,carrier,dep:m[3].toUpperCase(),arr:m[6].toUpperCase(),depUtc:m[4],arrUtc:m[5],sourceDate:r.sourceDate,aircraft:m[7]||'',dh:carrier.startsWith('DH/')});
-  }
+  // Parser 6.0: no se recuperan vuelos desde notas. Un sector solo se acepta dentro de su bloque de duty.
   r.flights.sort((a,b)=>(a.sourceDate||r.sourceDate).localeCompare(b.sourceDate||r.sourceDate)||(a.depUtc||'').localeCompare(b.depUtc||''));
   const operationalFlights=r.flights.filter(f=>!f.dh);
   const hasTraining=r.activities.length>0||r.activityLabels.length>0||r.kind==='training';
@@ -2282,11 +2274,16 @@ function parseRosterDocument(doc){
   if(!hasDutyAnchor)continue;
   for(const raw of candidate){
    let line=String(raw||'').replace(/\s+/g,' ').trim();
-   // Limpia restos gráficos iniciales y descarta métricas del resumen aunque el corchete llegue roto.
-   line=line.replace(/^[^A-Za-z0-9]+/, '').trim();
-   const metricProbe=line.replace(/^\[/,'').trim();
-   if(/^(?:DT|BT|DP|FDP)\b/i.test(metricProbe)||/^\d{2}:\d{2}\]?$/.test(metricProbe))continue;
-   if(!line)continue;
+   // NetLine puede superponer una métrica de la columna anterior delante de una fecha o un vuelo.
+   // Quitamos solo el prefijo de la métrica y conservamos lo que haya después.
+   let previousLine='';
+   while(line&&line!==previousLine){
+    previousLine=line;
+    line=line.replace(/^\[?(?:DT|BT|DP|FDP)\s+\d{1,2}:\d{2}\]?\s*/i,'').trim();
+    line=line.replace(/^\d{1,2}:\d{2}\]?\s+(?=(?:(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\d{1,2}\b|(?:DH\/)?[A-Z0-9]{2,3}\s+\d{1,4}[A-Z]?\s+[A-Z]{3}\s+\d{4}\s+\d{4}\s+[A-Z]{3}|C\/I\b|C\/O\b|Pick Up\b|H\d+\b))/i,'').trim();
+    line=line.replace(/^[^A-Za-z0-9\[]+/, '').trim();
+   }
+   if(!line||/^\[?(?:DT|BT|DP|FDP)\b/i.test(line)||/^\d{1,2}:\d{2}\]?$/.test(line))continue;
    let lineDate=null,hadDate=false;const dm=line.match(DATE_PREFIX);
    if(dm){hadDate=true;const key=`${dm[1]}${String(dm[2]).padStart(2,'0')}`;lineDate=resolveDate(key);if(!lineDate){unrecognized.push(`Fecha fuera del periodo: ${line}`);continue}activeDate=lineDate;line=dm[3].trim();
     if(!line){if(current&&current.sourceEndDate!==lineDate&&(current.coUtc||current.endUtc||current.debriefUtc))finalize();continue}
@@ -2463,7 +2460,7 @@ function renderPendingRoster(plan,doc){
  $("rosterSummary").innerHTML=`<div class="roster-stat"><strong>${r.total}</strong><span>Duties</span></div><div class="roster-stat"><strong>${work}</strong><span>Trabajo</span></div><div class="roster-stat"><strong>${rest}</strong><span>Libres/vac.</span></div><div class="roster-stat"><strong>${r.changes}</strong><span>Cambios</span></div>`;
  const labels={new:"NUEVO",changed:"CAMBIO",same:"IGUAL"};
  $("rosterPreviewList").innerHTML=plan.preview.map(({item,status})=>{const d=item.rosterData;return `<div class="roster-preview-duty"><div class="roster-preview-date">${esc(formatRosterPreviewDate(item.date))}</div><div><div class="roster-preview-title">${esc(rosterDisplayTitle(item,item.title))}</div><div class="roster-preview-meta">${esc(rosterPreviewMeta(d))}</div><span class="sync-pill ${status}">${labels[status]}</span></div><div class="roster-preview-time">${esc(item.time||"Todo el día")}${item.endTime?`–${esc(item.endTime)}`:""}</div></div>`}).join("");
- const diag=[`Homebase: ${window.HOMEBASE_VERSION} · Parser 5.5`,`Archivo: ${plan.fileName}`,`Páginas leídas: ${doc.pageCount}`,`Periodo: ${p.period}`,`Duties detectados: ${r.total}`,`Líneas no interpretadas: ${p.unrecognized.length}`,`Aeropuertos sin zona horaria conocida: ${p.unknownAirports.length?p.unknownAirports.join(", "):"ninguno"}`,`Cambios previstos: ${r.added} nuevos · ${r.changed} modificados · ${r.removed} retirados · ${r.unchanged} iguales`];if(p.unrecognized.length)diag.push("","Líneas a revisar:",...p.unrecognized);
+ const diag=[`Homebase: ${window.HOMEBASE_VERSION} · Parser 6.0`,`Archivo: ${plan.fileName}`,`Páginas leídas: ${doc.pageCount}`,`Periodo: ${p.period}`,`Duties detectados: ${r.total}`,`Líneas no interpretadas: ${p.unrecognized.length}`,`Aeropuertos sin zona horaria conocida: ${p.unknownAirports.length?p.unknownAirports.join(", "):"ninguno"}`,`Cambios previstos: ${r.added} nuevos · ${r.changed} modificados · ${r.removed} retirados · ${r.unchanged} iguales`];if(p.unrecognized.length)diag.push("","Líneas a revisar:",...p.unrecognized);
  $("rosterDiagnosticsBody").textContent=diag.join("\n");$("applyRosterImport").textContent=r.changes?`Aplicar ${r.changes} cambios al calendario`:"Confirmar roster sin cambios";$("applyRosterImport").disabled=false;
 }
 function resetRosterPreview(){state.pendingRosterImport=null;$("rosterPreview").hidden=true;$("rosterSummary").innerHTML="";$("rosterPreviewList").innerHTML="";$("rosterDiagnosticsBody").textContent=""}
@@ -2482,7 +2479,7 @@ function applyPendingRoster(){
  const tombstoneMap=new Map();
  for(const t of [...(plan.tombstones||[]),...removedTombstones]){const key=t.id||rosterUidOf(t);const prev=tombstoneMap.get(key);if(!prev||Number(t.updatedAt||t.deletedAt||0)>Number(prev.updatedAt||prev.deletedAt||0))tombstoneMap.set(key,t)}
  state.items=[...plan.manual,...plan.outside,...tombstoneMap.values(),...incoming];
- state.rosterMeta={period:plan.parsed.period,periodStart:plan.parsed.periodStart,periodEnd:plan.parsed.periodEnd,fileName:plan.fileName,updatedAt:now,parserVersion:"5.5",appVersion:window.HOMEBASE_VERSION,activeRosterUids:incoming.map(rosterUidOf),counts:plan.result};
+ state.rosterMeta={period:plan.parsed.period,periodStart:plan.parsed.periodStart,periodEnd:plan.parsed.periodEnd,fileName:plan.fileName,updatedAt:now,parserVersion:"6.0",appVersion:window.HOMEBASE_VERSION,activeRosterUids:incoming.map(rosterUidOf),counts:plan.result};
  localStorage.setItem("homebase_roster_meta",JSON.stringify(state.rosterMeta));save();
  const r=plan.result;resetRosterPreview();$("rosterImportStatus").className="roster-status ok";$("rosterImportStatus").textContent=`Roster aplicado: ${r.added} nuevos, ${r.changed} modificados y ${r.removed} retirados. Los cambios se sincronizarán con los demás dispositivos. El PDF no se ha guardado.`;renderRosterControls();
 }
