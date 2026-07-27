@@ -1051,6 +1051,23 @@ body::before{
   .day-markers{gap:1px}
 }
 
+
+/* Homebase 1.6.0 · Hoy útil — capa visual aislada */
+.today-overview{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(210px,.75fr);gap:12px;margin:2px 0 22px}
+.today-focus,.today-stats{border:1px solid rgba(93,130,173,.14);background:linear-gradient(145deg,rgba(255,255,255,.96),rgba(248,250,253,.92));box-shadow:0 12px 34px rgba(44,57,75,.075);border-radius:22px}
+.today-focus{padding:18px 19px;min-height:118px;display:flex;flex-direction:column;justify-content:center}
+.today-focus-label{font-size:12px;font-weight:750;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:7px}
+.today-focus-title{font-size:20px;font-weight:780;letter-spacing:-.4px;line-height:1.18;color:var(--text)}
+.today-focus-meta{font-size:13px;color:var(--muted);margin-top:7px}
+.today-stats{padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.today-stat{background:rgba(93,130,173,.07);border-radius:15px;padding:12px 10px;display:flex;flex-direction:column;justify-content:center;min-height:72px}
+.today-stat strong{font-size:23px;line-height:1;letter-spacing:-.6px}
+.today-stat span{font-size:11px;color:var(--muted);margin-top:6px;font-weight:650}
+.tomorrow-card .event-row:nth-child(n+4){display:none}
+.tomorrow-empty{padding:18px;color:var(--muted);font-size:14px;text-align:center}
+@media(max-width:700px){.today-overview{grid-template-columns:1fr}.today-focus{min-height:104px}.today-stats{grid-template-columns:1fr 1fr}.today-stat{min-height:64px}}
+@media(prefers-color-scheme:dark){.today-focus,.today-stats{background:linear-gradient(145deg,rgba(41,44,50,.98),rgba(31,34,39,.95));border-color:rgba(139,170,207,.16)}}
+
 </style>
 <meta name="homebase-build" content="homebase-apple-polish-fase1-2-fixed-header-switch">
 </head>
@@ -1073,13 +1090,28 @@ body::before{
         <div><h1>Hoy</h1><div class="hero-date" id="todayDate"></div></div>
         <button class="new-btn" id="newToday">＋ Nuevo</button>
       </div>
-      <div class="section">
-        <div class="section-head"><h2>Eventos</h2><span id="todayEventCount"></span></div>
-        <div class="card list-card" id="todayEvents" class="today-event-list"></div>
+      <div class="today-overview" aria-label="Resumen del día">
+        <div class="today-focus">
+          <div class="today-focus-label">Siguiente</div>
+          <div class="today-focus-title" id="todayNextTitle">Día tranquilo</div>
+          <div class="today-focus-meta" id="todayNextMeta">No hay nada próximo.</div>
+        </div>
+        <div class="today-stats">
+          <div class="today-stat"><strong id="todayEventTotal">0</strong><span>eventos hoy</span></div>
+          <div class="today-stat"><strong id="todayTaskTotal">0</strong><span>pendientes</span></div>
+        </div>
       </div>
       <div class="section">
-        <div class="section-head"><h2>Pendientes</h2><span id="todayTaskCount"></span></div>
-        <div class="card list-card" id="todayTasks" class="today-task-list"></div>
+        <div class="section-head"><h2>Hoy</h2><span id="todayEventCount"></span></div>
+        <div class="card list-card today-event-list" id="todayEvents"></div>
+      </div>
+      <div class="section">
+        <div class="section-head"><h2>Pendientes de hoy</h2><span id="todayTaskCount"></span></div>
+        <div class="card list-card today-task-list" id="todayTasks"></div>
+      </div>
+      <div class="section">
+        <div class="section-head"><h2>Mañana</h2><span id="tomorrowEventCount"></span></div>
+        <div class="card list-card tomorrow-card" id="tomorrowEvents"></div>
       </div>
       
     </section>
@@ -1449,17 +1481,38 @@ function taskRow(item){
 function fillList(el,html,emptyTitle,emptyText){el.innerHTML=html||`<div class="empty"><strong>${emptyTitle}</strong>${emptyText}</div>`}
 
 function renderToday(){
- const today=iso(new Date()); $("todayDate").textContent=fmtDate(new Date());
+ const now=new Date(),today=iso(now),tomorrow=iso(addDays(now,1)); $("todayDate").textContent=fmtDate(now);
  const ev=eventsOn(today); fillList($("todayEvents"),ev.map(i=>eventRow(i,today)).join(""),"No hay eventos hoy","El día está libre.");
  const tasks=tasksVisible()
    .filter(i=>!i.done&&i.date&&i.date<=today)
    .sort((a,b)=>a.date.localeCompare(b.date));
  const done=tasksVisible().filter(i=>i.done).sort((a,b)=>(b.completedAt||0)-(a.completedAt||0)).slice(0,5);
+ const tomorrowEv=eventsOn(tomorrow);
  fillList($("todayTasks"),tasks.map(taskRow).join(""),"Todo al día","No hay pendientes para hoy.");
+ fillList($("tomorrowEvents"),tomorrowEv.slice(0,3).map(i=>eventRow(i,tomorrow)).join(""),"Mañana está libre","No hay eventos previstos.");
  if($("todayDone")) fillList($("todayDone"),done.map(taskRow).join(""),"Aún no hay completadas","Las tareas terminadas aparecerán aquí.");
  $("todayEventCount").textContent=`${ev.length} evento${ev.length===1?"":"s"}`;
  $("todayTaskCount").textContent=`${tasks.length} pendiente${tasks.length===1?"":"s"}`;
+ $("tomorrowEventCount").textContent=tomorrowEv.length?`${tomorrowEv.length} evento${tomorrowEv.length===1?"":"s"}`:"";
+ $("todayEventTotal").textContent=ev.length;
+ $("todayTaskTotal").textContent=tasks.length;
+ const currentMinutes=now.getHours()*60+now.getMinutes();
+ const nextToday=ev.find(i=>{if(!i.time)return true;const [h,m]=(i.time||"00:00").split(":").map(Number);return h*60+m>=currentMinutes;});
+ const next=nextToday||tomorrowEv[0];
+ if(next){
+   const isTomorrow=!nextToday;
+   $("todayNextTitle").textContent=next.source==="roster"?rosterDisplayTitle(next,next.title):next.title;
+   const when=next.time?(isTomorrow?`Mañana · ${next.time}`:`Hoy · ${next.time}`):(isTomorrow?"Mañana · Todo el día":"Hoy · Todo el día");
+   $("todayNextMeta").textContent=`${when}${next.source==="roster"?" · Roster":nextPeopleLabelSafe(next)}`;
+ }else{
+   $("todayNextTitle").textContent=tasks.length?`${tasks.length} pendiente${tasks.length===1?"":"s"} por resolver`:"Día tranquilo";
+   $("todayNextMeta").textContent=tasks.length?"Puedes verlos justo debajo.":"No hay nada próximo entre hoy y mañana.";
+ }
  if($("todayDoneCount")) $("todayDoneCount").textContent=`${done.length} completada${done.length===1?"":"s"}`;
+}
+function nextPeopleLabelSafe(item){
+ const label=itemPeopleLabel(item);
+ return label?` · ${label}`:"";
 }
 function renderTasks(){
  const all=tasksVisible();
@@ -2111,7 +2164,7 @@ async function linkFamilySync(){
 }
 function unlinkFamilySync(){if(!confirm("¿Desvincular este dispositivo? Los datos locales no se borrarán."))return;if(state.syncUnsubscribe)state.syncUnsubscribe();state.syncUnsubscribe=null;state.syncCode="";localStorage.removeItem("homebase_sync_code");state.syncStatus="idle";render()}
 
-window.HOMEBASE_VERSION="1.5.1";
+window.HOMEBASE_VERSION="1.6.0";
 const RosterParser=(()=>{
 const AIRPORT_TZ={
 PMI:'Europe/Madrid',BCN:'Europe/Madrid',MAD:'Europe/Madrid',AGP:'Europe/Madrid',ALC:'Europe/Madrid',VLC:'Europe/Madrid',SVQ:'Europe/Madrid',BIO:'Europe/Madrid',IBZ:'Europe/Madrid',MAH:'Europe/Madrid',GRO:'Europe/Madrid',REU:'Europe/Madrid',SCQ:'Europe/Madrid',OVD:'Europe/Madrid',VGO:'Europe/Madrid',ZAZ:'Europe/Madrid',XRY:'Europe/Madrid',LEI:'Europe/Madrid',SDR:'Europe/Madrid',RMU:'Europe/Madrid',

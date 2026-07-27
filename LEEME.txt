@@ -1,4 +1,13 @@
-Homebase 1.5.1 — Roster Parser 6.0
+HOMEBASE 1.6.0 · HOY ÚTIL
 
-Sube estos 7 archivos a la raíz del repositorio y reemplaza los anteriores.
-Después cierra la PWA por completo y vuelve a abrirla. En el diagnóstico debe aparecer: Homebase 1.5.1 · Parser 6.0.
+Esta versión parte de la 1.5.1 estable.
+No modifica el Parser 6.0, Firebase, la sincronización ni el modelo de datos.
+
+Cambios visibles:
+- Resumen superior con siguiente evento.
+- Contadores de eventos y pendientes.
+- Sección Hoy más clara.
+- Vista previa de hasta 3 eventos de mañana.
+- Ajustes visuales para iPhone, iPad y modo oscuro.
+
+Sube los 7 archivos a GitHub reemplazando los existentes.
