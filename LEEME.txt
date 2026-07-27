@@ -1,11 +1,9 @@
-HOMEBASE 1.4 · ESTABILIDAD DE ROSTER
+Homebase 1.4.1 — estabilidad de roster
 
-Sube todos estos archivos a la raíz del repositorio de GitHub y reemplaza los anteriores.
+Correcciones:
+- Las métricas DT/BT/DP/FDP ya no aparecen en el título.
+- Lectura más tolerante del último sector de un duty.
+- Comparación canónica: reimportar el mismo mes solo marca cambios reales.
+- Se conserva la sincronización de eliminaciones entre dispositivos.
 
-Cambios:
-- El lector tolera restos de bordes/columnas que algunos PDF anteponen a líneas de vuelo, C/O u hotel.
-- Los duties retirados se sincronizan como eliminaciones y no reaparecen en otros dispositivos.
-- El roster del periodo importado incluye una lista autoritativa de duties activos para evitar vuelos obsoletos.
-- No se ha modificado el diseño ni la lógica de eventos manuales.
-
-Tras publicar, cierra Homebase completamente en todos los dispositivos y vuelve a abrirla. En el dispositivo principal, importa de nuevo el roster de agosto una sola vez para limpiar y propagar cualquier vuelo antiguo que ya estuviera duplicado.
+Sube todos los archivos a la raíz de GitHub y reemplaza los existentes.

@@ -2247,6 +2247,9 @@ function parseRosterDocument(doc){
   if(!hasDutyAnchor)continue;
   for(const raw of candidate){
    let line=String(raw||'').replace(/\s+/g,' ').trim();
+   // Las métricas de resumen pertenecen al duty, pero no deben convertirse en etiquetas del título.
+   // Se ignoran antes de limpiar restos gráficos, porque algunos PDF empiezan literalmente por "[BT...".
+   if(/^\[(?:DT|BT|DP|FDP)\b/i.test(line)||/^\d{2}:\d{2}\]$/.test(line))continue;
    // Algunos PDF de NetLine anteponen restos de bordes/columnas (por ejemplo " ] EW 6806...").
    // Se eliminan solo al principio para no alterar códigos, horas ni anotaciones reales.
    line=line.replace(/^[\]\[|¦:;·•]+\s*/, '').trim();
@@ -2272,7 +2275,8 @@ function parseRosterDocument(doc){
    if(ci){const d=lineDate||activeDate;
     if(current&&current.sourceDate===d&&!current.flights.length&&!current.coUtc&&(current.kind==='standby'||current.kind==='ground'||current.kind==='training'||(current.kind==='flight'&&current.pickupUtc))){if(current.kind==='standby')current.preDutyCode=current.code;current.ciAirport=ci[1];current.ciUtc=ci[2];}
     else begin({sourceDate:d,kind:'flight',code:'FLD',ciAirport:ci[1],ciUtc:ci[2]});continue}
-   const flight=line.match(/^((?:DH\/)?[A-Z0-9]{2,3})\s+(\d{1,4}[A-Z]?)\s+([A-Z]{3})\s+(\d{4})\s+(\d{4})\s+([A-Z]{3})(?:\s+([A-Z0-9]{1,8}))?/i);
+   // Búsqueda estricta del sector, pero tolerante a un carácter residual delante de "EW".
+   const flight=line.match(/(?:^|[^A-Z0-9])((?:DH\/)?[A-Z0-9]{2,3})\s+(\d{1,4}[A-Z]?)\s+([A-Z]{3})\s+(\d{4})\s+(\d{4})\s+([A-Z]{3})(?:\s+([A-Z0-9]{1,8}))?/i);
    if(flight){const d=lineDate||activeDate;
     if(!current)current=ensureArrays({sourceDate:d,sourceEndDate:d,kind:'flight',code:'FLD'});
     if(current.sourceDate!==d&&current.coUtc){finalize();current=ensureArrays({sourceDate:d,sourceEndDate:d,kind:'flight',code:'FLD'})}
@@ -2367,20 +2371,49 @@ async function extractPdfDocument(file){
  return {pageCount,allLines,sections};
 }
 function rosterUidOf(item){const r=item.rosterData||{};if(r.rosterUid)return r.rosterUid;const first=r.flights?.[0]?.number||r.ciUtc||r.startUtc||r.code||"activity",last=r.flights?.at(-1)?.number||r.coUtc||r.endUtc||"";return `${r.sourceDate||item.date}|${r.kind||"ground"}|${first}|${last}`}
-function rosterSignature(r){return JSON.stringify(r)}
+function rosterComparable(r){
+ const flights=(r?.flights||[]).map(f=>({number:f.number||"",dep:f.dep||"",arr:f.arr||"",depUtc:f.depUtc||"",arrUtc:f.arrUtc||"",dh:!!f.dh,aircraft:f.aircraft||""}));
+ const activities=(r?.activities||[]).map(a=>({code:a.code||"",airport:a.airport||"",startUtc:a.startUtc||"",endUtc:a.endUtc||"",extra:a.extra||""}));
+ return {
+  sourceDate:r?.sourceDate||"",sourceEndDate:r?.sourceEndDate||r?.sourceDate||"",kind:r?.kind||"",code:r?.code||"",
+  ciAirport:r?.ciAirport||"",ciUtc:r?.ciUtc||"",coAirport:r?.coAirport||"",coUtc:r?.coUtc||"",
+  pickupUtc:r?.pickupUtc||"",showUpAirport:r?.showUpAirport||"",showUpUtc:r?.showUpUtc||"",briefingAirport:r?.briefingAirport||"",briefingUtc:r?.briefingUtc||"",
+  debriefAirport:r?.debriefAirport||"",debriefUtc:r?.debriefUtc||"",airport:r?.airport||"",startUtc:r?.startUtc||"",endUtc:r?.endUtc||"",
+  hotelCode:r?.hotelCode||"",hotelAirport:r?.hotelAirport||"",flights,activities,
+  activityLabels:[...(r?.activityLabels||[])].filter(x=>!["DT","BT","DP","FDP"].includes(String(x).toUpperCase())).sort()
+ };
+}
+function rosterSignature(r){return JSON.stringify(rosterComparable(r))}
+function rosterMatchScore(prev,r){
+ const p=prev.rosterData||{};let score=0;
+ if((p.sourceDate||prev.date)===(r.sourceDate||r.date))score+=100;
+ if((p.kind||"")===(r.kind||""))score+=30;
+ const pt=p.ciUtc||p.showUpUtc||p.briefingUtc||p.startUtc||p.flights?.[0]?.depUtc||"";
+ const rt=r.ciUtc||r.showUpUtc||r.briefingUtc||r.startUtc||r.flights?.[0]?.depUtc||"";
+ if(pt&&rt){const d=Math.abs(Number(pt)-Number(rt));score+=Math.max(0,20-Math.floor(d/10));}
+ const pa=p.ciAirport||p.showUpAirport||p.briefingAirport||p.airport||p.flights?.[0]?.dep||"";
+ const ra=r.ciAirport||r.showUpAirport||r.briefingAirport||r.airport||r.flights?.[0]?.dep||"";
+ if(pa&&ra&&pa===ra)score+=10;
+ return score;
+}
 function planRosterSync(parsed,fileName){
  const manual=state.items.filter(i=>i.source!=="roster"),allRoster=state.items.filter(i=>i.source==="roster");
  const inRange=allRoster.filter(i=>{const d=i.rosterData?.sourceDate||i.date;return d>=parsed.periodStart&&d<=parsed.periodEnd}),outside=allRoster.filter(i=>!inRange.includes(i));
- const oldMap=new Map(inRange.map(i=>[rosterUidOf(i),i])),seen=new Map();let added=0,changed=0,unchanged=0;
+ const unmatched=new Set(inRange),seen=new Map();let added=0,changed=0,unchanged=0;
  const incoming=[],preview=[];
  for(const original of parsed.duties){
   const r=typeof structuredClone==="function"?structuredClone(original):JSON.parse(JSON.stringify(original));let uid=r.rosterUid;const n=(seen.get(uid)||0)+1;seen.set(uid,n);if(n>1){uid=`${uid}|${n}`;r.rosterUid=uid}
-  const prev=oldMap.get(uid),status=!prev?"new":rosterSignature(prev.rosterData)===rosterSignature(r)?"same":"changed";
+  let prev=[...unmatched].find(i=>rosterUidOf(i)===uid)||null;
+  if(!prev){
+   const candidates=[...unmatched].filter(i=>(i.rosterData?.sourceDate||i.date)===r.sourceDate&&(i.rosterData?.kind||"")===r.kind);
+   if(candidates.length)prev=candidates.sort((a,b)=>rosterMatchScore(b,r)-rosterMatchScore(a,r))[0];
+  }
+  const status=!prev?"new":rosterSignature(prev.rosterData)===rosterSignature(r)?"same":"changed";
   if(status==="new")added++;else if(status==="changed")changed++;else unchanged++;
   const item={id:prev?.id||(crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random()}`),type:"event",title:r.title,date:r.date,endDate:r.endDate||r.date,allDay:!r.time,time:r.time||"",endTime:r.endTime||"",person:"David",category:"Trabajo",repeat:"none",repeatDays:[],repeatUntil:"",notes:prev?.notes||"",exceptions:[],done:false,completedAt:null,deletedAt:null,source:"roster",rosterData:r};
-  incoming.push(item);preview.push({item,status});if(prev)oldMap.delete(uid);
+  incoming.push(item);preview.push({item,status});if(prev)unmatched.delete(prev);
  }
- const removedItems=[...oldMap.values()],removed=removedItems.length;
+ const removedItems=[...unmatched],removed=removedItems.length;
  return {parsed,fileName,manual,outside,incoming,preview,removedItems,result:{added,changed,unchanged,removed,total:incoming.length,changes:added+changed+removed}};
 }
 function rosterPreviewMeta(r){
@@ -2410,7 +2443,7 @@ function applyPendingRoster(){
  const removedTombstones=plan.removedItems.map(i=>({...i,deletedAt:now,rosterRemoved:true,updatedAt:now}));
  const incoming=plan.incoming.map(i=>({...i,deletedAt:null,rosterRemoved:false,updatedAt:now}));
  state.items=[...plan.manual,...plan.outside,...removedTombstones,...incoming];
- state.rosterMeta={period:plan.parsed.period,periodStart:plan.parsed.periodStart,periodEnd:plan.parsed.periodEnd,fileName:plan.fileName,updatedAt:now,parserVersion:"5.1",activeRosterUids:incoming.map(rosterUidOf),counts:plan.result};
+ state.rosterMeta={period:plan.parsed.period,periodStart:plan.parsed.periodStart,periodEnd:plan.parsed.periodEnd,fileName:plan.fileName,updatedAt:now,parserVersion:"5.2",activeRosterUids:incoming.map(rosterUidOf),counts:plan.result};
  localStorage.setItem("homebase_roster_meta",JSON.stringify(state.rosterMeta));save();
  const r=plan.result;resetRosterPreview();$("rosterImportStatus").className="roster-status ok";$("rosterImportStatus").textContent=`Roster aplicado: ${r.added} nuevos, ${r.changed} modificados y ${r.removed} retirados. Los cambios se sincronizarán con los demás dispositivos. El PDF no se ha guardado.`;renderRosterControls();
 }
