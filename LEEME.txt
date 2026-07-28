@@ -1,13 +1,8 @@
-HOMEBASE 1.6.0 · HOY ÚTIL
+HOMEBASE 1.6.1 — TRAYECTO COMPLETO DEL DUTY
 
-Esta versión parte de la 1.5.1 estable.
-No modifica el Parser 6.0, Firebase, la sincronización ni el modelo de datos.
+Cambios:
+- Vuelos, trenes, taxis y otros transportes se muestran juntos y en orden cronológico.
+- TRAIN/TAXI aparecen con origen, destino y horario cuando el roster los incluye.
+- No se ha modificado el Parser 6.0, Firebase, la sincronización ni los datos guardados.
 
-Cambios visibles:
-- Resumen superior con siguiente evento.
-- Contadores de eventos y pendientes.
-- Sección Hoy más clara.
-- Vista previa de hasta 3 eventos de mañana.
-- Ajustes visuales para iPhone, iPad y modo oscuro.
-
-Sube los 7 archivos a GitHub reemplazando los existentes.
+Sube estos archivos a GitHub reemplazando los actuales. No es necesario volver a importar ningún roster.

@@ -1993,8 +1993,31 @@ function openDetail(id,dateIso){
    if(r.showUpLocal) rows+=detailRow("S/U",r.showUpLocal);
    if(r.briefingLocal) rows+=detailRow("Briefing",r.briefingLocal);
    if(r.ciLocal) rows+=detailRow("C/I",r.ciLocal);
-   if(r.activities?.length){rows+=`<div class="detail-row"><div class="detail-label">Actividad</div><div class="detail-value roster-detail">${r.activities.map(a=>`<div class="roster-activity"><span>${esc(String(a.code||"Formación").replaceAll("_"," "))}</span><span>${esc(a.startLocal||"")}${a.endLocal?`–${esc(a.endLocal)}`:""}</span></div>`).join("")}</div></div>`;}
-   if(r.flights?.length){rows+=`<div class="detail-row"><div class="detail-label">Vuelos</div><div class="detail-value roster-detail">${r.flights.map(f=>`<div class="roster-flight"><span>${esc(f.number||"")} · ${esc(f.dep)} → ${esc(f.arr)}${f.dh?` <span class="roster-badge">DH</span>`:""}</span><span>${esc(f.depLocal)}–${esc(f.arrLocal)}</span></div>`).join("")}</div></div>`;}
+   const dutySegments=[];
+   for(const f of (r.flights||[])){
+     dutySegments.push({
+       type:"flight",
+       sortDate:f.depLocalDate||f.sourceDate||r.sourceDate||item.date,
+       sortTime:f.depLocal||"99:99",
+       left:`${esc(f.number||"")} · ${esc(f.dep)} → ${esc(f.arr)}${f.dh?` <span class="roster-badge">DH</span>`:""}`,
+       right:`${esc(f.depLocal||"")}${f.arrLocal?`–${esc(f.arrLocal)}`:""}`
+     });
+   }
+   for(const a of (r.activities||[])){
+     const code=String(a.code||"Actividad").replaceAll("_"," ");
+     const destination=String(a.arr||a.destination||a.extra||"").trim().match(/^[A-Z]{3}$/i)?.[0]?.toUpperCase()||"";
+     const origin=String(a.dep||a.airport||"").trim().toUpperCase();
+     const route=origin&&destination?` · ${esc(origin)} → ${esc(destination)}`:origin?` · ${esc(origin)}`:"";
+     dutySegments.push({
+       type:"activity",
+       sortDate:a.startLocalDate||a.sourceDate||r.sourceDate||item.date,
+       sortTime:a.startLocal||"99:99",
+       left:`${esc(code)}${route}`,
+       right:`${esc(a.startLocal||"")}${a.endLocal?`–${esc(a.endLocal)}`:""}`
+     });
+   }
+   dutySegments.sort((a,b)=>`${a.sortDate}T${a.sortTime}`.localeCompare(`${b.sortDate}T${b.sortTime}`));
+   if(dutySegments.length){rows+=`<div class="detail-row"><div class="detail-label">Trayecto del duty</div><div class="detail-value roster-detail">${dutySegments.map(s=>`<div class="${s.type==="flight"?"roster-flight":"roster-activity"}"><span>${s.left}</span><span>${s.right}</span></div>`).join("")}</div></div>`;}
    if(r.coLocal) rows+=detailRow("C/O",r.coLocal);
    if(r.debriefLocal) rows+=detailRow("Debriefing",r.debriefLocal);
    if(r.hotel&&state.rosterSettings.showHotels) rows+=detailRow("Noche fuera",r.hotel);
@@ -2164,7 +2187,7 @@ async function linkFamilySync(){
 }
 function unlinkFamilySync(){if(!confirm("¿Desvincular este dispositivo? Los datos locales no se borrarán."))return;if(state.syncUnsubscribe)state.syncUnsubscribe();state.syncUnsubscribe=null;state.syncCode="";localStorage.removeItem("homebase_sync_code");state.syncStatus="idle";render()}
 
-window.HOMEBASE_VERSION="1.6.0";
+window.HOMEBASE_VERSION="1.6.1";
 const RosterParser=(()=>{
 const AIRPORT_TZ={
 PMI:'Europe/Madrid',BCN:'Europe/Madrid',MAD:'Europe/Madrid',AGP:'Europe/Madrid',ALC:'Europe/Madrid',VLC:'Europe/Madrid',SVQ:'Europe/Madrid',BIO:'Europe/Madrid',IBZ:'Europe/Madrid',MAH:'Europe/Madrid',GRO:'Europe/Madrid',REU:'Europe/Madrid',SCQ:'Europe/Madrid',OVD:'Europe/Madrid',VGO:'Europe/Madrid',ZAZ:'Europe/Madrid',XRY:'Europe/Madrid',LEI:'Europe/Madrid',SDR:'Europe/Madrid',RMU:'Europe/Madrid',
