@@ -1,8 +1,9 @@
-HOMEBASE 1.6.1 — TRAYECTO COMPLETO DEL DUTY
+HOMEBASE 1.6.3 — ICONOS MÁS CLAROS
 
-Cambios:
-- Vuelos, trenes, taxis y otros transportes se muestran juntos y en orden cronológico.
-- TRAIN/TAXI aparecen con origen, destino y horario cuando el roster los incluye.
-- No se ha modificado el Parser 6.0, Firebase, la sincronización ni los datos guardados.
+Cambios visuales:
+- Standby usa el símbolo de espera/encendido ⏻.
+- Actividades no de vuelo usan un icono genérico 📌.
+- «Sin fecha límite» tiene ahora una casilla clara y consistente en iPhone/iPad.
 
-Sube estos archivos a GitHub reemplazando los actuales. No es necesario volver a importar ningún roster.
+No se han modificado el Parser 6.0, Firebase, la sincronización ni los datos.
+No es necesario volver a importar ningún roster.

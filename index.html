@@ -1068,6 +1068,30 @@ body::before{
 @media(max-width:700px){.today-overview{grid-template-columns:1fr}.today-focus{min-height:104px}.today-stats{grid-template-columns:1fr 1fr}.today-stat{min-height:64px}}
 @media(prefers-color-scheme:dark){.today-focus,.today-stats{background:linear-gradient(145deg,rgba(41,44,50,.98),rgba(31,34,39,.95));border-color:rgba(139,170,207,.16)}}
 
+
+/* Control limpio para «Sin fecha límite» */
+.no-deadline-option{display:flex;align-items:center;gap:9px;margin-top:12px;cursor:pointer;font-weight:650;color:var(--text)}
+.no-deadline-option input{position:absolute;opacity:0;pointer-events:none}
+.no-deadline-check{width:22px;height:22px;box-sizing:border-box;border:2px solid rgba(120,120,128,.38);border-radius:7px;background:var(--card);display:inline-grid;place-items:center;flex:0 0 22px;transition:.16s ease}
+.no-deadline-option input:checked + .no-deadline-check{background:#3478f6;border-color:#3478f6}
+.no-deadline-option input:checked + .no-deadline-check::after{content:"✓";color:white;font-size:15px;font-weight:900;line-height:1}
+.no-deadline-option input:focus-visible + .no-deadline-check{outline:3px solid rgba(52,120,246,.28);outline-offset:2px}
+/* Homebase 1.6.3 · Iconos más claros y control sin fecha límite */
+.roster-mini.emoji{
+ width:18px;height:18px;flex:0 0 18px;
+ font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif;
+ font-size:15px;line-height:18px;color:inherit;
+ filter:none;background:transparent;box-shadow:none;
+ text-shadow:0 1px 1px rgba(0,0,0,.08);
+}
+.roster-mini.emoji.flight{font-size:16px}
+.roster-mini.emoji.vacation{font-size:16px}
+.day.selected .roster-mini.emoji{background:rgba(255,255,255,.30);border-radius:6px;box-shadow:none}
+@media(max-width:430px){
+ .roster-mini.emoji{width:17px;height:17px;flex-basis:17px;font-size:14px;line-height:17px}
+ .day-markers{gap:1px}
+}
+
 </style>
 <meta name="homebase-build" content="homebase-apple-polish-fase1-2-fixed-header-switch">
 </head>
@@ -1215,9 +1239,10 @@ body::before{
     <div>
       <label id="startDateLabel">Empieza</label>
       <input id="startDate" type="date" required>
-      <label id="noDeadlineWrap" style="display:none;margin-top:10px">
-        <input id="noDeadline" type="checkbox" style="width:auto;min-height:0;margin-right:7px">
-        Sin fecha límite
+      <label id="noDeadlineWrap" class="no-deadline-option" style="display:none">
+        <input id="noDeadline" type="checkbox">
+        <span class="no-deadline-check" aria-hidden="true"></span>
+        <span>Sin fecha límite</span>
       </label>
     </div>
     <div id="endDateWrap"><label>Termina</label><input id="endDate" type="date"></div>
@@ -1528,17 +1553,26 @@ function renderTasks(){
  $("taskCount").textContent=`${pending.length}`; $("doneCount").textContent=`${done.length}`;
 }
 function rosterMiniIcon(kind){
+ const normalized=["flight","standby","off","vacation","training","ground"].includes(kind)?kind:"other";
  const icons={
-  flight:'<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M21.6 11.2 14.3 8V3.7c0-.9-.7-1.7-1.7-1.7s-1.7.8-1.7 1.7V8L3.6 11.2c-.5.2-.8.7-.8 1.2s.3 1 .8 1.2l7.3 3.2v3.5l-2.1 1.4v1.1l3.8-1.1 3.8 1.1v-1.1l-2.1-1.4v-3.5l7.3-3.2c.5-.2.8-.7.8-1.2s-.3-1-.8-1.2Z"/></svg>',
-  standby:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="currentColor" opacity=".16"/><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><text x="12" y="15.2" text-anchor="middle" font-size="9.5" font-family="-apple-system,BlinkMacSystemFont,Arial" font-weight="800" fill="currentColor">S</text></svg>',
-  off:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="currentColor" opacity=".16"/><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m8.2 12.1 2.4 2.5 5.3-5.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-  vacation:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="currentColor" opacity=".18"/><circle cx="12" cy="12" r="3.7" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M18.5 5.5l-1.7 1.7M7.2 16.8l-1.7 1.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
-  other:'<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="7" width="16" height="12" rx="2.2" fill="currentColor" opacity=".18"/><rect x="4" y="7" width="16" height="12" rx="2.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9 7V5.5h6V7M4 11.5h16M10.5 11.5v1.7h3v-1.7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>'
+  flight:"✈️",
+  standby:"⏻",
+  off:"🏠",
+  vacation:"🏖️",
+  training:"🎓",
+  ground:"📌",
+  other:"📌"
  };
- const normalized=(kind==="training"||kind==="ground")?"other":kind;
- const cls=normalized==="flight"?" flight":normalized==="standby"?" standby":normalized==="off"?" off":normalized==="vacation"?" vacation":" other-duty";
- const label=normalized==="flight"?"Vuelo":normalized==="standby"?"Standby":normalized==="off"?"Día libre":normalized==="vacation"?"Vacaciones":"Otro duty";
- return `<span class="roster-mini${cls}" title="${label}" aria-label="${label}">${icons[normalized]||icons.other}</span>`;
+ const labels={
+  flight:"Vuelo",
+  standby:"Standby",
+  off:"Día libre",
+  vacation:"Vacaciones",
+  training:"Formación",
+  ground:"Actividad no de vuelo",
+  other:"Otro duty"
+ };
+ return `<span class="roster-mini emoji ${normalized}" title="${labels[normalized]}" aria-label="${labels[normalized]}">${icons[normalized]}</span>`;
 }
 
 function renderMonth(){
@@ -2187,7 +2221,7 @@ async function linkFamilySync(){
 }
 function unlinkFamilySync(){if(!confirm("¿Desvincular este dispositivo? Los datos locales no se borrarán."))return;if(state.syncUnsubscribe)state.syncUnsubscribe();state.syncUnsubscribe=null;state.syncCode="";localStorage.removeItem("homebase_sync_code");state.syncStatus="idle";render()}
 
-window.HOMEBASE_VERSION="1.6.1";
+window.HOMEBASE_VERSION="1.6.3";
 const RosterParser=(()=>{
 const AIRPORT_TZ={
 PMI:'Europe/Madrid',BCN:'Europe/Madrid',MAD:'Europe/Madrid',AGP:'Europe/Madrid',ALC:'Europe/Madrid',VLC:'Europe/Madrid',SVQ:'Europe/Madrid',BIO:'Europe/Madrid',IBZ:'Europe/Madrid',MAH:'Europe/Madrid',GRO:'Europe/Madrid',REU:'Europe/Madrid',SCQ:'Europe/Madrid',OVD:'Europe/Madrid',VGO:'Europe/Madrid',ZAZ:'Europe/Madrid',XRY:'Europe/Madrid',LEI:'Europe/Madrid',SDR:'Europe/Madrid',RMU:'Europe/Madrid',
