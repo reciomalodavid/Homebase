@@ -1104,6 +1104,17 @@ body::before{
 .duty-segment-time{font-size:12px;font-weight:760;color:var(--muted);white-space:nowrap}
 @media(max-width:430px){.duty-segment{grid-template-columns:26px minmax(0,1fr);gap:7px}.duty-segment-time{grid-column:2;font-size:11px;margin-top:-4px}.duty-segment-icon{width:24px;height:24px;font-size:15px}}
 
+
+/* Perfiles del hogar 1.8.1 */
+.profile-group{margin:18px 0 8px}.profile-group-title{font-size:12px;font-weight:850;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin:0 4px 8px}
+.profile-kind{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:750;color:var(--muted);margin-top:3px}
+.profile-add{width:100%;border:1px dashed rgba(60,60,67,.22);background:rgba(242,242,247,.72);border-radius:15px;padding:13px;font-weight:800;color:var(--accent);margin-top:12px}
+.profile-edit{border:0;border-radius:10px;padding:8px 10px;font-size:11px;font-weight:800;background:#eef1f5;color:#485464}
+.profile-form{display:none;margin-top:14px;padding:14px;border-radius:16px;background:var(--surface-2)}.profile-form.open{display:block}
+.profile-form-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:13px}.profile-form-actions button{border:0;border-radius:12px;padding:11px;font-weight:800}.profile-form-cancel{background:#e9e9ee}.profile-form-save{background:var(--accent);color:white}
+.profile-row .avatar{overflow:hidden}.profile-row-main{min-width:0}.profile-row-main strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.category-other{margin-top:10px}.category-other[hidden]{display:none}
+@media(max-width:520px){.profile-actions{grid-column:1/-1;justify-content:flex-start;flex-wrap:wrap}.profile-row{grid-template-columns:48px minmax(0,1fr)}}
 </style>
 <meta name="homebase-build" content="homebase-apple-polish-fase1-2-fixed-header-switch">
 </head>
@@ -1115,7 +1126,7 @@ body::before{
       <div><div class="brand-title">Homebase</div><div class="brand-sub">La base de operaciones de la familia</div></div>
     </div>
     <div class="top-actions">
-      <button class="icon-btn" id="filterBtn" aria-label="Filtrar personas">☷</button>
+      <button class="icon-btn" id="filterBtn" aria-label="Filtrar perfiles">☷</button>
       <button class="icon-btn" id="trashBtn">🗑<span class="badge" id="trashBadge">0</span></button>
     </div>
   </header>
@@ -1205,8 +1216,8 @@ body::before{
 
       <div class="section">
       <div class="card list-card">
-        <div class="event-row" id="openFiltersRow"><div class="event-time">☷</div><div class="event-bar" style="--person-color:var(--accent)"></div><div><div class="event-title">Filtros</div><div class="event-meta">Elegir personas visibles</div></div><div>›</div></div>
-        <div class="event-row" id="openProfilesRow"><div class="event-time">◉</div><div class="event-bar" style="--person-color:var(--purple)"></div><div><div class="event-title">Perfiles</div><div class="event-meta">Fotos e identidad de cada persona</div></div><div>›</div></div>
+        <div class="event-row" id="openFiltersRow"><div class="event-time">☷</div><div class="event-bar" style="--person-color:var(--accent)"></div><div><div class="event-title">Filtros</div><div class="event-meta">Elegir perfiles visibles</div></div><div>›</div></div>
+        <div class="event-row" id="openProfilesRow"><div class="event-time">◉</div><div class="event-bar" style="--person-color:var(--purple)"></div><div><div class="event-title">Perfiles</div><div class="event-meta">Personas, mascotas, vehículos y viviendas</div></div><div>›</div></div>
         <div class="event-row" id="openTrashRow"><div class="event-time">🗑</div><div class="event-bar" style="--person-color:var(--danger)"></div><div><div class="event-title">Papelera</div><div class="event-meta">Restaurar elementos borrados</div></div><div>›</div></div>
       </div>
       </div>
@@ -1264,7 +1275,7 @@ body::before{
   <label>Para quién</label><div class="member-picks" id="personPicks"></div>
   <button type="button" class="more" id="moreOptions">Más opciones</button>
   <div class="advanced" id="advanced">
-    <label>Categoría</label><select id="category"><option>Familia</option><option>Colegio</option><option>Extraescolar</option><option>Viaje</option><option>Médico</option><option>Casa</option><option>Otro</option></select>
+    <label>Categoría</label><select id="category"></select><div class="category-other" id="categoryOtherWrap" hidden><label>Especifica cuál</label><input id="categoryOther" maxlength="60" placeholder="Ej. Cambio de batería"></div>
     <div id="repeatWrap"><label>Repetición</label><select id="repeat"><option value="none">No se repite</option><option value="weekly">Cada semana</option><option value="monthly">Cada mes, este día</option><option value="yearly">Cada año (cumpleaños, aniversario…)</option></select>
       <div id="repeatDaysWrap" style="display:none"><label>Días</label><div class="week-picks">
         <label><input type="checkbox" name="repeatDay" value="1">L</label><label><input type="checkbox" name="repeatDay" value="2">M</label><label><input type="checkbox" name="repeatDay" value="3">X</label><label><input type="checkbox" name="repeatDay" value="4">J</label><label><input type="checkbox" name="repeatDay" value="5">V</label><label><input type="checkbox" name="repeatDay" value="6">S</label><label><input type="checkbox" name="repeatDay" value="0">D</label>
@@ -1287,7 +1298,7 @@ body::before{
 
 <dialog id="detailDialog"><div class="modal"><div class="modal-head"><h2>Detalle</h2><button class="close" id="closeDetail">×</button></div><h2 id="detailTitle"></h2><div class="detail-grid" id="detailGrid"></div><div class="action-grid"><button class="edit-btn" id="editItem">Editar</button><button class="delete-btn" id="deleteItem">Borrar</button></div></div></dialog>
 <dialog id="confirmDialog"><div class="modal"><div class="modal-head"><h2 id="confirmTitle">Confirmar</h2><button class="close" id="closeConfirm">×</button></div><p id="confirmText"></p><div class="action-grid" id="confirmActions"></div></div></dialog>
-<dialog id="filterDialog"><div class="modal"><div class="modal-head"><h2>Filtrar personas</h2><button class="close" id="closeFilter">×</button></div><div class="filter-list" id="filterList"></div></div></dialog>
+<dialog id="filterDialog"><div class="modal"><div class="modal-head"><h2>Filtrar perfiles</h2><button class="close" id="closeFilter">×</button></div><div class="filter-list" id="filterList"></div></div></dialog>
 
 <dialog id="profilesDialog">
   <div class="modal">
@@ -1295,8 +1306,17 @@ body::before{
       <h2>Perfiles</h2>
       <button class="close" id="closeProfiles">×</button>
     </div>
-    <p class="event-meta" style="margin-bottom:14px">Pulsa “Foto” para elegir una imagen del iPhone. Si no hay foto, se muestran las iniciales.</p>
+    <p class="event-meta" style="margin-bottom:14px">Personas, mascotas, vehículos y viviendas pueden tener foto y sus propios eventos.</p>
     <div class="profile-list" id="profileList"></div>
+    <button type="button" class="profile-add" id="addProfileButton">＋ Añadir perfil</button>
+    <form class="profile-form" id="profileForm">
+      <input type="hidden" id="profileEditingName">
+      <label>Tipo</label>
+      <select id="profileType"><option value="person">Persona</option><option value="pet">Mascota</option><option value="vehicle">Vehículo</option><option value="home">Vivienda</option></select>
+      <label>Nombre</label><input id="profileName" maxlength="40" required placeholder="Ej. Moto, Lolo o Casa del pueblo">
+      <label>Color</label><input id="profileColor" type="color" value="#687587">
+      <div class="profile-form-actions"><button type="button" class="profile-form-cancel" id="cancelProfileForm">Cancelar</button><button type="submit" class="profile-form-save">Guardar perfil</button></div>
+    </form>
   </div>
 </dialog>
 
@@ -1360,14 +1380,29 @@ body::before{
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
 <script>
-const PEOPLE=[
- {name:"Familia",color:"#3a7be0"},
- {name:"David",color:"#2f9e74"},
- {name:"Ángeles",color:"#9c5ac7"},
- {name:"Erick",color:"#f09a35"},
- {name:"Elia",color:"#e96587"}
+const DEFAULT_PROFILES=[
+ {name:"Familia",type:"person",color:"#3a7be0",locked:true},
+ {name:"David",type:"person",color:"#2f9e74",locked:true},
+ {name:"Ángeles",type:"person",color:"#9c5ac7",locked:true},
+ {name:"Erick",type:"person",color:"#f09a35",locked:true},
+ {name:"Elia",type:"person",color:"#e96587",locked:true},
+ {name:"Perico",type:"pet",color:"#3d4652"},
+ {name:"Kimi",type:"pet",color:"#9a6b43"},
+ {name:"Qashqai",type:"vehicle",color:"#687587"},
+ {name:"Ford Ka",type:"vehicle",color:"#5d82ad"},
+ {name:"Casa Santa Ponsa",type:"home",color:"#d27a36"},
+ {name:"Piso Ripollet",type:"home",color:"#8a6bb3"}
 ];
+let PEOPLE=(()=>{try{const saved=JSON.parse(localStorage.getItem("homebase_profiles")||"null");return Array.isArray(saved)&&saved.length?saved:DEFAULT_PROFILES.map(x=>({...x}));}catch{return DEFAULT_PROFILES.map(x=>({...x}));}})();
 const profilePhotos=JSON.parse(localStorage.getItem("homebase_profile_photos")||"{}");
+const PROFILE_TYPES={person:{label:"Personas",singular:"Persona",icon:"👤"},pet:{label:"Mascotas",singular:"Mascota",icon:"🐾"},vehicle:{label:"Vehículos",singular:"Vehículo",icon:"🚗"},home:{label:"Viviendas",singular:"Vivienda",icon:"⌂"}};
+const CATEGORY_SETS={
+ person:["Familia","Colegio","Extraescolar","Viaje","Médico","Cumpleaños","Trabajo","Otro"],
+ pet:["Veterinario","Vacuna","Medicación","Desparasitación","Peluquería","Seguro","Otro"],
+ vehicle:["Seguro","ITV","Revisión","Mantenimiento","Reparación","Impuesto","Aparcamiento","Otro"],
+ home:["Seguro","Mantenimiento","Reparación","Comunidad","Impuestos","Alquiler","Suministros","Otro"]
+};
+let profilesUpdatedAt=Number(localStorage.getItem("homebase_profiles_updated_at")||0);
 const state={
  items:[],
  visiblePeople:PEOPLE.map(p=>p.name),
@@ -1407,18 +1442,20 @@ const fmtDate=d=>new Intl.DateTimeFormat("es-ES",{weekday:"long",day:"numeric",m
 const fmtShort=d=>new Intl.DateTimeFormat("es-ES",{day:"numeric",month:"short"}).format(d);
 const esc=s=>(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
 const personColor=name=>PEOPLE.find(p=>p.name===name)?.color||"#3a7be0";
+const profileType=name=>PEOPLE.find(p=>p.name===name)?.type||"person";
+function saveProfiles(sync=true){localStorage.setItem("homebase_profiles",JSON.stringify(PEOPLE));profilesUpdatedAt=Date.now();localStorage.setItem("homebase_profiles_updated_at",String(profilesUpdatedAt));state.visiblePeople=state.visiblePeople.filter(n=>PEOPLE.some(p=>p.name===n));if(sync)scheduleCloudSave();}
 const itemPeople=item=>Array.isArray(item.people)&&item.people.length?item.people:[item.person||"Familia"];
 const itemPeopleLabel=item=>itemPeople(item).join(" y ");
 const itemVisible=item=>itemPeople(item).some(name=>state.visiblePeople.includes(name));
 const itemColor=item=>item.eventColor||personColor(itemPeople(item)[0]);
+const itemCategoryLabel=item=>item.category==="Otro"&&item.categoryOther?item.categoryOther:(item.category||"Familia");
 const visible=name=>state.visiblePeople.includes(name);
 
 function initials(name){
  if(name==="Familia")return "⌂";
- if(name==="Erick")return "ER";
- if(name==="Elia")return "EL";
- if(name==="Ángeles")return "Á";
- return name.split(/\s+/).filter(Boolean).slice(0,2).map(part=>part.charAt(0).toUpperCase()).join("");
+ const type=profileType(name);
+ const letters=name.split(/\s+/).filter(Boolean).slice(0,2).map(part=>part.charAt(0).toUpperCase()).join("");
+ return letters||(PROFILE_TYPES[type]?.icon||"•");
 }
 function avatarHtml(name){
  const photo=profilePhotos[name];
@@ -1445,6 +1482,7 @@ function load(){
   people:Array.isArray(i.people)&&i.people.length?i.people:[i.person||"Familia"],
   eventColor:i.eventColor||"",
   category:i.category||"Familia",
+  categoryOther:i.categoryOther||"",
   repeat:i.repeat||"none",
   repeatDays:Array.isArray(i.repeatDays)?i.repeatDays:[],
   repeatUntil:i.repeatUntil||i.repeatEnd||((i.repeat==="weekly"&&i.endDate&&i.endDate!==i.date)?i.endDate:""),
@@ -1510,7 +1548,7 @@ function eventRow(item,dateIso){
    return `<div class="event-row" data-id="${item.id}" data-date="${dateIso}" style="--person-color:#5d82ad"><div class="event-time">${time}</div><div class="event-bar"></div><div><div class="event-title">${esc(rosterDisplayTitle(item,item.title))} <span class="roster-badge">ROSTER</span></div><div class="event-meta">${esc(meta)}</div></div><div style="display:flex;align-items:center;gap:7px"><span class="avatar" style="--person-color:#5d82ad">✈</span><button class="row-action" data-delete="${item.id}" data-date="${dateIso}">⋯</button></div></div>`;
  }
  return `<div class="event-row" data-id="${item.id}" data-date="${dateIso}" style="--person-color:${itemColor(item)}">
- <div class="event-time">${time}</div><div class="event-bar"></div><div><div class="event-title">${esc(item.title)}</div><div class="event-meta">${esc(itemPeopleLabel(item))} · ${esc(item.category)}${item.repeat==="weekly"?" · Semanal":item.repeat==="monthly"?" · Mensual":item.repeat==="yearly"?" · Anual":""}</div></div><div style="display:flex;align-items:center;gap:7px">${eventAvatarHtml(item)}<button class="row-action" data-delete="${item.id}" data-date="${dateIso}">⋯</button></div></div>`;
+ <div class="event-time">${time}</div><div class="event-bar"></div><div><div class="event-title">${esc(item.title)}</div><div class="event-meta">${esc(itemPeopleLabel(item))} · ${esc(itemCategoryLabel(item))}${item.repeat==="weekly"?" · Semanal":item.repeat==="monthly"?" · Mensual":item.repeat==="yearly"?" · Anual":""}</div></div><div style="display:flex;align-items:center;gap:7px">${eventAvatarHtml(item)}<button class="row-action" data-delete="${item.id}" data-date="${dateIso}">⋯</button></div></div>`;
 }
 function taskRow(item){
  return `<div class="task-row" data-task="${item.id}"><button class="check ${item.done?"done":""}" data-check="${item.id}">${item.done?"✓":""}</button><div><div class="event-title task-title ${item.done?"done":""}">${esc(item.title)}</div><div class="event-meta">${esc(itemPeopleLabel(item))} · ${item.date ? fmtDate(parseDate(item.date)) : "Sin fecha límite"}</div></div>${eventAvatarHtml(item)}</div>`;
@@ -1835,44 +1873,44 @@ async function prepareProfileImage(file){
 }
 
 function renderProfiles(){
- $("profileList").innerHTML=PEOPLE.map(person=>`
+ const order=["person","pet","vehicle","home"];
+ $("profileList").innerHTML=order.map(type=>{
+   const profiles=PEOPLE.filter(p=>p.type===type);
+   if(!profiles.length)return "";
+   return `<section class="profile-group"><div class="profile-group-title">${PROFILE_TYPES[type].label}</div>${profiles.map(person=>`
    <div class="profile-row">
      ${avatarHtml(person.name)}
-     <div><strong>${esc(person.name)}</strong><div class="event-meta">${profilePhotos[person.name]?"Foto personalizada":"Iniciales y color"}</div></div>
+     <div class="profile-row-main"><strong>${esc(person.name)}</strong><div class="profile-kind">${PROFILE_TYPES[type].icon} ${PROFILE_TYPES[type].singular} · ${profilePhotos[person.name]?"Foto personalizada":"Iniciales y color"}</div></div>
      <div class="profile-actions">
        <label class="profile-upload">Foto<input type="file" accept="image/*" data-profile-file="${esc(person.name)}" hidden></label>
-       ${profilePhotos[person.name]?`<button class="profile-remove" data-remove-photo="${esc(person.name)}">Quitar</button>`:""}
+       <button class="profile-edit" type="button" data-edit-profile="${esc(person.name)}">Editar</button>
+       ${profilePhotos[person.name]?`<button class="profile-remove" type="button" data-remove-photo="${esc(person.name)}">Quitar foto</button>`:""}
+       ${person.locked?"":`<button class="profile-remove" type="button" data-delete-profile="${esc(person.name)}">Eliminar</button>`}
      </div>
-   </div>`).join("");
+   </div>`).join("")}</section>`;
+ }).join("");
 
  document.querySelectorAll("[data-profile-file]").forEach(input=>{
    input.onchange=async()=>{
-     const file=input.files?.[0];
-     if(!file)return;
-
-     try{
-       const dataUrl=await prepareProfileImage(file);
-       profilePhotos[input.dataset.profileFile]=dataUrl;
-       localStorage.setItem("homebase_profile_photos",JSON.stringify(profilePhotos));
-       scheduleCloudSave();
-       renderProfiles();
-       render();
-     }catch(error){
-       alert("No he podido procesar esa foto. Prueba con otra imagen o una captura de pantalla.");
-       console.error(error);
-     }finally{
-       input.value="";
-     }
+     const file=input.files?.[0];if(!file)return;
+     try{const dataUrl=await prepareProfileImage(file);profilePhotos[input.dataset.profileFile]=dataUrl;localStorage.setItem("homebase_profile_photos",JSON.stringify(profilePhotos));scheduleCloudSave();renderProfiles();render();}
+     catch(error){alert("No he podido procesar esa foto. Prueba con otra imagen o una captura de pantalla.");console.error(error)}
+     finally{input.value=""}
    };
  });
- document.querySelectorAll("[data-remove-photo]").forEach(button=>{
-   button.onclick=()=>{
-     delete profilePhotos[button.dataset.removePhoto];
-     localStorage.setItem("homebase_profile_photos",JSON.stringify(profilePhotos));
-     scheduleCloudSave();
-     renderProfiles();render();
-   };
- });
+ document.querySelectorAll("[data-remove-photo]").forEach(button=>button.onclick=()=>{delete profilePhotos[button.dataset.removePhoto];localStorage.setItem("homebase_profile_photos",JSON.stringify(profilePhotos));scheduleCloudSave();renderProfiles();render()});
+ document.querySelectorAll("[data-edit-profile]").forEach(button=>button.onclick=()=>openProfileForm(button.dataset.editProfile));
+ document.querySelectorAll("[data-delete-profile]").forEach(button=>button.onclick=()=>deleteProfile(button.dataset.deleteProfile));
+}
+function openProfileForm(name=""){
+ const profile=PEOPLE.find(p=>p.name===name);
+ $("profileEditingName").value=profile?.name||"";$("profileType").value=profile?.type||"person";$("profileName").value=profile?.name||"";$("profileColor").value=profile?.color||"#687587";$("profileName").disabled=!!profile?.locked;$("profileType").disabled=!!profile?.locked;$("profileForm").classList.add("open");(profile?.locked?$("profileColor"):$("profileName")).focus();
+}
+function closeProfileForm(){$("profileForm").reset();$("profileEditingName").value="";$("profileName").disabled=false;$("profileType").disabled=false;$("profileColor").value="#687587";$("profileForm").classList.remove("open")}
+function deleteProfile(name){
+ if(!confirm(`¿Eliminar el perfil “${name}”? Sus eventos se conservarán y pasarán a Familia.`))return;
+ state.items.forEach(item=>{if(!itemPeople(item).includes(name))return;const remaining=itemPeople(item).filter(n=>n!==name);item.people=remaining.length?remaining:["Familia"];item.person=item.people[0];item.updatedAt=Date.now()});
+ PEOPLE=PEOPLE.filter(p=>p.name!==name);delete profilePhotos[name];localStorage.setItem("homebase_profile_photos",JSON.stringify(profilePhotos));saveProfiles(false);setPeople();closeProfileForm();save();renderProfiles();
 }
 
 function renderTrash(){
@@ -1955,7 +1993,7 @@ function renderTrashDetail(item){
  }
 
  rows+=detailRow("Para",itemPeopleLabel(item));
- rows+=detailRow("Categoría",item.category||"Familia");
+ rows+=detailRow("Categoría",itemCategoryLabel(item));
  if(item.notes) rows+=detailRow("Notas",item.notes);
 
  $("trashDetailGrid").innerHTML=rows;
@@ -1997,13 +2035,27 @@ function bindDynamic(){
  });
 }
 
+function selectedProfileNames(){return [...document.querySelectorAll("[name=eventPerson]:checked")].map(x=>x.value)}
+function updateCategoryOptions(preferred=""){
+ const names=selectedProfileNames();
+ const types=[...new Set((names.length?names:["Familia"]).map(profileType))];
+ const options=[...new Set(types.flatMap(t=>CATEGORY_SETS[t]||CATEGORY_SETS.person))];
+ if(!options.includes("Otro"))options.push("Otro");
+ const current=preferred||$("category").value;
+ $("category").innerHTML=options.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("");
+ $("category").value=options.includes(current)?current:options[0];
+ updateCategoryOtherVisibility();
+}
+function updateCategoryOtherVisibility(){const other=$("category").value==="Otro";$("categoryOtherWrap").hidden=!other;$("categoryOther").required=other;if(!other)$("categoryOther").value=""}
 function setPeople(){
- $("personPicks").innerHTML=PEOPLE.map(p=>`<label class="member-pick"><input type="checkbox" name="eventPerson" value="${esc(p.name)}"><span>${esc(p.name)}</span></label>`).join("");
+ $("personPicks").innerHTML=PEOPLE.map(p=>`<label class="member-pick"><input type="checkbox" name="eventPerson" value="${esc(p.name)}"><span>${esc(PROFILE_TYPES[p.type]?.icon||"")} ${esc(p.name)}</span></label>`).join("");
+ document.querySelectorAll("[name=eventPerson]").forEach(x=>x.onchange=()=>updateCategoryOptions());
+ updateCategoryOptions();
 }
 function nowRounded(){const n=new Date(),mins=Math.ceil((n.getHours()*60+n.getMinutes())/15)*15;return `${String(Math.floor((mins%1440)/60)).padStart(2,"0")}:${String(mins%60).padStart(2,"0")}`}
 function plusHour(t){const [h,m]=t.split(":").map(Number),v=(h*60+m+60)%1440;return `${String(Math.floor(v/60)).padStart(2,"0")}:${String(v%60).padStart(2,"0")}`}
 function resetEditor(type="event",preferredDate=null){
- state.editingId=null;$("editorForm").reset();$("itemType").value=type;$("editorTitle").textContent="Nuevo";document.querySelectorAll("[data-type]").forEach(b=>b.classList.toggle("active",b.dataset.type===type));toggleType(type);$("advanced").classList.remove("open");const chosenDate=preferredDate instanceof Date&&!Number.isNaN(preferredDate.getTime())?iso(preferredDate):iso(new Date()),time=nowRounded();$("startDate").value=chosenDate;$("endDate").value=chosenDate;$("allDay").checked=false;$("timeRow").style.display=type==="event"?"grid":"none";$("startTime").value=time;$("endTime").value=plusHour(time);document.querySelectorAll("[name=repeatDay]").forEach(x=>x.checked=false);document.querySelectorAll("[name=eventPerson]").forEach(x=>x.checked=x.value==="Familia");document.querySelectorAll("[name=eventColor]").forEach(x=>x.checked=x.value==="#3a7be0");
+ state.editingId=null;$("editorForm").reset();$("itemType").value=type;$("editorTitle").textContent="Nuevo";document.querySelectorAll("[data-type]").forEach(b=>b.classList.toggle("active",b.dataset.type===type));toggleType(type);$("advanced").classList.remove("open");const chosenDate=preferredDate instanceof Date&&!Number.isNaN(preferredDate.getTime())?iso(preferredDate):iso(new Date()),time=nowRounded();$("startDate").value=chosenDate;$("endDate").value=chosenDate;$("allDay").checked=false;$("timeRow").style.display=type==="event"?"grid":"none";$("startTime").value=time;$("endTime").value=plusHour(time);document.querySelectorAll("[name=repeatDay]").forEach(x=>x.checked=false);document.querySelectorAll("[name=eventPerson]").forEach(x=>x.checked=x.value==="Familia");updateCategoryOptions("Familia");$("categoryOther").value="";document.querySelectorAll("[name=eventColor]").forEach(x=>x.checked=x.value==="#3a7be0");
  $("noDeadline").checked=false;
  $("startDate").disabled=false;
  $("startDate").required=true;
@@ -2026,7 +2078,7 @@ function openEdit(item){
  $("startDate").disabled=$("noDeadline").checked;
  $("startDate").required=!$("noDeadline").checked;
  $("startDate").value=item.date||"";
- $("endDate").value=item.endDate||item.date||"";$("allDay").checked=!!item.allDay||!item.time;$("timeRow").style.display=$("allDay").checked?"none":"grid";$("startTime").value=item.time;$("endTime").value=item.endTime;document.querySelectorAll("[name=eventPerson]").forEach(x=>x.checked=itemPeople(item).includes(x.value));document.querySelectorAll("[name=eventColor]").forEach(x=>x.checked=x.value===(item.eventColor||"#3a7be0"));$("category").value=item.category;$("repeat").value=item.repeat;$("repeatUntil").value=item.repeatUntil;$("notes").value=item.notes;document.querySelectorAll("[name=repeatDay]").forEach(x=>x.checked=item.repeatDays.includes(Number(x.value)));const rep=item.repeat==="weekly",recurring=["weekly","monthly","yearly"].includes(item.repeat);
+ $("endDate").value=item.endDate||item.date||"";$("allDay").checked=!!item.allDay||!item.time;$("timeRow").style.display=$("allDay").checked?"none":"grid";$("startTime").value=item.time;$("endTime").value=item.endTime;document.querySelectorAll("[name=eventPerson]").forEach(x=>x.checked=itemPeople(item).includes(x.value));document.querySelectorAll("[name=eventColor]").forEach(x=>x.checked=x.value===(item.eventColor||"#3a7be0"));updateCategoryOptions(item.category||"Familia");$("category").value=item.category||"Familia";$("categoryOther").value=item.categoryOther||"";updateCategoryOtherVisibility();$("repeat").value=item.repeat;$("repeatUntil").value=item.repeatUntil;$("notes").value=item.notes;document.querySelectorAll("[name=repeatDay]").forEach(x=>x.checked=item.repeatDays.includes(Number(x.value)));const rep=item.repeat==="weekly",recurring=["weekly","monthly","yearly"].includes(item.repeat);
  if(rep){
    if(item.endDate && item.endDate!==item.date && !item.repeatUntil){
      item.repeatUntil=item.endDate;
@@ -2128,7 +2180,7 @@ try{
 function cleanSyncCode(value){return (value||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,12)}
 function createCode(){const alphabet="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";let code="HB";for(let i=0;i<8;i++)code+=alphabet[Math.floor(Math.random()*alphabet.length)];return code}
 function syncDoc(code=state.syncCode){return cloudDb?.collection("homebaseSyncs").doc(code)}
-function cloudPayload(){return {version:1,items:state.items,rosterMeta:state.rosterMeta||null,profilePhotos:{...profilePhotos},updatedAt:Date.now()}}
+function cloudPayload(){return {version:2,items:state.items,rosterMeta:state.rosterMeta||null,profiles:PEOPLE,profilesUpdatedAt,profilePhotos:{...profilePhotos},updatedAt:Date.now()}}
 function rosterCanonicalKey(item){
  const r=item?.rosterData||{},date=r.sourceDate||item?.date||"",kind=r.kind||"ground";
  const flights=(r.flights||[]).map(f=>`${f.number||""}:${f.dep||""}-${f.arr||""}`).join(">");
@@ -2169,6 +2221,7 @@ function applyRemotePayload(data){
  state.items=mergeItems(state.items,data?.items||[]);
  if(remoteWins)state.rosterMeta=remoteMeta;
  if(state.rosterMeta)state.items=reconcileRosterSnapshot(state.items,state.rosterMeta);
+ if(Array.isArray(data?.profiles)&&data.profiles.length&&Number(data.profilesUpdatedAt||0)>=profilesUpdatedAt){PEOPLE=data.profiles;profilesUpdatedAt=Number(data.profilesUpdatedAt||Date.now());localStorage.setItem("homebase_profiles",JSON.stringify(PEOPLE));localStorage.setItem("homebase_profiles_updated_at",String(profilesUpdatedAt));state.visiblePeople=[...new Set([...state.visiblePeople,...PEOPLE.map(p=>p.name)])].filter(n=>PEOPLE.some(p=>p.name===n));setPeople();}
  if(data?.profilePhotos)Object.assign(profilePhotos,data.profilePhotos);
 }
 function setSyncStatus(status,text){state.syncStatus=status;state.syncStatusText=text||"";renderSyncControls()}
@@ -2247,7 +2300,7 @@ async function linkFamilySync(){
 }
 function unlinkFamilySync(){if(!confirm("¿Desvincular este dispositivo? Los datos locales no se borrarán."))return;if(state.syncUnsubscribe)state.syncUnsubscribe();state.syncUnsubscribe=null;state.syncCode="";localStorage.removeItem("homebase_sync_code");state.syncStatus="idle";render()}
 
-window.HOMEBASE_VERSION="1.6.3";
+window.HOMEBASE_VERSION="1.8.1";
 const RosterParser=(()=>{
 const AIRPORT_TZ={
 PMI:'Europe/Madrid',BCN:'Europe/Madrid',MAD:'Europe/Madrid',AGP:'Europe/Madrid',ALC:'Europe/Madrid',VLC:'Europe/Madrid',SVQ:'Europe/Madrid',BIO:'Europe/Madrid',IBZ:'Europe/Madrid',MAH:'Europe/Madrid',GRO:'Europe/Madrid',REU:'Europe/Madrid',SCQ:'Europe/Madrid',OVD:'Europe/Madrid',VGO:'Europe/Madrid',ZAZ:'Europe/Madrid',XRY:'Europe/Madrid',LEI:'Europe/Madrid',SDR:'Europe/Madrid',RMU:'Europe/Madrid',
@@ -2649,7 +2702,7 @@ function updateRosterEnvironmentStatus(){
 $("editorForm").onsubmit=e=>{e.preventDefault();const type=$("itemType").value,values={type,title:$("titleInput").value.trim(),date:type==="task"&&$("noDeadline").checked?"":$("startDate").value,
  endDate:type==="event"
    ? (["weekly","monthly","yearly"].includes($("repeat").value) ? $("startDate").value : ($("endDate").value||$("startDate").value))
-   : (type==="task"&&$("noDeadline").checked?"":$("startDate").value),allDay:type==="event"?$("allDay").checked:false,time:type==="event"&&!$("allDay").checked?$("startTime").value:"",endTime:type==="event"&&!$("allDay").checked?$("endTime").value:"",people:(()=>{const selected=[...document.querySelectorAll("[name=eventPerson]:checked")].map(x=>x.value);return selected.length?selected:["Familia"]})(),person:(()=>{const selected=[...document.querySelectorAll("[name=eventPerson]:checked")].map(x=>x.value);return selected[0]||"Familia"})(),eventColor:type==="event"?(document.querySelector("[name=eventColor]:checked")?.value||"#3a7be0"):"",category:$("category").value,repeat:type==="event"?$("repeat").value:"none",repeatDays:type==="event"?[...document.querySelectorAll("[name=repeatDay]:checked")].map(x=>Number(x.value)):[],repeatUntil:type==="event"?$("repeatUntil").value:"",notes:$("notes").value.trim()};if(state.editingId)Object.assign(state.items.find(i=>i.id===state.editingId),values,{updatedAt:Date.now()});else state.items.push({id:crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random()}`,...values,exceptions:[],done:false,completedAt:null,deletedAt:null,updatedAt:Date.now()});$("editorDialog").close();save()};
+   : (type==="task"&&$("noDeadline").checked?"":$("startDate").value),allDay:type==="event"?$("allDay").checked:false,time:type==="event"&&!$("allDay").checked?$("startTime").value:"",endTime:type==="event"&&!$("allDay").checked?$("endTime").value:"",people:(()=>{const selected=[...document.querySelectorAll("[name=eventPerson]:checked")].map(x=>x.value);return selected.length?selected:["Familia"]})(),person:(()=>{const selected=[...document.querySelectorAll("[name=eventPerson]:checked")].map(x=>x.value);return selected[0]||"Familia"})(),eventColor:type==="event"?(document.querySelector("[name=eventColor]:checked")?.value||"#3a7be0"):"",category:$("category").value,categoryOther:$("category").value==="Otro"?$("categoryOther").value.trim():"",repeat:type==="event"?$("repeat").value:"none",repeatDays:type==="event"?[...document.querySelectorAll("[name=repeatDay]:checked")].map(x=>Number(x.value)):[],repeatUntil:type==="event"?$("repeatUntil").value:"",notes:$("notes").value.trim()};if(state.editingId)Object.assign(state.items.find(i=>i.id===state.editingId),values,{updatedAt:Date.now()});else state.items.push({id:crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random()}`,...values,exceptions:[],done:false,completedAt:null,deletedAt:null,updatedAt:Date.now()});$("editorDialog").close();save()};
 document.querySelectorAll("[data-type]").forEach(b=>b.onclick=()=>{$("itemType").value=b.dataset.type;document.querySelectorAll("[data-type]").forEach(x=>x.classList.toggle("active",x===b));toggleType(b.dataset.type)});
 $("moreOptions").onclick=()=>$("advanced").classList.toggle("open");
 $("repeat").onchange=()=>{
@@ -2685,6 +2738,11 @@ $("noDeadline").onchange=()=>{
  if(on)$("startDate").value="";
  else if(!$("startDate").value)$("startDate").value=iso(new Date());
 };
+
+$("category").onchange=updateCategoryOtherVisibility;
+$("addProfileButton").onclick=()=>openProfileForm();
+$("cancelProfileForm").onclick=closeProfileForm;
+$("profileForm").onsubmit=e=>{e.preventDefault();const oldName=$("profileEditingName").value.trim(),name=$("profileName").value.trim(),type=$("profileType").value,color=$("profileColor").value;if(!name)return;if(PEOPLE.some(p=>p.name.toLocaleLowerCase("es")===name.toLocaleLowerCase("es")&&p.name!==oldName)){alert("Ya existe un perfil con ese nombre.");return}if(oldName){const profile=PEOPLE.find(p=>p.name===oldName);if(!profile)return;profile.name=name;profile.type=type;profile.color=color;if(oldName!==name){state.items.forEach(item=>{if(!itemPeople(item).includes(oldName))return;item.people=itemPeople(item).map(n=>n===oldName?name:n);item.person=item.people[0];item.updatedAt=Date.now()});if(profilePhotos[oldName]){profilePhotos[name]=profilePhotos[oldName];delete profilePhotos[oldName]}}}else{PEOPLE.push({name,type,color})}localStorage.setItem("homebase_profile_photos",JSON.stringify(profilePhotos));saveProfiles(false);state.visiblePeople=[...new Set([...state.visiblePeople,name])];setPeople();closeProfileForm();save();renderProfiles();};
 
 document.querySelectorAll(".nav-btn").forEach(b=>b.onclick=()=>{
  state.page=b.dataset.page;
