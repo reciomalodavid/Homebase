@@ -1104,6 +1104,16 @@ body::before{
 .duty-segment-time{font-size:12px;font-weight:760;color:var(--muted);white-space:nowrap}
 @media(max-width:430px){.duty-segment{grid-template-columns:26px minmax(0,1fr);gap:7px}.duty-segment-time{grid-column:2;font-size:11px;margin-top:-4px}.duty-segment-icon{width:24px;height:24px;font-size:15px}}
 
+
+/* Homebase 1.8 · perfiles del hogar */
+.profile-group{margin:16px 0 8px;font-size:12px;font-weight:850;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.profile-row{display:grid;grid-template-columns:46px 1fr auto;gap:11px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)}
+.profile-row:last-child{border-bottom:0}.profile-kind{font-size:12px;color:var(--muted);margin-top:3px}
+.profile-add{width:100%;margin:8px 0 4px;padding:12px;border:1px dashed var(--line);border-radius:13px;background:var(--surface);font-weight:800;color:var(--accent)}
+.profile-actions{display:flex;gap:6px;align-items:center}.profile-delete{border:0;background:#fff0f0;color:var(--danger);border-radius:10px;padding:8px 10px;font-weight:800}
+.profile-upload{background:var(--accent-soft);color:var(--accent);border-radius:10px;padding:8px 10px;font-weight:800;cursor:pointer}
+.category-custom{margin-top:8px}.category-custom[hidden]{display:none}
+.member-pick .pick-avatar{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;overflow:hidden;background:var(--person-color);color:#fff;font-size:11px;font-weight:850;flex:0 0 auto}.member-pick .pick-avatar img{width:100%;height:100%;object-fit:cover}
 </style>
 <meta name="homebase-build" content="homebase-apple-polish-fase1-2-fixed-header-switch">
 </head>
@@ -1206,7 +1216,7 @@ body::before{
       <div class="section">
       <div class="card list-card">
         <div class="event-row" id="openFiltersRow"><div class="event-time">☷</div><div class="event-bar" style="--person-color:var(--accent)"></div><div><div class="event-title">Filtros</div><div class="event-meta">Elegir personas visibles</div></div><div>›</div></div>
-        <div class="event-row" id="openProfilesRow"><div class="event-time">◉</div><div class="event-bar" style="--person-color:var(--purple)"></div><div><div class="event-title">Perfiles</div><div class="event-meta">Fotos e identidad de cada persona</div></div><div>›</div></div>
+        <div class="event-row" id="openProfilesRow"><div class="event-time">◉</div><div class="event-bar" style="--person-color:var(--purple)"></div><div><div class="event-title">Perfiles</div><div class="event-meta">Personas, mascotas, vehículos y viviendas</div></div><div>›</div></div>
         <div class="event-row" id="openTrashRow"><div class="event-time">🗑</div><div class="event-bar" style="--person-color:var(--danger)"></div><div><div class="event-title">Papelera</div><div class="event-meta">Restaurar elementos borrados</div></div><div>›</div></div>
       </div>
       </div>
@@ -1264,7 +1274,7 @@ body::before{
   <label>Para quién</label><div class="member-picks" id="personPicks"></div>
   <button type="button" class="more" id="moreOptions">Más opciones</button>
   <div class="advanced" id="advanced">
-    <label>Categoría</label><select id="category"><option>Familia</option><option>Colegio</option><option>Extraescolar</option><option>Viaje</option><option>Médico</option><option>Casa</option><option>Otro</option></select>
+    <label>Categoría</label><select id="category"></select><input id="customCategory" class="category-custom" hidden maxlength="60" placeholder="Escribe la categoría (ej. Cambio de batería)">
     <div id="repeatWrap"><label>Repetición</label><select id="repeat"><option value="none">No se repite</option><option value="weekly">Cada semana</option><option value="monthly">Cada mes, este día</option><option value="yearly">Cada año (cumpleaños, aniversario…)</option></select>
       <div id="repeatDaysWrap" style="display:none"><label>Días</label><div class="week-picks">
         <label><input type="checkbox" name="repeatDay" value="1">L</label><label><input type="checkbox" name="repeatDay" value="2">M</label><label><input type="checkbox" name="repeatDay" value="3">X</label><label><input type="checkbox" name="repeatDay" value="4">J</label><label><input type="checkbox" name="repeatDay" value="5">V</label><label><input type="checkbox" name="repeatDay" value="6">S</label><label><input type="checkbox" name="repeatDay" value="0">D</label>
@@ -1295,11 +1305,23 @@ body::before{
       <h2>Perfiles</h2>
       <button class="close" id="closeProfiles">×</button>
     </div>
-    <p class="event-meta" style="margin-bottom:14px">Pulsa “Foto” para elegir una imagen del iPhone. Si no hay foto, se muestran las iniciales.</p>
+    <p class="event-meta" style="margin-bottom:14px">Personas, mascotas, vehículos y viviendas pueden tener foto, color y eventos propios.</p>
+    <button class="profile-add" id="addProfile" type="button">＋ Añadir perfil</button>
     <div class="profile-list" id="profileList"></div>
   </div>
 </dialog>
 
+
+
+<dialog id="profileEditorDialog">
+<form class="modal" id="profileEditorForm">
+  <div class="modal-head"><h2>Nuevo perfil</h2><button type="button" class="close" id="closeProfileEditor">×</button></div>
+  <label>Tipo</label><select id="profileType"><option value="person">Persona</option><option value="pet">Mascota</option><option value="vehicle">Vehículo</option><option value="home">Vivienda</option></select>
+  <label>Nombre</label><input id="profileName" required maxlength="40" placeholder="Ej. Qashqai, Perico o Casa Santa Ponsa">
+  <label>Color</label><input id="profileColor" type="color" value="#5d82ad">
+  <button class="save" type="submit">Crear perfil</button>
+</form>
+</dialog>
 
 <dialog id="trashDetailDialog">
   <div class="modal">
@@ -1360,17 +1382,20 @@ body::before{
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
 <script>
-const PEOPLE=[
- {name:"Familia",color:"#3a7be0"},
- {name:"David",color:"#2f9e74"},
- {name:"Ángeles",color:"#9c5ac7"},
- {name:"Erick",color:"#f09a35"},
- {name:"Elia",color:"#e96587"}
+const DEFAULT_PROFILES=[
+ {name:"Familia",type:"group",color:"#3a7be0"},
+ {name:"David",type:"person",color:"#2f9e74"},{name:"Ángeles",type:"person",color:"#9c5ac7"},{name:"Erick",type:"person",color:"#f09a35"},{name:"Elia",type:"person",color:"#e96587"},
+ {name:"Perico",type:"pet",color:"#374151"},{name:"Kimi",type:"pet",color:"#9a6b3f"},
+ {name:"Qashqai",type:"vehicle",color:"#687587"},{name:"Ford Ka",type:"vehicle",color:"#7b8fa8"},
+ {name:"Casa Santa Ponsa",type:"home",color:"#2f8f83"},{name:"Piso Ripollet",type:"home",color:"#b06c4f"}
 ];
+let PEOPLE=JSON.parse(localStorage.getItem("homebase_profiles")||"null")||DEFAULT_PROFILES.map(x=>({...x}));
+for(const d of DEFAULT_PROFILES)if(!PEOPLE.some(p=>p.name===d.name))PEOPLE.push({...d});
+localStorage.setItem("homebase_profiles",JSON.stringify(PEOPLE));
 const profilePhotos=JSON.parse(localStorage.getItem("homebase_profile_photos")||"{}");
 const state={
  items:[],
- visiblePeople:PEOPLE.map(p=>p.name),
+ visiblePeople:JSON.parse(localStorage.getItem("homebase_visible_profiles")||"null")||PEOPLE.map(p=>p.name),
  page:"todayPage",
  mode:"month",
  month:new Date(new Date().getFullYear(),new Date().getMonth(),1),
@@ -1412,9 +1437,31 @@ const itemPeopleLabel=item=>itemPeople(item).join(" y ");
 const itemVisible=item=>itemPeople(item).some(name=>state.visiblePeople.includes(name));
 const itemColor=item=>item.eventColor||personColor(itemPeople(item)[0]);
 const visible=name=>state.visiblePeople.includes(name);
+const PROFILE_TYPE_LABELS={group:"Familia",person:"Personas",pet:"Mascotas",vehicle:"Vehículos",home:"Viviendas"};
+const CATEGORY_SETS={
+ group:["Familia","Cumpleaños","Viaje","Colegio","Médico","Casa","Otro"],
+ person:["Personal","Médico","Colegio","Extraescolar","Viaje","Cumpleaños","Otro"],
+ pet:["Veterinario","Vacuna","Medicación","Desparasitación","Seguro","Peluquería","Otro"],
+ vehicle:["Seguro","ITV","Revisión","Mantenimiento","Reparación","Impuesto","Aparcamiento","Otro"],
+ home:["Seguro","Mantenimiento","Reparación","Impuestos","Comunidad","Alquiler","Suministros","Otro"]
+};
+function profileType(name){return PEOPLE.find(p=>p.name===name)?.type||"person"}
+function updateCategoryOptions(preferred=""){
+ const selected=[...document.querySelectorAll("[name=eventPerson]:checked")].map(x=>x.value);
+ const types=[...new Set((selected.length?selected:["Familia"]).map(profileType))];
+ const options=[...new Set(types.flatMap(t=>CATEGORY_SETS[t]||CATEGORY_SETS.group))];
+ if(!options.includes("Otro"))options.push("Otro");
+ const select=$("category"),old=preferred||select.value;
+ select.innerHTML=options.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join("");
+ select.value=options.includes(old)?old:options[0];
+ toggleCustomCategory();
+}
+function toggleCustomCategory(){const custom=$("customCategory");if(!custom)return;custom.hidden=$("category").value!=="Otro";custom.required=!custom.hidden}
+
 
 function initials(name){
  if(name==="Familia")return "⌂";
+ const type=profileType(name); if(type==="pet")return "🐾"; if(type==="vehicle")return "🚗"; if(type==="home")return "⌂";
  if(name==="Erick")return "ER";
  if(name==="Elia")return "EL";
  if(name==="Ángeles")return "Á";
@@ -1835,175 +1882,43 @@ async function prepareProfileImage(file){
 }
 
 function renderProfiles(){
- $("profileList").innerHTML=PEOPLE.map(person=>`
+ const order=["group","person","pet","vehicle","home"];
+ $("profileList").innerHTML=order.map(type=>{
+   const profiles=PEOPLE.filter(p=>p.type===type);if(!profiles.length)return "";
+   return `<div class="profile-group">${PROFILE_TYPE_LABELS[type]}</div>`+profiles.map(person=>`
    <div class="profile-row">
      ${avatarHtml(person.name)}
-     <div><strong>${esc(person.name)}</strong><div class="event-meta">${profilePhotos[person.name]?"Foto personalizada":"Iniciales y color"}</div></div>
+     <div><strong>${esc(person.name)}</strong><div class="profile-kind">${profilePhotos[person.name]?"Foto personalizada":(PROFILE_TYPE_LABELS[person.type]||"Perfil")}</div></div>
      <div class="profile-actions">
        <label class="profile-upload">Foto<input type="file" accept="image/*" data-profile-file="${esc(person.name)}" hidden></label>
-       ${profilePhotos[person.name]?`<button class="profile-remove" data-remove-photo="${esc(person.name)}">Quitar</button>`:""}
+       ${person.name!=="Familia"?`<button class="profile-delete" type="button" data-delete-profile="${esc(person.name)}">×</button>`:""}
      </div>
    </div>`).join("");
-
- document.querySelectorAll("[data-profile-file]").forEach(input=>{
-   input.onchange=async()=>{
-     const file=input.files?.[0];
-     if(!file)return;
-
-     try{
-       const dataUrl=await prepareProfileImage(file);
-       profilePhotos[input.dataset.profileFile]=dataUrl;
-       localStorage.setItem("homebase_profile_photos",JSON.stringify(profilePhotos));
-       scheduleCloudSave();
-       renderProfiles();
-       render();
-     }catch(error){
-       alert("No he podido procesar esa foto. Prueba con otra imagen o una captura de pantalla.");
-       console.error(error);
-     }finally{
-       input.value="";
-     }
-   };
+ }).join("");
+ document.querySelectorAll("[data-profile-file]").forEach(input=>input.onchange=async()=>{
+   const file=input.files?.[0];if(!file)return;
+   try{profilePhotos[input.dataset.profileFile]=await prepareProfileImage(file);localStorage.setItem("homebase_profile_photos",JSON.stringify(profilePhotos));scheduleCloudSave();renderProfiles();render()}
+   catch(error){alert("No he podido procesar esa foto. Prueba con otra imagen.");console.error(error)}finally{input.value=""}
  });
- document.querySelectorAll("[data-remove-photo]").forEach(button=>{
-   button.onclick=()=>{
-     delete profilePhotos[button.dataset.removePhoto];
-     localStorage.setItem("homebase_profile_photos",JSON.stringify(profilePhotos));
-     scheduleCloudSave();
-     renderProfiles();render();
-   };
+ document.querySelectorAll("[data-delete-profile]").forEach(button=>button.onclick=()=>{
+   const name=button.dataset.deleteProfile;
+   if(state.items.some(i=>itemPeople(i).includes(name))){alert("Este perfil tiene eventos. Bórralos o reasígnalos antes de eliminarlo.");return}
+   if(!confirm(`¿Eliminar el perfil ${name}?`))return;
+   PEOPLE=PEOPLE.filter(p=>p.name!==name);delete profilePhotos[name];state.visiblePeople=state.visiblePeople.filter(x=>x!==name);
+   persistProfiles();renderProfiles();render();scheduleCloudSave();
  });
 }
-
-function renderTrash(){
- const items=state.items.filter(i=>i.deletedAt).sort((a,b)=>b.deletedAt-a.deletedAt);
- $("trashBadge").textContent=items.length;
- $("trashList").innerHTML=items.length?items.map(i=>{
-   const kind=i.type==="event"?"Evento":"Pendiente";
-   const when=i.date
-     ? (i.type==="event" && i.endDate && i.endDate!==i.date
-         ? `${fmtShort(parseDate(i.date))} – ${fmtShort(parseDate(i.endDate))}`
-         : fmtDate(parseDate(i.date)))
-     : "Sin fecha límite";
-   return `<div class="trash-item" data-trash-open="${i.id}">
-     <div>
-       <strong>${esc(i.title)}</strong>
-       <div class="event-meta">${kind} · ${when}</div>
-     </div>
-     <div class="trash-actions">
-       <button class="small-btn restore" data-restore="${i.id}">Restaurar</button>
-       <button class="small-btn permanent" data-permanent="${i.id}">Eliminar</button>
-     </div>
-   </div>`;
- }).join(""):`<div class="empty"><strong>Papelera vacía</strong>No hay elementos borrados.</div>`;
-}
-function renderRosterControls(){
- const has=!!state.rosterMeta;
- if($("rosterPeriodLabel")) $("rosterPeriodLabel").textContent=has?(state.rosterMeta.period||"Cargado"):"Sin cargar";
- if($("rosterLastUpdate")) $("rosterLastUpdate").textContent=has?`Última importación: ${new Date(state.rosterMeta.updatedAt).toLocaleString("es-ES",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}`:"El PDF se procesa localmente y se convierte en entradas del calendario.";
- if($("rosterVisibleSwitch")){ $("rosterVisibleSwitch").checked=state.rosterVisible; $("rosterVisibleSwitch").disabled=!has; }
- if($("rosterVisibilityHelp")) $("rosterVisibilityHelp").textContent=has?"Oculta o muestra todos los duties sin borrarlos.":"Disponible después de importar un roster.";
- if($("rosterVisibilityRow")) $("rosterVisibilityRow").classList.toggle("is-disabled",!has);
- if($("calendarRosterToggle")){ $("calendarRosterToggle").classList.toggle("on",state.rosterVisible); $("calendarRosterToggle").textContent=state.rosterVisible?"✈ Roster visible":"✈ Roster oculto"; $("calendarRosterToggle").hidden=!has; }
- if($("toggleRosterOffs")) $("toggleRosterOffs").checked=state.rosterSettings.showOffs;
- if($("toggleRosterVacations")) $("toggleRosterVacations").checked=state.rosterSettings.showVacations;
- if($("toggleRosterHotels")) $("toggleRosterHotels").checked=state.rosterSettings.showHotels;
- if($("rosterOptionsPanel")) $("rosterOptionsPanel").hidden=!has;
-}
-function render(){
- renderSyncControls();
- renderRosterControls();
- document.querySelectorAll(".page").forEach(p=>p.classList.toggle("active",p.id===state.page));
- document.querySelectorAll(".nav-btn").forEach(b=>b.classList.toggle("active",b.dataset.page===state.page));
- if($("eventFab")) $("eventFab").hidden=!["todayPage","calendarPage"].includes(state.page);
- if($("filterBadge")) $("filterBadge").textContent=state.visiblePeople.length;
- renderToday();
- renderTasks();
- renderCalendar();
- renderMorePending();
- renderTrash();
- bindDynamic();
-}
-
-
-function renderTrashDetail(item){
- state.trashDetailId=item.id;
- $("trashDetailTitle").textContent=item.title;
-
- let rows="";
- rows+=detailRow("Tipo",item.type==="event"?"Evento":"Pendiente");
-
- if(item.type==="event"){
-   if(item.repeat==="weekly"){
-     rows+=detailRow("Comienza",item.date?fmtDate(parseDate(item.date)):"Sin fecha");
-     rows+=detailRow("Horario",item.time?`${item.time}${item.endTime?"–"+item.endTime:""}`:"Todo el día");
-     rows+=detailRow("Repetición",item.repeatUntil?`Cada semana hasta ${fmtDate(parseDate(item.repeatUntil))}`:"Cada semana");
-   }else{
-     rows+=detailRow(
-       "Fecha",
-       item.date
-         ? (item.endDate&&item.endDate!==item.date
-             ? `${fmtDate(parseDate(item.date))} → ${fmtDate(parseDate(item.endDate))}`
-             : fmtDate(parseDate(item.date)))
-         : "Sin fecha"
-     );
-     if(item.type==="event") rows+=detailRow("Horario",item.time?`${item.time}${item.endTime?"–"+item.endTime:""}`:"Todo el día");
-   }
- }else{
-   rows+=detailRow("Fecha límite",item.date?fmtDate(parseDate(item.date)):"Sin fecha límite");
-   rows+=detailRow("Estado",item.done?"Completada":"Pendiente");
- }
-
- rows+=detailRow("Para",itemPeopleLabel(item));
- rows+=detailRow("Categoría",item.category||"Familia");
- if(item.notes) rows+=detailRow("Notas",item.notes);
-
- $("trashDetailGrid").innerHTML=rows;
- $("trashDetailDialog").showModal();
-}
-
-function bindDynamic(){
- document.querySelectorAll("[data-id]").forEach(el=>el.onclick=e=>{if(e.target.closest("[data-delete]"))return;openDetail(el.dataset.id,el.dataset.date)});
- document.querySelectorAll("[data-task]").forEach(el=>el.onclick=e=>{if(e.target.closest("[data-check]"))return;openDetail(el.dataset.task,null)});
- document.querySelectorAll("[data-check]").forEach(b=>b.onclick=e=>{e.stopPropagation();const item=state.items.find(i=>i.id===b.dataset.check);if(item.done){item.done=false;item.completedAt=null;save()}else confirmComplete(item)});
- document.querySelectorAll("[data-delete]").forEach(b=>b.onclick=e=>{e.stopPropagation();const item=state.items.find(i=>i.id===b.dataset.delete);confirmDelete(item,b.dataset.date)});
- document.querySelectorAll("[data-day]").forEach(b=>b.onclick=()=>{state.selectedDate=parseDate(b.dataset.day);renderCalendar();bindDynamic()});
- document.querySelectorAll("[data-filter]").forEach(b=>b.onclick=()=>{const f=b.dataset.filter;if(f==="Todos")state.visiblePeople=PEOPLE.every(p=>state.visiblePeople.includes(p.name))?[]:PEOPLE.map(p=>p.name);else state.visiblePeople=state.visiblePeople.includes(f)?state.visiblePeople.filter(x=>x!==f):[...state.visiblePeople,f];renderFilters();render()});
- document.querySelectorAll("[data-restore]").forEach(b=>b.onclick=()=>{const i=state.items.find(x=>x.id===b.dataset.restore);i.deletedAt=null;save();renderTrash();bindDynamic()});
- document.querySelectorAll("[data-permanent]").forEach(b=>b.onclick=e=>{
-   e.stopPropagation();
-   state.items=state.items.filter(x=>x.id!==b.dataset.permanent);
-   save();renderTrash();bindDynamic();
- });
- document.querySelectorAll("[data-restore]").forEach(b=>b.onclick=e=>{
-   e.stopPropagation();
-   const i=state.items.find(x=>x.id===b.dataset.restore);
-   if(!i)return;
-   i.deletedAt=null;
-   save();renderTrash();bindDynamic();
- });
- document.querySelectorAll("[data-trash-open]").forEach(row=>row.onclick=e=>{
-   if(e.target.closest("[data-restore],[data-permanent]"))return;
-   const item=state.items.find(x=>x.id===row.dataset.trashOpen);
-   if(item)renderTrashDetail(item);
- });
-
- document.querySelectorAll(".avatar").forEach(avatar=>{
-   avatar.onclick=event=>{
-     event.stopPropagation();
-     renderProfiles();
-     $("profilesDialog").showModal();
-   };
- });
-}
+function persistProfiles(){localStorage.setItem("homebase_profiles",JSON.stringify(PEOPLE));localStorage.setItem("homebase_profile_photos",JSON.stringify(profilePhotos));localStorage.setItem("homebase_visible_profiles",JSON.stringify(state.visiblePeople))}
 
 function setPeople(){
- $("personPicks").innerHTML=PEOPLE.map(p=>`<label class="member-pick"><input type="checkbox" name="eventPerson" value="${esc(p.name)}"><span>${esc(p.name)}</span></label>`).join("");
+ $("personPicks").innerHTML=PEOPLE.map(p=>`<label class="member-pick"><input type="checkbox" name="eventPerson" value="${esc(p.name)}"><span class="pick-avatar" style="--person-color:${p.color}">${profilePhotos[p.name]?`<img src="${profilePhotos[p.name]}" alt="">`:esc(initials(p.name))}</span><span>${esc(p.name)}</span></label>`).join("");
+ document.querySelectorAll("[name=eventPerson]").forEach(x=>x.onchange=()=>updateCategoryOptions());
 }
 function nowRounded(){const n=new Date(),mins=Math.ceil((n.getHours()*60+n.getMinutes())/15)*15;return `${String(Math.floor((mins%1440)/60)).padStart(2,"0")}:${String(mins%60).padStart(2,"0")}`}
 function plusHour(t){const [h,m]=t.split(":").map(Number),v=(h*60+m+60)%1440;return `${String(Math.floor(v/60)).padStart(2,"0")}:${String(v%60).padStart(2,"0")}`}
 function resetEditor(type="event",preferredDate=null){
  state.editingId=null;$("editorForm").reset();$("itemType").value=type;$("editorTitle").textContent="Nuevo";document.querySelectorAll("[data-type]").forEach(b=>b.classList.toggle("active",b.dataset.type===type));toggleType(type);$("advanced").classList.remove("open");const chosenDate=preferredDate instanceof Date&&!Number.isNaN(preferredDate.getTime())?iso(preferredDate):iso(new Date()),time=nowRounded();$("startDate").value=chosenDate;$("endDate").value=chosenDate;$("allDay").checked=false;$("timeRow").style.display=type==="event"?"grid":"none";$("startTime").value=time;$("endTime").value=plusHour(time);document.querySelectorAll("[name=repeatDay]").forEach(x=>x.checked=false);document.querySelectorAll("[name=eventPerson]").forEach(x=>x.checked=x.value==="Familia");document.querySelectorAll("[name=eventColor]").forEach(x=>x.checked=x.value==="#3a7be0");
+ $("customCategory").value="";updateCategoryOptions("Familia");
  $("noDeadline").checked=false;
  $("startDate").disabled=false;
  $("startDate").required=true;
@@ -2026,7 +1941,7 @@ function openEdit(item){
  $("startDate").disabled=$("noDeadline").checked;
  $("startDate").required=!$("noDeadline").checked;
  $("startDate").value=item.date||"";
- $("endDate").value=item.endDate||item.date||"";$("allDay").checked=!!item.allDay||!item.time;$("timeRow").style.display=$("allDay").checked?"none":"grid";$("startTime").value=item.time;$("endTime").value=item.endTime;document.querySelectorAll("[name=eventPerson]").forEach(x=>x.checked=itemPeople(item).includes(x.value));document.querySelectorAll("[name=eventColor]").forEach(x=>x.checked=x.value===(item.eventColor||"#3a7be0"));$("category").value=item.category;$("repeat").value=item.repeat;$("repeatUntil").value=item.repeatUntil;$("notes").value=item.notes;document.querySelectorAll("[name=repeatDay]").forEach(x=>x.checked=item.repeatDays.includes(Number(x.value)));const rep=item.repeat==="weekly",recurring=["weekly","monthly","yearly"].includes(item.repeat);
+ $("endDate").value=item.endDate||item.date||"";$("allDay").checked=!!item.allDay||!item.time;$("timeRow").style.display=$("allDay").checked?"none":"grid";$("startTime").value=item.time;$("endTime").value=item.endTime;document.querySelectorAll("[name=eventPerson]").forEach(x=>x.checked=itemPeople(item).includes(x.value));document.querySelectorAll("[name=eventColor]").forEach(x=>x.checked=x.value===(item.eventColor||"#3a7be0"));updateCategoryOptions(item.category);if(![...$("category").options].some(o=>o.value===item.category)){$("category").value="Otro";$("customCategory").value=item.category||"";toggleCustomCategory()}$("repeat").value=item.repeat;$("repeatUntil").value=item.repeatUntil;$("notes").value=item.notes;document.querySelectorAll("[name=repeatDay]").forEach(x=>x.checked=item.repeatDays.includes(Number(x.value)));const rep=item.repeat==="weekly",recurring=["weekly","monthly","yearly"].includes(item.repeat);
  if(rep){
    if(item.endDate && item.endDate!==item.date && !item.repeatUntil){
      item.repeatUntil=item.endDate;
@@ -2128,7 +2043,7 @@ try{
 function cleanSyncCode(value){return (value||"").toUpperCase().replace(/[^A-Z0-9]/g,"").slice(0,12)}
 function createCode(){const alphabet="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";let code="HB";for(let i=0;i<8;i++)code+=alphabet[Math.floor(Math.random()*alphabet.length)];return code}
 function syncDoc(code=state.syncCode){return cloudDb?.collection("homebaseSyncs").doc(code)}
-function cloudPayload(){return {version:1,items:state.items,rosterMeta:state.rosterMeta||null,profilePhotos:{...profilePhotos},updatedAt:Date.now()}}
+function cloudPayload(){return {version:2,items:state.items,rosterMeta:state.rosterMeta||null,profiles:PEOPLE,profilePhotos:{...profilePhotos},updatedAt:Date.now()}}
 function rosterCanonicalKey(item){
  const r=item?.rosterData||{},date=r.sourceDate||item?.date||"",kind=r.kind||"ground";
  const flights=(r.flights||[]).map(f=>`${f.number||""}:${f.dep||""}-${f.arr||""}`).join(">");
@@ -2169,6 +2084,7 @@ function applyRemotePayload(data){
  state.items=mergeItems(state.items,data?.items||[]);
  if(remoteWins)state.rosterMeta=remoteMeta;
  if(state.rosterMeta)state.items=reconcileRosterSnapshot(state.items,state.rosterMeta);
+ if(Array.isArray(data?.profiles)&&data.profiles.length){PEOPLE=data.profiles;state.visiblePeople=[...new Set([...state.visiblePeople,...PEOPLE.map(p=>p.name)])];persistProfiles();setPeople()}
  if(data?.profilePhotos)Object.assign(profilePhotos,data.profilePhotos);
 }
 function setSyncStatus(status,text){state.syncStatus=status;state.syncStatusText=text||"";renderSyncControls()}
@@ -2247,7 +2163,7 @@ async function linkFamilySync(){
 }
 function unlinkFamilySync(){if(!confirm("¿Desvincular este dispositivo? Los datos locales no se borrarán."))return;if(state.syncUnsubscribe)state.syncUnsubscribe();state.syncUnsubscribe=null;state.syncCode="";localStorage.removeItem("homebase_sync_code");state.syncStatus="idle";render()}
 
-window.HOMEBASE_VERSION="1.6.3";
+window.HOMEBASE_VERSION="1.8.0";
 const RosterParser=(()=>{
 const AIRPORT_TZ={
 PMI:'Europe/Madrid',BCN:'Europe/Madrid',MAD:'Europe/Madrid',AGP:'Europe/Madrid',ALC:'Europe/Madrid',VLC:'Europe/Madrid',SVQ:'Europe/Madrid',BIO:'Europe/Madrid',IBZ:'Europe/Madrid',MAH:'Europe/Madrid',GRO:'Europe/Madrid',REU:'Europe/Madrid',SCQ:'Europe/Madrid',OVD:'Europe/Madrid',VGO:'Europe/Madrid',ZAZ:'Europe/Madrid',XRY:'Europe/Madrid',LEI:'Europe/Madrid',SDR:'Europe/Madrid',RMU:'Europe/Madrid',
@@ -2649,7 +2565,7 @@ function updateRosterEnvironmentStatus(){
 $("editorForm").onsubmit=e=>{e.preventDefault();const type=$("itemType").value,values={type,title:$("titleInput").value.trim(),date:type==="task"&&$("noDeadline").checked?"":$("startDate").value,
  endDate:type==="event"
    ? (["weekly","monthly","yearly"].includes($("repeat").value) ? $("startDate").value : ($("endDate").value||$("startDate").value))
-   : (type==="task"&&$("noDeadline").checked?"":$("startDate").value),allDay:type==="event"?$("allDay").checked:false,time:type==="event"&&!$("allDay").checked?$("startTime").value:"",endTime:type==="event"&&!$("allDay").checked?$("endTime").value:"",people:(()=>{const selected=[...document.querySelectorAll("[name=eventPerson]:checked")].map(x=>x.value);return selected.length?selected:["Familia"]})(),person:(()=>{const selected=[...document.querySelectorAll("[name=eventPerson]:checked")].map(x=>x.value);return selected[0]||"Familia"})(),eventColor:type==="event"?(document.querySelector("[name=eventColor]:checked")?.value||"#3a7be0"):"",category:$("category").value,repeat:type==="event"?$("repeat").value:"none",repeatDays:type==="event"?[...document.querySelectorAll("[name=repeatDay]:checked")].map(x=>Number(x.value)):[],repeatUntil:type==="event"?$("repeatUntil").value:"",notes:$("notes").value.trim()};if(state.editingId)Object.assign(state.items.find(i=>i.id===state.editingId),values,{updatedAt:Date.now()});else state.items.push({id:crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random()}`,...values,exceptions:[],done:false,completedAt:null,deletedAt:null,updatedAt:Date.now()});$("editorDialog").close();save()};
+   : (type==="task"&&$("noDeadline").checked?"":$("startDate").value),allDay:type==="event"?$("allDay").checked:false,time:type==="event"&&!$("allDay").checked?$("startTime").value:"",endTime:type==="event"&&!$("allDay").checked?$("endTime").value:"",people:(()=>{const selected=[...document.querySelectorAll("[name=eventPerson]:checked")].map(x=>x.value);return selected.length?selected:["Familia"]})(),person:(()=>{const selected=[...document.querySelectorAll("[name=eventPerson]:checked")].map(x=>x.value);return selected[0]||"Familia"})(),eventColor:type==="event"?(document.querySelector("[name=eventColor]:checked")?.value||"#3a7be0"):"",category:$("category").value==="Otro"?($("customCategory").value.trim()||"Otro"):$("category").value,repeat:type==="event"?$("repeat").value:"none",repeatDays:type==="event"?[...document.querySelectorAll("[name=repeatDay]:checked")].map(x=>Number(x.value)):[],repeatUntil:type==="event"?$("repeatUntil").value:"",notes:$("notes").value.trim()};if(state.editingId)Object.assign(state.items.find(i=>i.id===state.editingId),values,{updatedAt:Date.now()});else state.items.push({id:crypto.randomUUID?crypto.randomUUID():`${Date.now()}-${Math.random()}`,...values,exceptions:[],done:false,completedAt:null,deletedAt:null,updatedAt:Date.now()});$("editorDialog").close();save()};
 document.querySelectorAll("[data-type]").forEach(b=>b.onclick=()=>{$("itemType").value=b.dataset.type;document.querySelectorAll("[data-type]").forEach(x=>x.classList.toggle("active",x===b));toggleType(b.dataset.type)});
 $("moreOptions").onclick=()=>$("advanced").classList.toggle("open");
 $("repeat").onchange=()=>{
@@ -2704,6 +2620,10 @@ $("filterBtn").onclick=()=>{renderFilters();$("filterDialog").showModal();bindDy
 $("trashBtn").onclick=()=>{renderTrash();$("trashDialog").showModal();bindDynamic()};
 $("openTrashRow").onclick=$("trashBtn").onclick;
 $("openProfilesRow").onclick=()=>{renderProfiles();$("profilesDialog").showModal()};
+$("addProfile").onclick=()=>{$("profileEditorForm").reset();$("profileColor").value="#5d82ad";$("profileEditorDialog").showModal()};
+$("closeProfileEditor").onclick=()=>$("profileEditorDialog").close();
+$("profileEditorForm").onsubmit=e=>{e.preventDefault();const name=$("profileName").value.trim();if(!name)return;if(PEOPLE.some(p=>p.name.toLowerCase()===name.toLowerCase())){alert("Ya existe un perfil con ese nombre.");return}PEOPLE.push({name,type:$("profileType").value,color:$("profileColor").value});state.visiblePeople.push(name);persistProfiles();setPeople();renderProfiles();$("profileEditorDialog").close();render();scheduleCloudSave()};
+$("category").onchange=toggleCustomCategory;
 
 
 $("createSyncCode").onclick=createFamilySync;

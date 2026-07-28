@@ -1,4 +1,4 @@
-HOMEBASE 1.7.2 — TRAIN NO ES TRAINING
+HOMEBASE 1.8.0 — TRAIN NO ES TRAINING
 
 Cambio aplicado:
 - El código TRAIN se interpreta como trayecto en tren, no como formación.
@@ -13,3 +13,13 @@ No es necesario volver a importar el roster para corregir el icono del calendari
 INSTALACIÓN
 Sustituye en GitHub los 7 archivos por los incluidos en este ZIP.
 Si el icono antiguo continúa unos segundos, cierra y vuelve a abrir la PWA para que se actualice la caché.
+
+HOMEBASE 1.8.0 — PERFILES DEL HOGAR
+- Perfiles agrupados: personas, mascotas, vehículos y viviendas.
+- Incluye inicialmente Perico, Kimi, Qashqai, Ford Ka, Casa Santa Ponsa y Piso Ripollet.
+- Cada perfil admite foto y color propio.
+- Se pueden crear perfiles adicionales.
+- Eventos y pendientes pueden asignarse a cualquiera de estos perfiles.
+- Categorías adaptadas al tipo: veterinario/vacuna, seguro/ITV/revisión, mantenimiento/comunidad/alquiler, etc.
+- La categoría «Otro» permite escribir una categoría personalizada.
+- Perfiles y fotos se incluyen en la sincronización familiar de Firebase.
