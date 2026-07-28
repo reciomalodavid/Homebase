@@ -1,9 +1,10 @@
-HOMEBASE 1.6.3 — ICONOS MÁS CLAROS
+HOMEBASE 1.7.0 — CALENDARIO LIMPIO Y TRAYECTO INTUITIVO
 
 Cambios visuales:
-- Standby usa el símbolo de espera/encendido ⏻.
-- Actividades no de vuelo usan un icono genérico 📌.
-- «Sin fecha límite» tiene ahora una casilla clara y consistente en iPhone/iPad.
+- El calendario mensual muestra un solo icono resumen por día de roster.
+- Un día con cualquier sector, incluido DH, aparece como duty de vuelo (✈️).
+- Standby: ⏻ · OFF: 🏠 · Vacaciones: 🏖️ · Formación pura: 📚 · Tierra/otros: ➡️.
+- En el detalle del duty, cada tramo sí lleva su icono contextual: vuelo ✈️, DH 💺, tren 🚆, taxi 🚖, bus 🚌, coche 🚗 y genérico ➡️.
+- No se modifica el parser, Firebase ni la estructura de datos.
 
-No se han modificado el Parser 6.0, Firebase, la sincronización ni los datos.
-No es necesario volver a importar ningún roster.
+Sustituye los 7 archivos del proyecto por estos.

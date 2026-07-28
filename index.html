@@ -1092,6 +1092,18 @@ body::before{
  .day-markers{gap:1px}
 }
 
+
+/* Homebase 1.7.0 · Resumen mensual + timeline contextual */
+.roster-mini.emoji{width:20px;height:20px;flex-basis:20px;font-size:16px;line-height:20px;text-shadow:none}
+.day-markers{justify-content:center}
+.duty-timeline{padding:2px 0;background:transparent}
+.duty-segment{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:8px;align-items:center;padding:10px 4px;border-bottom:1px solid var(--line)}
+.duty-segment:last-child{border-bottom:0}
+.duty-segment-icon{width:26px;height:26px;border-radius:9px;background:rgba(93,130,173,.10);display:grid;place-items:center;font-family:"Apple Color Emoji","Segoe UI Emoji",sans-serif;font-size:16px}
+.duty-segment-main{min-width:0;font-weight:760;line-height:1.3}
+.duty-segment-time{font-size:12px;font-weight:760;color:var(--muted);white-space:nowrap}
+@media(max-width:430px){.duty-segment{grid-template-columns:26px minmax(0,1fr);gap:7px}.duty-segment-time{grid-column:2;font-size:11px;margin-top:-4px}.duty-segment-icon{width:24px;height:24px;font-size:15px}}
+
 </style>
 <meta name="homebase-build" content="homebase-apple-polish-fase1-2-fixed-header-switch">
 </head>
@@ -1552,27 +1564,33 @@ function renderTasks(){
  fillList($("doneList"),done.map(taskRow).join(""),"No hay completadas","Las tareas terminadas aparecerán aquí.");
  $("taskCount").textContent=`${pending.length}`; $("doneCount").textContent=`${done.length}`;
 }
-function rosterMiniIcon(kind){
+function rosterPrimaryKind(rosterEvents){
+ const rows=rosterEvents.map(e=>e.rosterData||{});
+ // En el mes importa el tipo global del día, no cada tramo. Cualquier sector,
+ // incluso DH, convierte el día en duty de vuelo.
+ if(rows.some(r=>(r.flights||[]).length))return "flight";
+ const kinds=rows.map(r=>r.kind||"other");
+ for(const kind of ["standby","vacation","off","training","ground","other"]){
+  if(kinds.includes(kind))return kind;
+ }
+ return "other";
+}
+function rosterMiniIcon(kind,count=1){
  const normalized=["flight","standby","off","vacation","training","ground"].includes(kind)?kind:"other";
- const icons={
-  flight:"✈️",
-  standby:"⏻",
-  off:"🏠",
-  vacation:"🏖️",
-  training:"🎓",
-  ground:"📌",
-  other:"📌"
- };
- const labels={
-  flight:"Vuelo",
-  standby:"Standby",
-  off:"Día libre",
-  vacation:"Vacaciones",
-  training:"Formación",
-  ground:"Actividad no de vuelo",
-  other:"Otro duty"
- };
- return `<span class="roster-mini emoji ${normalized}" title="${labels[normalized]}" aria-label="${labels[normalized]}">${icons[normalized]}</span>`;
+ const icons={flight:"✈️",standby:"⏻",off:"🏠",vacation:"🏖️",training:"📚",ground:"➡️",other:"➡️"};
+ const labels={flight:"Duty con vuelo",standby:"Standby",off:"Día libre",vacation:"Vacaciones",training:"Formación",ground:"Actividad no de vuelo",other:"Otro duty"};
+ const extra=count>1?` · ${count} actividades de roster`:"";
+ return `<span class="roster-mini emoji ${normalized}" title="${labels[normalized]}${extra}" aria-label="${labels[normalized]}${extra}">${icons[normalized]}</span>`;
+}
+function dutySegmentIcon(segment){
+ if(segment.type==="flight")return segment.dh?"💺":"✈️";
+ const code=String(segment.code||"").toUpperCase();
+ if(/TRAIN|RAIL|ICE|RE/.test(code))return "🚆";
+ if(/TAXI/.test(code))return "🚖";
+ if(/BUS|COACH|SHUTTLE/.test(code))return "🚌";
+ if(/CAR|DRIVE|RENTAL/.test(code))return "🚗";
+ if(/WALK/.test(code))return "🚶";
+ return "➡️";
 }
 
 function renderMonth(){
@@ -1606,10 +1624,8 @@ function renderMonth(){
    const more=multi.length>2?`<span class="month-more">+${multi.length-2}</span>`:"";
    const rosterEvents=punctual.filter(e=>e.source==="roster");
    const normalEvents=punctual.filter(e=>e.source!=="roster");
-   const rosterKinds=[...new Set(rosterEvents.map(e=>e.rosterData?.kind||"other"))];
-   const priority=["flight","standby","off","vacation","training","other"];
-   rosterKinds.sort((a,b)=>priority.indexOf(a)-priority.indexOf(b));
-   const rosterIcons=rosterKinds.slice(0,2).map(rosterMiniIcon).join("");
+   // Un único símbolo resumen por día, aunque existan varios duties o transportes.
+   const rosterIcons=rosterEvents.length?rosterMiniIcon(rosterPrimaryKind(rosterEvents),rosterEvents.length):"";
    const normalDots=normalEvents.slice(0,3).map(e=>`<span class="dot" style="--dot-color:${itemColor(e)}"></span>`).join("");
    const markers=(rosterIcons||normalDots)?`<div class="day-markers">${rosterIcons}${normalDots?`<span class="event-mini-dots">${normalDots}</span>`:""}</div>`:"";
    html+=`<button class="day ${multi.length?"has-bands":""} ${d.getMonth()!==m?"other":""} ${di===iso(new Date())?"today":""} ${state.selectedDate&&di===iso(state.selectedDate)?"selected":""}" data-day="${di}"><span class="day-number">${d.getDate()}</span>${markers}${bands?`<div class="month-bands">${bands}${more}</div>`:""}</button>`;
@@ -2030,7 +2046,7 @@ function openDetail(id,dateIso){
    const dutySegments=[];
    for(const f of (r.flights||[])){
      dutySegments.push({
-       type:"flight",
+       type:"flight", dh:!!f.dh, code:f.number||"",
        sortDate:f.depLocalDate||f.sourceDate||r.sourceDate||item.date,
        sortTime:f.depLocal||"99:99",
        left:`${esc(f.number||"")} · ${esc(f.dep)} → ${esc(f.arr)}${f.dh?` <span class="roster-badge">DH</span>`:""}`,
@@ -2043,7 +2059,7 @@ function openDetail(id,dateIso){
      const origin=String(a.dep||a.airport||"").trim().toUpperCase();
      const route=origin&&destination?` · ${esc(origin)} → ${esc(destination)}`:origin?` · ${esc(origin)}`:"";
      dutySegments.push({
-       type:"activity",
+       type:"activity", code:a.code||"",
        sortDate:a.startLocalDate||a.sourceDate||r.sourceDate||item.date,
        sortTime:a.startLocal||"99:99",
        left:`${esc(code)}${route}`,
@@ -2051,7 +2067,7 @@ function openDetail(id,dateIso){
      });
    }
    dutySegments.sort((a,b)=>`${a.sortDate}T${a.sortTime}`.localeCompare(`${b.sortDate}T${b.sortTime}`));
-   if(dutySegments.length){rows+=`<div class="detail-row"><div class="detail-label">Trayecto del duty</div><div class="detail-value roster-detail">${dutySegments.map(s=>`<div class="${s.type==="flight"?"roster-flight":"roster-activity"}"><span>${s.left}</span><span>${s.right}</span></div>`).join("")}</div></div>`;}
+   if(dutySegments.length){rows+=`<div class="detail-row"><div class="detail-label">Trayecto del duty</div><div class="detail-value roster-detail duty-timeline">${dutySegments.map(s=>`<div class="duty-segment ${s.type}"><span class="duty-segment-icon" aria-hidden="true">${dutySegmentIcon(s)}</span><span class="duty-segment-main">${s.left}</span><span class="duty-segment-time">${s.right}</span></div>`).join("")}</div></div>`;}
    if(r.coLocal) rows+=detailRow("C/O",r.coLocal);
    if(r.debriefLocal) rows+=detailRow("Debriefing",r.debriefLocal);
    if(r.hotel&&state.rosterSettings.showHotels) rows+=detailRow("Noche fuera",r.hotel);
@@ -2345,8 +2361,8 @@ function parseRosterDocument(doc){
    const labels=[...r.activityLabels];
    for(const a of r.activities)addActivityLabel({activityLabels:labels},a.code);
    const unique=[...new Set(labels.filter(Boolean))];
-   r.title=`🎓 ${unique.length?unique.join(' + '):cleanCode(r.code)||'Formación'}`;
-  }else if(r.kind==='standby')r.title=`⏳ Standby${r.code?` · ${cleanCode(r.code)}`:''}`;
+   r.title=`📚 ${unique.length?unique.join(' + '):cleanCode(r.code)||'Formación'}`;
+  }else if(r.kind==='standby')r.title=`⏻ Standby${r.code?` · ${cleanCode(r.code)}`:''}`;
   else if(r.kind==='vacation')r.title='🌴 Vacaciones';
   else if(r.kind==='off')r.title='Libre';
   else r.title=cleanCode(r.code)||'Actividad de tierra';
