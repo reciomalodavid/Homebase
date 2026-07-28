@@ -1566,19 +1566,27 @@ function renderTasks(){
 }
 function rosterPrimaryKind(rosterEvents){
  const rows=rosterEvents.map(e=>e.rosterData||{});
- // En el mes importa el tipo global del día, no cada tramo. Cualquier sector,
- // incluso DH, convierte el día en duty de vuelo.
- if(rows.some(r=>(r.flights||[]).length))return "flight";
  const kinds=rows.map(r=>r.kind||"other");
- for(const kind of ["standby","vacation","off","training","ground","other"]){
-  if(kinds.includes(kind))return kind;
- }
+ const trainingPattern=/(?:^|[^A-Z0-9])(?:SIM|CRM|SEP|OPC|LPC|EBT|UPRT|CBT|TRG|TRAIN(?:ING)?|REC[_ -]?TRG|LINE[_ -]?CK|FT\d+)(?:$|[^A-Z0-9])/i;
+ const isTrainingDay=rows.some(r=>{
+  const text=[r.code,r.title,...(r.activityLabels||[]),...(r.activities||[]).map(a=>a.code)].filter(Boolean).join(" ");
+  return r.kind==="training"||trainingPattern.test(text);
+ });
+ // El calendario resume el propósito principal del día. Un SIM/CRM/SEP con DH
+ // sigue siendo formación, no un duty de vuelo operativo.
+ if(kinds.includes("vacation"))return "vacation";
+ if(kinds.includes("off"))return "off";
+ if(kinds.includes("standby"))return "standby";
+ if(isTrainingDay)return "training";
+ if(rows.some(r=>(r.flights||[]).some(f=>!f.dh)))return "flight";
+ if(rows.some(r=>(r.flights||[]).length))return "dh";
+ if(kinds.includes("ground"))return "ground";
  return "other";
 }
 function rosterMiniIcon(kind,count=1){
- const normalized=["flight","standby","off","vacation","training","ground"].includes(kind)?kind:"other";
- const icons={flight:"✈️",standby:"⏻",off:"🏠",vacation:"🏖️",training:"📚",ground:"➡️",other:"➡️"};
- const labels={flight:"Duty con vuelo",standby:"Standby",off:"Día libre",vacation:"Vacaciones",training:"Formación",ground:"Actividad no de vuelo",other:"Otro duty"};
+ const normalized=["flight","dh","standby","off","vacation","training","ground"].includes(kind)?kind:"other";
+ const icons={flight:"✈️",dh:"💺",standby:"⏻",off:"🏠",vacation:"🏖️",training:"🖥️",ground:"➡️",other:"➡️"};
+ const labels={flight:"Duty con vuelo",dh:"Solo posicionamiento DH",standby:"Standby",off:"Día libre",vacation:"Vacaciones",training:"Formación",ground:"Actividad no de vuelo",other:"Otro duty"};
  const extra=count>1?` · ${count} actividades de roster`:"";
  return `<span class="roster-mini emoji ${normalized}" title="${labels[normalized]}${extra}" aria-label="${labels[normalized]}${extra}">${icons[normalized]}</span>`;
 }
@@ -2361,7 +2369,7 @@ function parseRosterDocument(doc){
    const labels=[...r.activityLabels];
    for(const a of r.activities)addActivityLabel({activityLabels:labels},a.code);
    const unique=[...new Set(labels.filter(Boolean))];
-   r.title=`📚 ${unique.length?unique.join(' + '):cleanCode(r.code)||'Formación'}`;
+   r.title=`🖥️ ${unique.length?unique.join(' + '):cleanCode(r.code)||'Formación'}`;
   }else if(r.kind==='standby')r.title=`⏻ Standby${r.code?` · ${cleanCode(r.code)}`:''}`;
   else if(r.kind==='vacation')r.title='🌴 Vacaciones';
   else if(r.kind==='off')r.title='Libre';
