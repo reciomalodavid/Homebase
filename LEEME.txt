@@ -1,19 +1,15 @@
-HOMEBASE 1.7.1 — CALENDARIO MINIMALISTA
+HOMEBASE 1.7.2 — TRAIN NO ES TRAINING
 
-Cambios:
-- Un solo símbolo resumen por día de roster.
-- SIM, CRM, SEP, OPC, LPC, EBT y otros trainings muestran 🖥️ aunque haya DH antes o después.
-- Vuelo operativo: ✈️. Solo DH: 💺. Standby: ⏻. OFF: 🏠. Vacaciones: 🏖️.
-- Sin rutas ni número de sectores en la casilla mensual.
-- No se modifica el parser, Firebase ni los datos guardados.
+Cambio aplicado:
+- El código TRAIN se interpreta como trayecto en tren, no como formación.
+- Un día TRAIN + DH aparece en el calendario mensual como 💺 (posicionamiento).
+- SIM, CRM, SEP, OPC, LPC, EBT, UPRT, CBT, TRG, TRAINING, etc. siguen apareciendo como 🖥️.
+- La vista de detalle mantiene el orden cronológico: 🚆 TRAIN y después 💺 DH.
 
-HOMEBASE 1.7.0 — CALENDARIO LIMPIO Y TRAYECTO INTUITIVO
+No se han cambiado Firebase, la sincronización ni la estructura de los datos.
+Para importaciones nuevas, TRAIN también queda clasificado como actividad terrestre.
+No es necesario volver a importar el roster para corregir el icono del calendario de datos ya guardados.
 
-Cambios visuales:
-- El calendario mensual muestra un solo icono resumen por día de roster.
-- Un día con cualquier sector, incluido DH, aparece como duty de vuelo (✈️).
-- Standby: ⏻ · OFF: 🏠 · Vacaciones: 🏖️ · Formación pura: 📚 · Tierra/otros: ➡️.
-- En el detalle del duty, cada tramo sí lleva su icono contextual: vuelo ✈️, DH 💺, tren 🚆, taxi 🚖, bus 🚌, coche 🚗 y genérico ➡️.
-- No se modifica el parser, Firebase ni la estructura de datos.
-
-Sustituye los 7 archivos del proyecto por estos.
+INSTALACIÓN
+Sustituye en GitHub los 7 archivos por los incluidos en este ZIP.
+Si el icono antiguo continúa unos segundos, cierra y vuelve a abrir la PWA para que se actualice la caché.

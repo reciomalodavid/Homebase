@@ -1567,13 +1567,15 @@ function renderTasks(){
 function rosterPrimaryKind(rosterEvents){
  const rows=rosterEvents.map(e=>e.rosterData||{});
  const kinds=rows.map(r=>r.kind||"other");
- const trainingPattern=/(?:^|[^A-Z0-9])(?:SIM|CRM|SEP|OPC|LPC|EBT|UPRT|CBT|TRG|TRAIN(?:ING)?|REC[_ -]?TRG|LINE[_ -]?CK|FT\d+)(?:$|[^A-Z0-9])/i;
+ // TRAIN aislado significa tren, no formación. Solo estos códigos convierten
+ // el propósito principal del día en training aunque haya sectores DH.
+ const trainingPattern=/(?:^|[^A-Z0-9])(?:SIM|CRM|SEP|OPC|LPC|EBT|UPRT|CBT|TRG|TRAINING|REC[_ -]?TRG|LINE[_ -]?CK|FT\d+)(?:$|[^A-Z0-9])/i;
  const isTrainingDay=rows.some(r=>{
-  const text=[r.code,r.title,...(r.activityLabels||[]),...(r.activities||[]).map(a=>a.code)].filter(Boolean).join(" ");
-  return r.kind==="training"||trainingPattern.test(text);
+  const raw=[r.code,...(r.activityLabels||[]),...(r.activities||[]).map(a=>a.code)].filter(Boolean).join(" ");
+  return trainingPattern.test(raw);
  });
  // El calendario resume el propósito principal del día. Un SIM/CRM/SEP con DH
- // sigue siendo formación, no un duty de vuelo operativo.
+ // sigue siendo formación, pero TRAIN + DH es posicionamiento y muestra DH.
  if(kinds.includes("vacation"))return "vacation";
  if(kinds.includes("off"))return "off";
  if(kinds.includes("standby"))return "standby";
@@ -2292,7 +2294,7 @@ function classifyRosterCode(code){
  if(c==='U'||c==='VAC'||c==='VACATION')return'vacation';
  if(c==='FREI'||c==='OFF'||c.startsWith('O_'))return'off';
  if(c.startsWith('STBY')||c.startsWith('SBY'))return'standby';
- if(/(?:CRM|SEP|REF|OPC|LPC|CBT|SIM|TRG|TRAIN|MEET|UPRT|RFT|DGS|CFRM|FANSC|LINE_CK|FT\d)/.test(c))return'training';
+ if(/(?:CRM|SEP|REF|OPC|LPC|CBT|SIM|TRG|TRAINING|MEET|UPRT|RFT|DGS|CFRM|FANSC|LINE_CK|FT\d)/.test(c))return'training';
  return'ground';
 }
 function normalizeActivityCode(code){
