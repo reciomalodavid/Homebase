@@ -1,0 +1,132 @@
+/* Homebase 1.10.2 · glass cálido, limpio y reversible. Solo presentación. */
+:root{
+  color-scheme:light!important;
+  --hb-ink:#1d1d1f;
+  --hb-muted:#74747b;
+  --hb-accent:#e87513;
+  --hb-warm:rgba(255,179,92,.24);
+  --hb-cool:rgba(117,171,255,.20);
+  --hb-glass:rgba(255,255,255,.58);
+  --hb-glass-strong:rgba(255,255,255,.72);
+  --hb-line:rgba(255,255,255,.86);
+  --hb-shadow:0 18px 48px rgba(50,41,34,.10);
+}
+
+html,body{background:#f5f1eb!important;color:var(--hb-ink)!important}
+body{
+  background:
+    radial-gradient(circle at 4% 1%,var(--hb-warm),transparent 31%),
+    radial-gradient(circle at 98% 7%,var(--hb-cool),transparent 32%),
+    radial-gradient(circle at 52% 95%,rgba(255,218,177,.14),transparent 30%),
+    linear-gradient(180deg,#f8f3ed 0%,#f1f5fa 53%,#f7f2ec 100%)!important;
+  background-attachment:fixed!important;
+}
+
+.topbar,
+.card,
+.calendar-shell,
+.today-focus,
+.today-stats,
+dialog[open]{
+  background:var(--hb-glass)!important;
+  border:1px solid var(--hb-line)!important;
+  box-shadow:var(--hb-shadow)!important;
+  -webkit-backdrop-filter:blur(26px) saturate(170%)!important;
+  backdrop-filter:blur(26px) saturate(170%)!important;
+}
+
+/* Barra inferior tipo cápsula flotante, inspirada en el efecto de Udemy/iOS. */
+.bottom-nav{
+  left:14px!important;
+  right:14px!important;
+  bottom:calc(10px + env(safe-area-inset-bottom))!important;
+  width:auto!important;
+  min-height:78px!important;
+  padding:9px 10px!important;
+  border:1px solid rgba(255,255,255,.88)!important;
+  border-radius:30px!important;
+  background:
+    radial-gradient(circle at 13% 52%,rgba(255,144,44,.22),transparent 27%),
+    radial-gradient(circle at 87% 42%,rgba(99,153,255,.16),transparent 28%),
+    rgba(255,255,255,.60)!important;
+  box-shadow:0 20px 50px rgba(43,36,30,.16),inset 0 1px 0 rgba(255,255,255,.92)!important;
+  -webkit-backdrop-filter:blur(30px) saturate(190%)!important;
+  backdrop-filter:blur(30px) saturate(190%)!important;
+  overflow:hidden!important;
+}
+.bottom-nav::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  border-radius:inherit;
+  background:linear-gradient(115deg,rgba(255,255,255,.48),rgba(255,255,255,.05) 43%,rgba(255,255,255,.20));
+}
+.bottom-nav>*{position:relative;z-index:1}
+.bottom-nav button,
+.bottom-nav .nav-item{
+  min-height:58px!important;
+  border-radius:22px!important;
+  color:#777a80!important;
+  transition:background .18s ease,color .18s ease,transform .18s ease!important;
+}
+.bottom-nav button.active,
+.bottom-nav .nav-item.active,
+.bottom-nav [aria-current="page"]{
+  color:var(--hb-accent)!important;
+  background:linear-gradient(145deg,rgba(255,255,255,.86),rgba(255,236,218,.66))!important;
+  border:1px solid rgba(255,255,255,.90)!important;
+  box-shadow:0 8px 22px rgba(204,104,25,.13),inset 0 1px 0 #fff!important;
+}
+.bottom-nav button:active,.bottom-nav .nav-item:active{transform:scale(.97)}
+
+/* Menús y formularios: menos gris, más cristal blanco. */
+dialog[open] .modal{
+  background:
+    radial-gradient(circle at 9% 4%,rgba(255,180,105,.17),transparent 31%),
+    radial-gradient(circle at 96% 10%,rgba(126,177,255,.14),transparent 30%),
+    rgba(248,248,249,.72)!important;
+}
+dialog[open] .modal-head{
+  background:rgba(255,252,248,.88)!important;
+  border-bottom:1px solid rgba(255,255,255,.88)!important;
+  -webkit-backdrop-filter:blur(28px) saturate(170%)!important;
+  backdrop-filter:blur(28px) saturate(170%)!important;
+}
+dialog[open] input:not([type="checkbox"]):not([type="radio"]),
+dialog[open] select,
+dialog[open] textarea,
+dialog[open] .member-pick,
+dialog[open] .type-switch{
+  background:rgba(255,255,255,.78)!important;
+  border-color:rgba(255,255,255,.90)!important;
+  box-shadow:0 8px 22px rgba(45,39,34,.055),inset 0 1px 0 rgba(255,255,255,.95)!important;
+}
+dialog[open] .type-switch button[aria-selected="true"],
+dialog[open] .type-switch button.active{
+  background:rgba(255,255,255,.96)!important;
+  box-shadow:0 7px 18px rgba(42,37,33,.09)!important;
+}
+
+/* Tarjetas blancas y ligeras, conservando la jerarquía actual. */
+.card,.today-focus,.today-stats,.calendar-shell{
+  background:rgba(255,255,255,.55)!important;
+  border-color:rgba(255,255,255,.84)!important;
+}
+.card .card,.today-stats>*,.calendar-shell .day-cell{
+  background:rgba(255,255,255,.72)!important;
+  border-color:rgba(255,255,255,.82)!important;
+}
+
+/* Botones principales: naranja algo más refinado. */
+.fab,.save,.primary,#newBtn,.new-btn{
+  background:linear-gradient(145deg,#f38a18,#df6905)!important;
+  box-shadow:0 13px 30px rgba(216,103,10,.26),inset 0 1px 0 rgba(255,255,255,.30)!important;
+}
+
+@media(max-width:700px){
+  .bottom-nav{left:10px!important;right:10px!important;bottom:calc(7px + env(safe-area-inset-bottom))!important;border-radius:27px!important;min-height:76px!important;padding:8px!important}
+  .bottom-nav button,.bottom-nav .nav-item{min-height:58px!important;border-radius:20px!important}
+}
+
+@media(prefers-reduced-motion:reduce){.bottom-nav button,.bottom-nav .nav-item{transition:none!important}}
