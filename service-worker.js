@@ -1,5 +1,5 @@
-const SHELL_CACHE="homebase-1.9.0";
-const RUNTIME_CACHE="homebase-1.9.0";
+const SHELL_CACHE="homebase-1.9.1";
+const RUNTIME_CACHE="homebase-1.9.1";
 const SHELL=["./","./index.html","./manifest.webmanifest","./apple-touch-icon.png","./icon-192.png","./icon-512.png","./roster-sync-fix.js","./homebase-ui-1.8.3.js","./homebase-ui-1.8.3.css"];
 
 async function prepareAppHtml(response){
@@ -10,12 +10,15 @@ async function prepareAppHtml(response){
  const viewport='<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover">';
  html=html.replace(/<meta\s+name=["']viewport["'][^>]*>/i,viewport);
 
- const style='<link rel="stylesheet" href="./homebase-ui-1.8.3.css?v=190" data-homebase-ui="1.9.0">';
+ const critical='<style data-homebase-critical>:root{--glass-bg:rgba(255,255,255,.46);--glass-border:rgba(255,255,255,.78);--glass-shadow:0 18px 48px rgba(49,38,28,.13)}body{background:radial-gradient(circle at 10% -3%,rgba(255,186,112,.34),transparent 34%),radial-gradient(circle at 96% 6%,rgba(112,170,255,.27),transparent 31%),linear-gradient(180deg,#f7efe6 0%,#eef4fb 55%,#f7f2eb 100%)!important;background-attachment:fixed!important}.topbar,.bottom-nav,.card,.calendar-shell,dialog,.today-focus,.today-stats{border:1px solid var(--glass-border)!important;background:var(--glass-bg)!important;box-shadow:var(--glass-shadow)!important}.topbar,.bottom-nav,.card,.calendar-shell,dialog{-webkit-backdrop-filter:saturate(175%) blur(24px);backdrop-filter:saturate(175%) blur(24px)}</style>';
+ if(!html.includes('data-homebase-critical'))html=html.replace('</head>',`${critical}\n</head>`);
+
+ const style='<link rel="stylesheet" href="./homebase-ui-1.8.3.css?v=191" data-homebase-ui="1.9.1">';
  if(!html.includes("homebase-ui-1.8.3.css"))html=html.replace("</head>",`${style}\n</head>`);
 
  const scripts=[];
- if(!html.includes("homebase-ui-1.8.3.js"))scripts.push('<script src="./homebase-ui-1.8.3.js?v=190"></script>');
- if(!html.includes("roster-sync-fix.js"))scripts.push('<script src="./roster-sync-fix.js?v=190"></script>');
+ if(!html.includes("homebase-ui-1.8.3.js"))scripts.push('<script src="./homebase-ui-1.8.3.js?v=191"></script>');
+ if(!html.includes("roster-sync-fix.js"))scripts.push('<script src="./roster-sync-fix.js?v=191"></script>');
  if(scripts.length)html=html.replace("</body>",`${scripts.join("\n")}\n</body>`);
 
  return new Response(html,{status:response.status,statusText:response.statusText,headers});
