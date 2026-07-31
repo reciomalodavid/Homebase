@@ -18,6 +18,16 @@
     if (el) el.classList.add('hb-header-hidden');
   }
 
+  function scrollPageToTop(){
+    showHeader();
+    accumulatedDown = 0;
+    accumulatedUp = 0;
+    lastY = 0;
+    window.scrollTo({ top:0, left:0, behavior:'auto' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
+  }
+
   function update(){
     ticking = false;
     const y = Math.max(0, window.scrollY || document.documentElement.scrollTop || 0);
@@ -34,11 +44,11 @@
     if (delta > 0){
       accumulatedDown += delta;
       accumulatedUp = 0;
-      if (y > 46 && accumulatedDown > 8) hideHeader();
+      if (y > 38 && accumulatedDown > 6) hideHeader();
     } else if (delta < 0){
       accumulatedUp += Math.abs(delta);
       accumulatedDown = 0;
-      if (accumulatedUp > 5) showHeader();
+      if (accumulatedUp > 4) showHeader();
     }
 
     lastY = y;
@@ -56,6 +66,16 @@
     lastY = Math.max(0, window.scrollY || 0);
     if (lastY <= 18) showHeader();
   });
+
+  document.addEventListener('click', event => {
+    const navItem = event.target.closest('.bottom-nav button,.bottom-nav a,.bottom-nav .nav-item');
+    if (!navItem) return;
+
+    scrollPageToTop();
+    requestAnimationFrame(scrollPageToTop);
+    setTimeout(scrollPageToTop, 70);
+    setTimeout(scrollPageToTop, 180);
+  }, true);
 
   const observer = new MutationObserver(() => {
     const el = topbar();
