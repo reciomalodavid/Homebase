@@ -1,15 +1,14 @@
-/* Homebase 1.9.4 · formularios, semana completa y perfiles */
+/* Homebase 1.9.5 · formularios iOS estables, semana completa y perfiles */
 html,body{width:100%;max-width:100%;overflow-x:hidden!important}
 .top-actions .icon-btn[aria-hidden="true"]{display:none!important}
 
-/* Diálogos: el contenedor no recorta; el scroll vive únicamente dentro de .modal. */
 dialog[open]{
   box-sizing:border-box!important;
   position:fixed!important;
   inset:12px!important;
   width:min(calc(100vw - 24px),820px)!important;
   max-width:820px!important;
-  height:auto!important;
+  height:calc(100dvh - 24px)!important;
   max-height:calc(100dvh - 24px)!important;
   margin:auto!important;
   padding:0!important;
@@ -23,8 +22,8 @@ dialog[open] .modal{
   width:100%!important;
   min-width:0!important;
   max-width:100%!important;
-  height:auto!important;
-  max-height:calc(100dvh - 24px)!important;
+  height:100%!important;
+  max-height:100%!important;
   margin:0!important;
   padding:20px 20px calc(34px + env(safe-area-inset-bottom))!important;
   overflow-x:hidden!important;
@@ -32,7 +31,14 @@ dialog[open] .modal{
   overscroll-behavior:contain;
   -webkit-overflow-scrolling:touch;
 }
-dialog[open] .modal>*{box-sizing:border-box!important;min-width:0!important;max-width:100%!important}
+dialog[open] .modal,
+dialog[open] form,
+dialog[open] .modal>*{
+  box-sizing:border-box!important;
+  min-width:0!important;
+  max-width:100%!important;
+}
+dialog[open] form{display:block!important;width:100%!important;overflow-x:hidden!important}
 dialog[open] .modal-head{
   position:sticky!important;
   top:-20px!important;
@@ -48,21 +54,66 @@ dialog[open] .modal-head .close{width:44px!important;height:44px!important;min-w
 
 dialog[open] .type-switch{width:100%!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}
 dialog[open] .type-switch button{width:100%!important;min-width:0!important}
+
+/* Una sola columna en todos los tamaños: elimina el choque de los controles nativos de fecha/hora de iOS. */
 dialog[open] .form-row,
-dialog[open] #timeRow{width:100%!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:12px!important}
+dialog[open] #timeRow{
+  display:grid!important;
+  width:100%!important;
+  min-width:0!important;
+  grid-template-columns:minmax(0,1fr)!important;
+  gap:0!important;
+}
+dialog[open] .form-row>div,
+dialog[open] #timeRow>div,
+dialog[open] #endDateWrap{
+  box-sizing:border-box!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  overflow:hidden!important;
+}
 dialog[open] input:not([type="checkbox"]):not([type="radio"]),
 dialog[open] select,
 dialog[open] textarea{
   box-sizing:border-box!important;
   display:block!important;
+  inline-size:100%!important;
   width:100%!important;
   min-width:0!important;
   max-width:100%!important;
+  margin-left:0!important;
+  margin-right:0!important;
+  overflow:hidden!important;
 }
+/* Safari/iOS conserva un ancho intrínseco especial en date/time; se neutraliza explícitamente. */
+dialog[open] input[type="date"],
+dialog[open] input[type="time"]{
+  -webkit-appearance:none!important;
+  appearance:none!important;
+  inline-size:100%!important;
+  width:100%!important;
+  min-inline-size:0!important;
+  min-width:0!important;
+  max-inline-size:100%!important;
+  max-width:100%!important;
+  padding-left:14px!important;
+  padding-right:14px!important;
+  text-align:center!important;
+}
+dialog[open] input[type="date"]::-webkit-date-and-time-value,
+dialog[open] input[type="time"]::-webkit-date-and-time-value{
+  min-width:0!important;
+  width:100%!important;
+  margin:0!important;
+  text-align:center!important;
+}
+dialog[open] input[type="date"]::-webkit-calendar-picker-indicator,
+dialog[open] input[type="time"]::-webkit-calendar-picker-indicator{margin:0!important;padding:0!important}
+
 dialog[open] .advanced{display:block!important}
 dialog[open] .more{display:none!important}
 
-/* Miembros: nunca quedan cortados y toda la tarjeta es pulsable. */
 dialog[open] .member-picks{
   box-sizing:border-box!important;
   display:grid!important;
@@ -73,31 +124,16 @@ dialog[open] .member-picks{
   padding-bottom:4px!important;
 }
 dialog[open] .member-pick{
-  box-sizing:border-box!important;
-  position:relative!important;
-  display:flex!important;
-  align-items:center!important;
-  justify-content:flex-start!important;
-  gap:10px!important;
-  width:100%!important;
-  min-width:0!important;
-  min-height:58px!important;
-  margin:0!important;
-  padding:12px 13px!important;
-  border:1px solid rgba(255,255,255,.82)!important;
-  border-radius:17px!important;
-  background:rgba(255,255,255,.82)!important;
-  box-shadow:0 5px 15px rgba(37,31,26,.06)!important;
-  cursor:pointer!important;
-  overflow:hidden!important;
-  -webkit-tap-highlight-color:transparent;
+  box-sizing:border-box!important;position:relative!important;display:flex!important;align-items:center!important;justify-content:flex-start!important;
+  gap:10px!important;width:100%!important;min-width:0!important;min-height:58px!important;margin:0!important;padding:12px 13px!important;
+  border:1px solid rgba(255,255,255,.82)!important;border-radius:17px!important;background:rgba(255,255,255,.82)!important;
+  box-shadow:0 5px 15px rgba(37,31,26,.06)!important;cursor:pointer!important;overflow:hidden!important;-webkit-tap-highlight-color:transparent;
 }
 dialog[open] .member-pick:has(input:checked){border-color:var(--accent)!important;background:color-mix(in srgb,var(--accent) 11%,rgba(255,255,255,.86))!important;color:var(--accent)!important}
 dialog[open] .member-pick input[type="checkbox"]{
-  -webkit-appearance:none!important;appearance:none!important;position:relative!important;inset:auto!important;
-  display:grid!important;place-items:center!important;width:26px!important;height:26px!important;min-width:26px!important;min-height:26px!important;
-  flex:0 0 26px!important;margin:0!important;padding:0!important;opacity:1!important;pointer-events:auto!important;
-  border:2px solid rgba(60,60,67,.30)!important;border-radius:50%!important;background:#fff!important;box-shadow:none!important;
+  -webkit-appearance:none!important;appearance:none!important;position:relative!important;inset:auto!important;display:grid!important;place-items:center!important;
+  width:26px!important;height:26px!important;min-width:26px!important;min-height:26px!important;flex:0 0 26px!important;margin:0!important;padding:0!important;
+  opacity:1!important;pointer-events:auto!important;border:2px solid rgba(60,60,67,.30)!important;border-radius:50%!important;background:#fff!important;box-shadow:none!important;
 }
 dialog[open] .member-pick input[type="checkbox"]::after{content:"✓";color:#fff;font-size:17px;font-weight:900;line-height:1;transform:scale(0)}
 dialog[open] .member-pick input[type="checkbox"]:checked{background:#0a84ff!important;border-color:#0a84ff!important}
@@ -105,38 +141,23 @@ dialog[open] .member-pick input[type="checkbox"]:checked::after{transform:scale(
 dialog[open] .member-pick span{min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:normal!important}
 dialog[open] .save{position:static!important;width:100%!important;margin:22px 0 0!important;min-height:54px!important}
 
-/* Vista semanal: 24 horas completas, de 00:00 a 24:00. */
 .week-scroll{max-height:none!important;overflow:auto!important;padding-bottom:120px!important}
 .timeline{height:1440px!important;background-size:auto 60px!important}
 .mobile-day-scroll{max-height:none!important;overflow-y:visible!important;padding-bottom:120px!important}
 .mobile-day-timeline{height:1008px!important}
 
-/* Perfiles/fotos: el selector nativo queda oculto y las acciones no invaden la ficha. */
 dialog[open] .profile-list{display:grid!important;gap:12px!important;width:100%!important}
-dialog[open] .profile-row{
-  box-sizing:border-box!important;
-  display:grid!important;
-  grid-template-columns:52px minmax(0,1fr) auto!important;
-  gap:12px!important;
-  align-items:center!important;
-  width:100%!important;
-  min-width:0!important;
-  padding:13px!important;
-  overflow:hidden!important;
-}
+dialog[open] .profile-row{box-sizing:border-box!important;display:grid!important;grid-template-columns:52px minmax(0,1fr) auto!important;gap:12px!important;align-items:center!important;width:100%!important;min-width:0!important;padding:13px!important;overflow:hidden!important}
 dialog[open] .profile-row-main{min-width:0!important}
 dialog[open] .profile-actions{display:flex!important;flex-wrap:wrap!important;justify-content:flex-end!important;gap:7px!important;min-width:0!important}
 dialog[open] .profile-upload{position:relative!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;min-height:38px!important;padding:9px 12px!important;overflow:hidden!important;white-space:nowrap!important}
-dialog[open] .profile-upload input[type="file"]{position:absolute!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none!important}
-dialog[open] .profile-edit,
-dialog[open] .profile-remove,
-dialog[open] .profile-actions button{min-height:38px!important;padding:9px 11px!important;white-space:nowrap!important}
+dialog[open] .profile-upload input[type="file"]{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;opacity:0!important;cursor:pointer!important}
+dialog[open] .profile-edit,dialog[open] .profile-remove,dialog[open] .profile-actions button{min-height:38px!important;padding:9px 11px!important;white-space:nowrap!important}
 
 @media(max-width:700px){
-  dialog[open]{inset:8px!important;width:calc(100vw - 16px)!important;max-height:calc(100dvh - 16px)!important;border-radius:24px!important}
-  dialog[open] .modal{max-height:calc(100dvh - 16px)!important;padding:18px 14px calc(30px + env(safe-area-inset-bottom))!important}
+  dialog[open]{inset:8px!important;width:calc(100vw - 16px)!important;height:calc(100dvh - 16px)!important;max-height:calc(100dvh - 16px)!important;border-radius:24px!important}
+  dialog[open] .modal{padding:18px 14px calc(30px + env(safe-area-inset-bottom))!important}
   dialog[open] .modal-head{top:-18px!important;margin:-18px -14px 16px!important;padding:18px 14px 14px!important}
-  dialog[open] .form-row,dialog[open] #timeRow{grid-template-columns:1fr!important;gap:0!important}
   dialog[open] .profile-row{grid-template-columns:48px minmax(0,1fr)!important}
   dialog[open] .profile-actions{grid-column:1/-1!important;justify-content:flex-start!important}
 }
