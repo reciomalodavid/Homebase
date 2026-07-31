@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const FIX_VERSION = "1.8.2";
+  const FIX_VERSION = "1.9.5";
   window.HOMEBASE_VERSION = FIX_VERSION;
 
   const originalApplyPendingRoster = applyPendingRoster;
@@ -34,7 +34,13 @@
 
     return (items || []).map(item => {
       if (!isInPeriod(item, meta)) return item;
+
       const active = useIds ? activeIds.has(item.id) : activeUids.has(rosterUid(item));
+      const manuallyDeleted = !!item.deletedAt && item.rosterRemoved !== true;
+
+      // Un borrado realizado por el usuario es autoritativo. Nunca debe revivir
+      // porque el duty siga formando parte de la última importación del roster.
+      if (manuallyDeleted) return item;
 
       if (active) {
         return item.deletedAt || item.rosterRemoved
@@ -65,7 +71,7 @@
       appVersion: FIX_VERSION,
       activeRosterIds,
       activeRosterUids,
-      snapshotVersion: 2
+      snapshotVersion: 3
     };
     state.items = hardReconcileRoster(state.items, state.rosterMeta);
     localStorage.setItem("homebase_roster_meta", JSON.stringify(state.rosterMeta));
@@ -78,19 +84,19 @@
     originalApplyRemotePayload(data);
     if (!state.rosterMeta) return;
     state.items = hardReconcileRoster(state.items, state.rosterMeta);
+    localStorage.setItem("homebase_v2_items", JSON.stringify(state.items));
   };
 
   const applyButton = document.getElementById("applyRosterImport");
   if (applyButton) applyButton.onclick = applyPendingRoster;
 
-  // Migra la instantánea actual para que la próxima sincronización ya incluya IDs autoritativos.
   if (state.rosterMeta && !Array.isArray(state.rosterMeta.activeRosterIds)) {
     const meta = state.rosterMeta;
     meta.activeRosterIds = (state.items || [])
       .filter(item => isInPeriod(item, meta) && !item.deletedAt)
       .filter(item => !Array.isArray(meta.activeRosterUids) || meta.activeRosterUids.includes(rosterUid(item)))
       .map(item => item.id);
-    meta.snapshotVersion = 2;
+    meta.snapshotVersion = 3;
     meta.appVersion = FIX_VERSION;
     state.items = hardReconcileRoster(state.items, meta);
     localStorage.setItem("homebase_roster_meta", JSON.stringify(meta));
@@ -100,11 +106,12 @@
   }
 })();
 
-// Capa visual independiente. Si fallase al cargar, la app base continúa funcionando.
 (() => {
+  if (document.querySelector('script[data-homebase-ui-loader]')) return;
   const script = document.createElement("script");
-  script.src = "./homebase-ui-1.8.3.js?v=183";
+  script.src = "./homebase-ui-1.8.3.js?v=195";
   script.defer = true;
-  script.onerror = error => console.warn("Homebase UI 1.8.3 no se pudo cargar", error);
+  script.dataset.homebaseUiLoader = "1.9.5";
+  script.onerror = error => console.warn("Homebase UI no se pudo cargar", error);
   document.head.appendChild(script);
 })();
