@@ -7,26 +7,8 @@
   let accumulatedUp = 0;
 
   function topbar(){ return document.querySelector('.topbar'); }
-
-  function showHeader(){
-    const el = topbar();
-    if (el) el.classList.remove('hb-header-hidden');
-  }
-
-  function hideHeader(){
-    const el = topbar();
-    if (el) el.classList.add('hb-header-hidden');
-  }
-
-  function scrollPageToTop(){
-    showHeader();
-    accumulatedDown = 0;
-    accumulatedUp = 0;
-    lastY = 0;
-    window.scrollTo({ top:0, left:0, behavior:'auto' });
-    document.documentElement.scrollTop = 0;
-    document.body.scrollTop = 0;
-  }
+  function showHeader(){ const el = topbar(); if (el) el.classList.remove('hb-header-hidden'); }
+  function hideHeader(){ const el = topbar(); if (el) el.classList.add('hb-header-hidden'); }
 
   function update(){
     ticking = false;
@@ -44,13 +26,12 @@
     if (delta > 0){
       accumulatedDown += delta;
       accumulatedUp = 0;
-      if (y > 38 && accumulatedDown > 6) hideHeader();
+      if (y > 46 && accumulatedDown > 8) hideHeader();
     } else if (delta < 0){
       accumulatedUp += Math.abs(delta);
       accumulatedDown = 0;
-      if (accumulatedUp > 4) showHeader();
+      if (accumulatedUp > 5) showHeader();
     }
-
     lastY = y;
   }
 
@@ -61,21 +42,33 @@
     }
   }
 
+  function isBottomNavigationTarget(target){
+    const button = target.closest('.bottom-nav button,.bottom-nav a,.bottom-nav .nav-item,.nav-btn');
+    return button && button.closest('.bottom-nav');
+  }
+
+  function preparePageSwitch(){
+    const root = document.documentElement;
+    root.classList.add('hb-page-switching');
+    showHeader();
+    accumulatedDown = 0;
+    accumulatedUp = 0;
+    window.scrollTo(0,0);
+    lastY = 0;
+    requestAnimationFrame(() => requestAnimationFrame(() => root.classList.remove('hb-page-switching')));
+  }
+
+  /* Se ejecuta antes del manejador original de navegación. El cambio de scroll y de página
+     ocurre dentro del mismo frame, evitando el salto visible posterior. */
+  document.addEventListener('click', event => {
+    if (isBottomNavigationTarget(event.target)) preparePageSwitch();
+  }, true);
+
   window.addEventListener('scroll', onScroll, { passive:true });
   window.addEventListener('pageshow', () => {
     lastY = Math.max(0, window.scrollY || 0);
     if (lastY <= 18) showHeader();
   });
-
-  document.addEventListener('click', event => {
-    const navItem = event.target.closest('.bottom-nav button,.bottom-nav a,.bottom-nav .nav-item');
-    if (!navItem) return;
-
-    scrollPageToTop();
-    requestAnimationFrame(scrollPageToTop);
-    setTimeout(scrollPageToTop, 70);
-    setTimeout(scrollPageToTop, 180);
-  }, true);
 
   const observer = new MutationObserver(() => {
     const el = topbar();
