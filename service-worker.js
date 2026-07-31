@@ -1,12 +1,12 @@
-const SHELL_CACHE="homebase-1.8.4";
-const RUNTIME_CACHE="homebase-1.8.4";
+const SHELL_CACHE="homebase-1.8.5";
+const RUNTIME_CACHE="homebase-1.8.5";
 const SHELL=["./","./index.html","./manifest.webmanifest","./apple-touch-icon.png","./icon-192.png","./icon-512.png","./roster-sync-fix.js","./homebase-ui-1.8.3.js","./homebase-ui-1.8.3.css"];
 
 async function injectRosterFix(response){
  const headers=new Headers(response.headers);
  headers.set("content-type","text/html; charset=utf-8");
  const html=await response.text();
- const script='<script src="./roster-sync-fix.js?v=184"></script>';
+ const script='<script src="./roster-sync-fix.js?v=185"></script>';
  const body=html.includes("roster-sync-fix.js")?html:html.replace("</body>",`${script}</body>`);
  return new Response(body,{status:response.status,statusText:response.statusText,headers});
 }
