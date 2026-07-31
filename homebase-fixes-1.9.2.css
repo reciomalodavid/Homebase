@@ -1,0 +1,151 @@
+/* Homebase 1.9.2 · corrección definitiva de formularios móviles */
+html,body{width:100%;max-width:100%;overflow-x:hidden!important}
+
+/* El botón superior de filtros queda retirado: el filtro sigue disponible en Más. */
+.top-actions .icon-btn[aria-hidden="true"]{display:none!important}
+
+/* Diálogo: siempre dentro del viewport, sin desbordamiento lateral. */
+dialog[open]{
+  box-sizing:border-box!important;
+  position:fixed!important;
+  inset:max(10px,env(safe-area-inset-top)) 10px max(10px,env(safe-area-inset-bottom)) 10px!important;
+  width:calc(100vw - 20px)!important;
+  max-width:620px!important;
+  height:auto!important;
+  max-height:none!important;
+  margin:auto!important;
+  padding:0!important;
+  border:1px solid rgba(255,255,255,.8)!important;
+  border-radius:26px!important;
+  overflow:hidden!important;
+  contain:layout paint;
+}
+dialog[open] .modal{
+  box-sizing:border-box!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+  height:100%!important;
+  max-height:100%!important;
+  margin:0!important;
+  padding:18px 16px calc(26px + env(safe-area-inset-bottom))!important;
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
+dialog[open] .modal>*{box-sizing:border-box!important;min-width:0!important;max-width:100%!important}
+dialog[open] .modal-head{
+  position:sticky!important;
+  top:-18px!important;
+  z-index:20!important;
+  width:auto!important;
+  margin:-18px -16px 16px!important;
+  padding:18px 16px 14px!important;
+  background:rgba(248,245,241,.91)!important;
+  border-bottom:1px solid rgba(255,255,255,.72)!important;
+}
+dialog[open] .modal-head h2{margin:0!important;font-size:28px!important}
+dialog[open] .modal-head .close{width:44px!important;height:44px!important;min-width:44px!important;flex:0 0 44px!important}
+
+dialog[open] .type-switch{width:100%!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important}
+dialog[open] .type-switch button{width:100%!important;min-width:0!important}
+dialog[open] .form-row,
+dialog[open] #timeRow{width:100%!important;grid-template-columns:1fr!important;gap:0!important}
+dialog[open] input:not([type="checkbox"]):not([type="radio"]),
+dialog[open] select,
+dialog[open] textarea{
+  box-sizing:border-box!important;
+  display:block!important;
+  width:100%!important;
+  min-width:0!important;
+  max-width:100%!important;
+}
+
+/* Selector de miembros: toda la tarjeta vuelve a ser pulsable y el check es visible. */
+dialog[open] .member-picks{
+  box-sizing:border-box!important;
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:10px!important;
+  width:100%!important;
+  max-width:100%!important;
+  overflow:visible!important;
+}
+dialog[open] .member-pick{
+  box-sizing:border-box!important;
+  position:relative!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  gap:10px!important;
+  width:100%!important;
+  min-width:0!important;
+  min-height:58px!important;
+  margin:0!important;
+  padding:12px 13px!important;
+  border:1px solid rgba(255,255,255,.82)!important;
+  border-radius:17px!important;
+  background:rgba(255,255,255,.82)!important;
+  box-shadow:0 5px 15px rgba(37,31,26,.06)!important;
+  cursor:pointer!important;
+  overflow:hidden!important;
+  -webkit-tap-highlight-color:transparent;
+}
+dialog[open] .member-pick:has(input:checked){
+  border-color:var(--accent)!important;
+  background:color-mix(in srgb,var(--accent) 11%,rgba(255,255,255,.86))!important;
+  color:var(--accent)!important;
+}
+dialog[open] .member-pick input[type="checkbox"]{
+  -webkit-appearance:none!important;
+  appearance:none!important;
+  position:relative!important;
+  inset:auto!important;
+  display:grid!important;
+  place-items:center!important;
+  width:26px!important;
+  height:26px!important;
+  min-width:26px!important;
+  min-height:26px!important;
+  flex:0 0 26px!important;
+  margin:0!important;
+  padding:0!important;
+  opacity:1!important;
+  pointer-events:auto!important;
+  border:2px solid rgba(60,60,67,.30)!important;
+  border-radius:50%!important;
+  background:#fff!important;
+  box-shadow:none!important;
+}
+dialog[open] .member-pick input[type="checkbox"]::after{
+  content:"✓";
+  color:#fff;
+  font-size:17px;
+  font-weight:900;
+  line-height:1;
+  transform:scale(0);
+}
+dialog[open] .member-pick input[type="checkbox"]:checked{background:#0a84ff!important;border-color:#0a84ff!important}
+dialog[open] .member-pick input[type="checkbox"]:checked::after{transform:scale(1)}
+dialog[open] .member-pick span{min-width:0!important;overflow:hidden!important;text-overflow:ellipsis!important;white-space:normal!important}
+
+/* Guardar no tapa campos ni miembros mientras se desplaza el formulario. */
+dialog[open] .save{
+  position:static!important;
+  width:100%!important;
+  margin:22px 0 0!important;
+  min-height:54px!important;
+}
+
+@media(max-width:390px){
+  dialog[open]{inset:max(6px,env(safe-area-inset-top)) 6px max(6px,env(safe-area-inset-bottom)) 6px!important;width:calc(100vw - 12px)!important;border-radius:22px!important}
+  dialog[open] .modal{padding-left:13px!important;padding-right:13px!important}
+  dialog[open] .modal-head{margin-left:-13px!important;margin-right:-13px!important;padding-left:13px!important;padding-right:13px!important}
+  dialog[open] .member-picks{grid-template-columns:1fr!important}
+}
+
+@media(prefers-color-scheme:dark){
+  dialog[open] .modal-head{background:rgba(30,31,35,.93)!important}
+  dialog[open] .member-pick{background:rgba(255,255,255,.08)!important;border-color:rgba(255,255,255,.15)!important}
+}
