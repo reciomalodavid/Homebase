@@ -1,12 +1,12 @@
 (() => {
   'use strict';
 
-  const VERSION = '1.9.8';
+  const VERSION = '1.10.0';
   const STORAGE_KEY = 'homebase_v2_items';
   let syncTimer = null;
   let lastSnapshot = null;
   let toastTimer = null;
-  let onlineTimer = null;
+  let connectionBannerTimer = null;
 
   function clone(value){
     try { return structuredClone(value); }
@@ -35,43 +35,50 @@
     badge.setAttribute('aria-label','Estado de sincronización');
     badge.innerHTML = '<span class="hb-sync-dot">✓</span><span class="hb-sync-text">Guardado</span>';
     badge.addEventListener('click', () => {
-      if (!navigator.onLine) showOfflineBanner();
+      if (!navigator.onLine) showConnectionBanner('offline', true);
     });
     const actions = topbar.querySelector('.top-actions') || topbar.lastElementChild || topbar;
     actions.insertBefore(badge, actions.firstChild);
     return badge;
   }
 
-  function ensureOfflineBanner(){
-    let banner = document.getElementById('homebaseOfflineBanner');
+  function ensureConnectionBanner(){
+    let banner = document.getElementById('homebaseConnectionBanner');
     if (banner) return banner;
-    banner = document.createElement('div');
-    banner.id = 'homebaseOfflineBanner';
-    banner.className = 'hb-offline-banner';
+    banner = document.createElement('section');
+    banner.id = 'homebaseConnectionBanner';
+    banner.className = 'hb-connection-banner';
     banner.setAttribute('role','status');
     banner.setAttribute('aria-live','polite');
-    banner.innerHTML = '<span class="hb-offline-icon">!</span><div><strong>Sin conexión</strong><span>Los cambios se guardan en este dispositivo y se sincronizarán al recuperar internet.</span></div><button type="button" aria-label="Cerrar aviso">×</button>';
-    banner.querySelector('button').addEventListener('click', () => banner.classList.remove('show'));
+    banner.innerHTML = '<span class="hb-connection-icon" aria-hidden="true">!</span><span class="hb-connection-copy"><span class="hb-connection-title"></span><span class="hb-connection-message"></span></span><button class="hb-connection-close" type="button" aria-label="Cerrar aviso">×</button>';
+    banner.querySelector('.hb-connection-close').addEventListener('click', () => {
+      banner.classList.remove('show');
+      clearTimeout(connectionBannerTimer);
+    });
     document.body.appendChild(banner);
     return banner;
   }
 
-  function showOfflineBanner(){
-    clearTimeout(onlineTimer);
-    const banner = ensureOfflineBanner();
-    banner.classList.remove('online');
-    banner.querySelector('strong').textContent = 'Sin conexión';
-    banner.querySelector('div span').textContent = 'Los cambios se guardan en este dispositivo y se sincronizarán al recuperar internet.';
-    banner.classList.add('show');
-  }
+  function showConnectionBanner(kind, manual = false){
+    const banner = ensureConnectionBanner();
+    const icon = banner.querySelector('.hb-connection-icon');
+    const title = banner.querySelector('.hb-connection-title');
+    const message = banner.querySelector('.hb-connection-message');
 
-  function showOnlineBanner(){
-    const banner = ensureOfflineBanner();
-    banner.classList.add('online','show');
-    banner.querySelector('strong').textContent = 'Conexión recuperada';
-    banner.querySelector('div span').textContent = 'Homebase volverá a sincronizar los cambios.';
-    clearTimeout(onlineTimer);
-    onlineTimer = setTimeout(() => banner.classList.remove('show'), 2800);
+    banner.dataset.kind = kind;
+    if (kind === 'online') {
+      icon.textContent = '✓';
+      title.textContent = 'Conexión recuperada';
+      message.textContent = 'Homebase está sincronizando los cambios.';
+    } else {
+      icon.textContent = '!';
+      title.textContent = 'Sin conexión';
+      message.textContent = 'Los cambios se guardarán y se sincronizarán después.';
+    }
+
+    banner.classList.add('show');
+    clearTimeout(connectionBannerTimer);
+    connectionBannerTimer = setTimeout(() => banner.classList.remove('show'), manual ? 6500 : kind === 'online' ? 3000 : 5000);
   }
 
   function setSyncState(kind, text){
@@ -82,11 +89,13 @@
     const label = badge.querySelector('.hb-sync-text');
     if (dot) dot.textContent = kind === 'offline' ? '!' : kind === 'syncing' ? '↻' : '✓';
     if (label) label.textContent = text;
-    if (kind === 'offline') showOfflineBanner();
   }
 
   function markSyncing(){
-    if (!navigator.onLine) return setSyncState('offline','Sin conexión');
+    if (!navigator.onLine) {
+      setSyncState('offline','Sin conexión');
+      return;
+    }
     setSyncState('syncing','Guardando');
     clearTimeout(syncTimer);
     syncTimer = setTimeout(() => setSyncState('saved','Guardado'), 1400);
@@ -181,10 +190,15 @@
   }
 
   window.addEventListener('online', () => {
-    setSyncState('saved','Conectado');
-    showOnlineBanner();
+    setSyncState('syncing','Sincronizando');
+    showConnectionBanner('online');
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(() => setSyncState('saved','Guardado'), 2200);
   });
-  window.addEventListener('offline', () => setSyncState('offline','Sin conexión'));
+  window.addEventListener('offline', () => {
+    setSyncState('offline','Sin conexión');
+    showConnectionBanner('offline');
+  });
 
   const observer = new MutationObserver(() => {
     ensureSyncBadge();
@@ -198,5 +212,6 @@
     ensureSyncBadge();
     wrapCloudFunctions();
     setSyncState(navigator.onLine ? 'saved' : 'offline', navigator.onLine ? 'Guardado' : 'Sin conexión');
+    if (!navigator.onLine) showConnectionBanner('offline');
   });
 })();
