@@ -99,3 +99,12 @@
     render();
   }
 })();
+
+// Capa visual independiente. Si fallase al cargar, la app base continúa funcionando.
+(() => {
+  const script = document.createElement("script");
+  script.src = "./homebase-ui-1.8.3.js?v=183";
+  script.defer = true;
+  script.onerror = error => console.warn("Homebase UI 1.8.3 no se pudo cargar", error);
+  document.head.appendChild(script);
+})();
