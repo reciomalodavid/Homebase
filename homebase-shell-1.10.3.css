@@ -1,49 +1,54 @@
-/* Homebase 1.10.3 · navegación iPhone completa + cabecera retráctil */
+/* Homebase 1.10.4 · navegación móvil completa + cabecera vertical */
 
-/* La cabecera se oculta suavemente al bajar y reaparece al subir. */
+/* Cabecera: solo movimiento vertical, sin desplazamiento lateral. */
 .topbar{
-  transition:transform .22s cubic-bezier(.2,.7,.2,1),opacity .18s ease!important;
-  will-change:transform!important;
+  transform:translate3d(0,0,0)!important;
+  transition:transform .16s cubic-bezier(.22,.7,.25,1),opacity .14s ease!important;
+  will-change:transform,opacity!important;
 }
 .topbar.hb-header-hidden{
-  transform:translate3d(0,calc(-100% - 12px),0)!important;
+  transform:translate3d(0,calc(-100% - 10px),0)!important;
   opacity:.98!important;
   pointer-events:none!important;
 }
 
-/* Barra inferior: siempre completa, cuatro accesos iguales y dentro del iPhone. */
+/* Barra inferior: neutraliza reglas antiguas de centrado/anchura. */
 .bottom-nav{
   box-sizing:border-box!important;
   position:fixed!important;
-  left:12px!important;
-  right:12px!important;
-  bottom:calc(8px + env(safe-area-inset-bottom))!important;
+  left:10px!important;
+  right:10px!important;
+  bottom:calc(7px + env(safe-area-inset-bottom))!important;
   z-index:900!important;
   display:grid!important;
   grid-template-columns:repeat(4,minmax(0,1fr))!important;
   align-items:stretch!important;
-  gap:4px!important;
-  width:auto!important;
+  gap:3px!important;
+  width:calc(100vw - 20px)!important;
   min-width:0!important;
-  max-width:none!important;
+  max-width:calc(100vw - 20px)!important;
   height:auto!important;
-  min-height:68px!important;
+  min-height:72px!important;
   margin:0!important;
   padding:7px!important;
-  overflow:visible!important;
+  transform:none!important;
+  overflow:hidden!important;
   border:1px solid rgba(255,255,255,.88)!important;
-  border-radius:25px!important;
-  background:linear-gradient(115deg,rgba(255,255,255,.60),rgba(246,249,255,.48),rgba(255,245,233,.50))!important;
-  box-shadow:0 16px 42px rgba(41,38,35,.14),inset 0 1px 0 rgba(255,255,255,.9)!important;
+  border-radius:26px!important;
+  background:linear-gradient(115deg,rgba(255,255,255,.62),rgba(246,249,255,.50),rgba(255,245,233,.52))!important;
+  box-shadow:0 16px 42px rgba(41,38,35,.14),inset 0 1px 0 rgba(255,255,255,.92)!important;
   -webkit-backdrop-filter:blur(30px) saturate(180%)!important;
   backdrop-filter:blur(30px) saturate(180%)!important;
 }
 .bottom-nav>*{
   box-sizing:border-box!important;
+  position:relative!important;
+  z-index:1!important;
   min-width:0!important;
   width:100%!important;
   max-width:100%!important;
   margin:0!important;
+  transform:none!important;
 }
 .bottom-nav button,
 .bottom-nav a,
@@ -54,9 +59,10 @@
   justify-content:center!important;
   gap:3px!important;
   min-width:0!important;
-  min-height:54px!important;
-  padding:6px 2px!important;
-  border-radius:18px!important;
+  width:100%!important;
+  min-height:56px!important;
+  padding:5px 1px!important;
+  border-radius:19px!important;
   overflow:hidden!important;
   white-space:nowrap!important;
   text-overflow:ellipsis!important;
@@ -71,24 +77,18 @@
 }
 .bottom-nav .active,
 .bottom-nav [aria-current="page"]{
-  background:rgba(255,255,255,.66)!important;
-  box-shadow:0 6px 18px rgba(42,39,36,.08),inset 0 0 0 1px rgba(255,255,255,.78)!important;
+  background:linear-gradient(145deg,rgba(255,255,255,.88),rgba(255,236,218,.67))!important;
+  box-shadow:0 6px 18px rgba(42,39,36,.08),inset 0 0 0 1px rgba(255,255,255,.82)!important;
 }
 
-/* Espacio final para que la navegación no tape el contenido. */
-body{padding-bottom:calc(92px + env(safe-area-inset-bottom))!important}
-
-/* El botón + queda por encima de la barra, no encima de ella. */
-.fab,
-button.fab,
-[aria-label="Nuevo"].floating,
-.floating-add{
-  bottom:calc(92px + env(safe-area-inset-bottom))!important;
+body{padding-bottom:calc(96px + env(safe-area-inset-bottom))!important}
+.fab,button.fab,[aria-label="Nuevo"].floating,.floating-add{
+  bottom:calc(96px + env(safe-area-inset-bottom))!important;
 }
 
 @media(max-width:390px){
-  .bottom-nav{left:8px!important;right:8px!important;gap:2px!important;padding:6px!important;border-radius:23px!important}
-  .bottom-nav button,.bottom-nav a,.bottom-nav .nav-item{font-size:11px!important;padding-left:1px!important;padding-right:1px!important}
+  .bottom-nav{left:6px!important;right:6px!important;width:calc(100vw - 12px)!important;max-width:calc(100vw - 12px)!important;gap:1px!important;padding:6px 4px!important;border-radius:23px!important}
+  .bottom-nav button,.bottom-nav a,.bottom-nav .nav-item{font-size:10.5px!important;padding-left:0!important;padding-right:0!important}
 }
 
 @media(min-width:768px){
@@ -96,6 +96,7 @@ button.fab,
     left:50%!important;
     right:auto!important;
     width:min(760px,calc(100vw - 32px))!important;
+    max-width:min(760px,calc(100vw - 32px))!important;
     transform:translateX(-50%)!important;
   }
 }
