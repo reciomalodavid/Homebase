@@ -1,18 +1,27 @@
-/* Homebase 1.10.4 · navegación móvil completa + cabecera vertical */
+/* Homebase 1.10.5 · cabecera centrada + navegación móvil completa */
 
-/* Cabecera: solo movimiento vertical, sin desplazamiento lateral. */
+/* Cabecera: ocupa siempre todo el ancho y solo se mueve verticalmente. */
 .topbar{
+  box-sizing:border-box!important;
+  left:0!important;
+  right:0!important;
+  inset-inline:0!important;
+  width:100%!important;
+  max-width:100vw!important;
+  margin-left:0!important;
+  margin-right:0!important;
   transform:translate3d(0,0,0)!important;
-  transition:transform .16s cubic-bezier(.22,.7,.25,1),opacity .14s ease!important;
+  transform-origin:center top!important;
+  transition:transform .14s cubic-bezier(.22,.7,.25,1),opacity .12s ease!important;
   will-change:transform,opacity!important;
 }
 .topbar.hb-header-hidden{
-  transform:translate3d(0,calc(-100% - 10px),0)!important;
+  transform:translate3d(0,calc(-100% - 8px),0)!important;
   opacity:.98!important;
   pointer-events:none!important;
 }
 
-/* Barra inferior: neutraliza reglas antiguas de centrado/anchura. */
+/* Barra inferior: neutraliza cualquier centrado o ancho heredado. */
 .bottom-nav{
   box-sizing:border-box!important;
   position:fixed!important;
