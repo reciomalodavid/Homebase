@@ -1,11 +1,12 @@
 (() => {
   "use strict";
 
-  const UI_VERSION = "1.8.4";
+  const UI_VERSION = "1.8.5";
   const MONTHS_BEFORE = 8;
   const MONTHS_AFTER = 16;
   let rebuilding = false;
   let baseRenderMonth = null;
+  let pendingScrollDate = null;
 
   const monthKey = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
   const monthLabel = d => {
@@ -21,6 +22,8 @@
     link.dataset.homebaseUi=UI_VERSION;
   }
 
+  function calendarVisible(){return !!document.getElementById("calendarPage")?.classList.contains("active")}
+
   function ensureTodayButton(){
     let btn=document.getElementById("calendarTodayFloat");
     if(btn)return btn;
@@ -35,33 +38,38 @@
     return btn;
   }
 
-  function calendarVisible(){return !!document.getElementById("calendarPage")?.classList.contains("active")}
+  function scrollToDate(dateIso,smooth=false){
+    const target=document.querySelector(`.continuous-month .day[data-date="${dateIso}"]`);
+    if(!target)return;
+    target.scrollIntoView({behavior:smooth?"smooth":"auto",block:"center"});
+  }
 
   function goToday(smooth){
-    if(!baseRenderMonth)return;
     const now=new Date();
     state.month=new Date(now.getFullYear(),now.getMonth(),1);
     state.selectedDate=iso(now);
-    renderContinuous(true);
-    requestAnimationFrame(()=>{
-      document.querySelector(`.continuous-month[data-month="${monthKey(now)}"]`)?.scrollIntoView({behavior:smooth?"smooth":"auto",block:"start"});
-      if(!smooth)window.scrollBy(0,-150);
-    });
+    pendingScrollDate=state.selectedDate;
+    renderContinuous();
+    requestAnimationFrame(()=>scrollToDate(state.selectedDate,smooth));
   }
 
   function wireDays(section){
     section.querySelectorAll(".day[data-date]").forEach(btn=>{
-      btn.onclick=e=>{
-        e.preventDefault();e.stopPropagation();
-        const dateIso=btn.dataset.date;if(!dateIso)return;
+      btn.addEventListener("click",e=>{
+        e.preventDefault();
+        e.stopPropagation();
+        const dateIso=btn.dataset.date;
+        if(!dateIso)return;
         const d=parseDate(dateIso);
         state.selectedDate=dateIso;
         state.month=new Date(d.getFullYear(),d.getMonth(),1);
-        baseRenderMonth();
-        renderSelectedDay?.();
-        section.querySelectorAll(".day.selected").forEach(x=>x.classList.remove("selected"));
-        btn.classList.add("selected");
-      };
+        pendingScrollDate=dateIso;
+
+        // Usa el render normal de Homebase para actualizar el detalle del día,
+        // y después reconstruye la tira continua conservando la posición.
+        render();
+        requestAnimationFrame(()=>scrollToDate(dateIso,false));
+      },{passive:false});
     });
   }
 
@@ -80,28 +88,33 @@
     if(title)title.textContent=best.dataset.label||"Calendario";
   }
 
-  function renderContinuous(forceToday=false){
+  function renderContinuous(){
     if(rebuilding||state.mode!=="month"||!baseRenderMonth)return;
-    const grid=document.getElementById("monthGrid"),weekdays=document.getElementById("weekdays");
+    const grid=document.getElementById("monthGrid");
+    const weekdays=document.getElementById("weekdays");
     const shell=grid?.closest(".calendar-shell");
     if(!grid||!weekdays||!shell)return;
 
     rebuilding=true;
-    shell.classList.remove("continuous-active");
-    let stack=document.getElementById("continuousMonths");
-    if(!stack){stack=document.createElement("div");stack.id="continuousMonths";stack.className="continuous-months";grid.after(stack)}
-
     const now=new Date();
-    const anchorMonth=forceToday?new Date(now.getFullYear(),now.getMonth(),1):new Date(state.month.getFullYear(),state.month.getMonth(),1);
+    const anchorMonth=new Date(now.getFullYear(),now.getMonth(),1);
     const savedMonth=new Date(state.month);
-    const fragment=document.createDocumentFragment();
+    const savedTitle=document.getElementById("periodTitle")?.textContent||"";
+    let stack=document.getElementById("continuousMonths");
+    if(!stack){
+      stack=document.createElement("div");
+      stack.id="continuousMonths";
+      stack.className="continuous-months";
+      grid.insertAdjacentElement("afterend",stack);
+    }
 
+    const fragment=document.createDocumentFragment();
     try{
-      stack.innerHTML="";
       for(let offset=-MONTHS_BEFORE;offset<=MONTHS_AFTER;offset++){
         const month=addMonths(anchorMonth,offset);
         state.month=month;
         baseRenderMonth();
+
         const section=document.createElement("section");
         section.className="continuous-month";
         section.dataset.month=monthKey(month);
@@ -111,35 +124,46 @@
         wireDays(section);
         fragment.appendChild(section);
       }
-      stack.appendChild(fragment);
+
+      stack.replaceChildren(fragment);
       shell.classList.add("continuous-active");
     }catch(error){
       console.error("Calendario continuo",error);
-      stack.innerHTML="";
       shell.classList.remove("continuous-active");
     }finally{
       state.month=savedMonth;
       baseRenderMonth();
+      const title=document.getElementById("periodTitle");
+      if(title&&savedTitle)title.textContent=savedTitle;
       rebuilding=false;
     }
 
-    updateHeader();
     ensureTodayButton().hidden=!calendarVisible();
+    updateHeader();
+
+    const targetDate=pendingScrollDate;
+    pendingScrollDate=null;
+    if(targetDate)requestAnimationFrame(()=>scrollToDate(targetDate,false));
   }
 
   injectStyles();
   ensureTodayButton();
   if(typeof renderMonth!=="function")return;
   baseRenderMonth=renderMonth;
-  renderMonth=function(){
+
+  renderMonth=function renderMonthContinuous(){
     baseRenderMonth();
-    if(state.mode==="month")queueMicrotask(()=>renderContinuous(false));
+    if(state.mode==="month"&&!rebuilding)queueMicrotask(renderContinuous);
   };
 
   document.addEventListener("click",e=>{
     const nav=e.target.closest?.("[data-page]");
     if(nav?.dataset.page==="calendarPage"){
-      setTimeout(()=>goToday(false),40);
+      const now=new Date();
+      state.month=new Date(now.getFullYear(),now.getMonth(),1);
+      pendingScrollDate=iso(now);
+      setTimeout(renderContinuous,50);
+      ensureTodayButton().hidden=false;
     }else if(nav){
       ensureTodayButton().hidden=true;
     }
@@ -154,5 +178,7 @@
   },{passive:true});
 
   window.HOMEBASE_VERSION=UI_VERSION;
-  setTimeout(()=>{if(state.mode==="month"&&calendarVisible())goToday(false)},120);
+  setTimeout(()=>{
+    if(state.mode==="month"&&calendarVisible())goToday(false);
+  },120);
 })();
