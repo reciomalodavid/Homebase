@@ -26,21 +26,19 @@
       const response=await fetch('../index.html?betaSource='+Date.now(),{cache:'no-store'});
       let html=await response.text();
 
-      // La beta usa los mismos archivos visuales de la estable, pero desde la raíz.
       html=html.replace(/<head>/i,'<head><base href="../">');
       html=html.replace(/<title>[^<]*<\/title>/i,'<title>Homebase Beta</title>');
       html=html.replace(/<meta\s+name=["']apple-mobile-web-app-title["'][^>]*>/i,'<meta name="apple-mobile-web-app-title" content="Homebase Beta">');
       html=html.replace(/<link\s+rel=["']manifest["'][^>]*>/i,'<link rel="manifest" href="./beta/manifest.webmanifest">');
       html=html.replace(/<link\s+rel=["']apple-touch-icon["'][^>]*>/i,'<link rel="apple-touch-icon" href="./beta/beta-icon.svg">');
 
-      // Base de datos de pruebas independiente. Nunca toca homebaseSyncs.
+      // Colección Firebase totalmente separada de la versión estable.
       html=html.replaceAll('homebaseSyncs','homebaseBetaSyncs');
 
-      // Service Worker independiente y limitado a /beta/.
+      // Service Worker propio, con alcance exclusivo de /beta/.
       html=html.replaceAll('./service-worker.js','./beta/service-worker.js');
-      html=html.replaceAll('service-worker.js','beta/service-worker.js');
 
-      // Separa todo el almacenamiento local de la beta.
+      // Almacenamiento local independiente.
       const isolation=`<script data-homebase-beta-isolation>
       (()=>{
         const PREFIX='homebase_beta__';
