@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#6f58c9">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Homebase Beta">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" href="./beta-icon.svg">
+  <title>Homebase Beta</title>
+  <style>
+    html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f6f2fb;color:#1d1d1f}
+    .beta-loader{min-height:100vh;display:grid;place-items:center;padding:28px;text-align:center}
+    .beta-loader-card{max-width:360px;padding:24px;border-radius:24px;background:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.9);box-shadow:0 18px 46px rgba(66,45,110,.12);backdrop-filter:blur(24px)}
+    .beta-dot{width:44px;height:44px;margin:0 auto 14px;border-radius:14px;background:linear-gradient(135deg,#6f58c9,#ad7be8);display:grid;place-items:center;color:white;font-weight:900}
+    .beta-loader small{display:block;margin-top:8px;color:#777}
+  </style>
+</head>
+<body>
+  <div class="beta-loader"><div class="beta-loader-card"><div class="beta-dot">B</div><strong>Cargando Homebase Beta…</strong><small>La versión estable no se modifica.</small></div></div>
+  <script>
+  (async()=>{
+    try{
+      const response=await fetch('../index.html?betaSource='+Date.now(),{cache:'no-store'});
+      let html=await response.text();
+
+      // La beta usa los mismos archivos visuales de la estable, pero desde la raíz.
+      html=html.replace(/<head>/i,'<head><base href="../">');
+      html=html.replace(/<title>[^<]*<\/title>/i,'<title>Homebase Beta</title>');
+      html=html.replace(/<meta\s+name=["']apple-mobile-web-app-title["'][^>]*>/i,'<meta name="apple-mobile-web-app-title" content="Homebase Beta">');
+      html=html.replace(/<link\s+rel=["']manifest["'][^>]*>/i,'<link rel="manifest" href="./beta/manifest.webmanifest">');
+      html=html.replace(/<link\s+rel=["']apple-touch-icon["'][^>]*>/i,'<link rel="apple-touch-icon" href="./beta/beta-icon.svg">');
+
+      // Base de datos de pruebas independiente. Nunca toca homebaseSyncs.
+      html=html.replaceAll('homebaseSyncs','homebaseBetaSyncs');
+
+      // Service Worker independiente y limitado a /beta/.
+      html=html.replaceAll('./service-worker.js','./beta/service-worker.js');
+      html=html.replaceAll('service-worker.js','beta/service-worker.js');
+
+      // Separa todo el almacenamiento local de la beta.
+      const isolation=`<script data-homebase-beta-isolation>
+      (()=>{
+        const PREFIX='homebase_beta__';
+        const rawGet=Storage.prototype.getItem;
+        const rawSet=Storage.prototype.setItem;
+        const rawRemove=Storage.prototype.removeItem;
+        const rawKey=Storage.prototype.key;
+        const isLocal=s=>s===window.localStorage;
+        Storage.prototype.getItem=function(k){return rawGet.call(this,isLocal(this)?PREFIX+k:k)};
+        Storage.prototype.setItem=function(k,v){return rawSet.call(this,isLocal(this)?PREFIX+k:k,v)};
+        Storage.prototype.removeItem=function(k){return rawRemove.call(this,isLocal(this)?PREFIX+k:k)};
+        Storage.prototype.key=function(i){const key=rawKey.call(this,i);return isLocal(this)&&key?.startsWith(PREFIX)?key.slice(PREFIX.length):key};
+        window.HOMEBASE_BETA=true;
+      })();
+      <\/script>`;
+      html=html.replace(/<head>/i,'<head>'+isolation);
+
+      const betaChrome=`<style data-homebase-beta-style>
+        :root{--beta-purple:#6f58c9}
+        body::after{content:'BETA';position:fixed;top:calc(7px + env(safe-area-inset-top));right:9px;z-index:9999;padding:5px 9px;border-radius:999px;background:rgba(111,88,201,.92);color:white;font:800 10px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.8px;box-shadow:0 5px 16px rgba(68,48,122,.22);pointer-events:none}
+        .brand-title::after{content:' Beta';color:var(--beta-purple);font-size:.58em;font-weight:850}
+      </style>`;
+      html=html.replace('</head>',betaChrome+'</head>');
+
+      document.open();
+      document.write(html);
+      document.close();
+    }catch(error){
+      document.body.innerHTML='<div class="beta-loader"><div class="beta-loader-card"><div class="beta-dot">!</div><strong>No se pudo cargar la beta</strong><small>Comprueba la conexión y vuelve a abrirla.</small></div></div>';
+      console.error('Homebase Beta loader',error);
+    }
+  })();
+  </script>
+</body>
+</html>
