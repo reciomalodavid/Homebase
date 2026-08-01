@@ -28,12 +28,16 @@
 
       html=html.replace(/<head>/i,'<head><base href="../">');
       html=html.replace(/<title>[^<]*<\/title>/i,'<title>Homebase Beta</title>');
+      html=html.replace(/<meta\s+name=["']viewport["'][^>]*>/i,'<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">');
       html=html.replace(/<meta\s+name=["']apple-mobile-web-app-title["'][^>]*>/i,'<meta name="apple-mobile-web-app-title" content="Homebase Beta">');
       html=html.replace(/<meta\s+name=["']theme-color["'][^>]*>/i,'<meta name="theme-color" content="#eef6fd">');
       html=html.replace(/<link\s+rel=["']manifest["'][^>]*>/i,'<link rel="manifest" href="./beta/manifest.webmanifest">');
       html=html.replace(/<link\s+rel=["']apple-touch-icon["'][^>]*>/i,'<link rel="apple-touch-icon" href="./beta/beta-icon.svg">');
 
-      html=html.replaceAll('homebaseSyncs','homebaseBetaSyncs');
+      // Usa la colección permitida por Firebase, pero con documentos BETA_ aislados.
+      // Así dos dispositivos beta sí pueden compartir código sin tocar datos estables.
+      html=html.replace(/collection\(["']homebaseSyncs["']\)\.doc\(code\)/g,'collection("homebaseSyncs").doc("BETA_"+code)');
+
       html=html.replaceAll('./service-worker.js','./beta/service-worker.js');
 
       const isolation=`<script data-homebase-beta-isolation>
@@ -68,6 +72,8 @@
             radial-gradient(circle at 96% 8%,rgba(170,218,255,.30),transparent 34%),
             linear-gradient(180deg,#f5faff 0%,#eef6fd 48%,#e7f2fc 100%)!important;
           background-attachment:fixed!important;
+          touch-action:manipulation;
+          -webkit-text-size-adjust:100%;
         }
         body::before{background:rgba(238,246,253,.88)!important}
         .topbar,.bottom-nav,.card,.calendar-shell,dialog,.today-focus,.today-stats{
@@ -79,12 +85,60 @@
         }
         .topbar{background:rgba(242,249,255,.72)!important}
         .bottom-nav{background:rgba(247,251,255,.76)!important}
+        .calendar-shell{touch-action:pan-y!important;overscroll-behavior-x:contain}
         .event-row,.task-row,.detail-row,.switch-line{border-color:rgba(91,139,181,.13)!important}
         .icon-btn,.row-action,.calendar-top>button,.close{background:rgba(255,255,255,.74)!important}
         body::after{content:'BETA';position:fixed;top:calc(7px + env(safe-area-inset-top));right:9px;z-index:9999;padding:5px 9px;border-radius:999px;background:rgba(111,88,201,.94);color:white;font:800 10px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.8px;box-shadow:0 5px 16px rgba(68,48,122,.22);pointer-events:none}
         .brand-title::after{content:' Beta';color:var(--beta-purple);font-size:.58em;font-weight:850}
       </style>`;
       html=html.replace('</head>',betaChrome+'</head>');
+
+      const betaGestures=`<script data-homebase-beta-gestures>
+      (()=>{
+        document.addEventListener('gesturestart',e=>e.preventDefault(),{passive:false});
+        document.addEventListener('gesturechange',e=>e.preventDefault(),{passive:false});
+        document.addEventListener('gestureend',e=>e.preventDefault(),{passive:false});
+
+        let lastTouchEnd=0;
+        document.addEventListener('touchend',e=>{
+          const now=Date.now();
+          if(now-lastTouchEnd<320)e.preventDefault();
+          lastTouchEnd=now;
+        },{passive:false});
+
+        let startX=0,startY=0,lastX=0,lastY=0,axis=null,active=false;
+        const getShell=target=>target.closest?.('.calendar-shell');
+
+        document.addEventListener('touchstart',e=>{
+          if(e.touches.length!==1||!getShell(e.target)){active=false;return}
+          const t=e.touches[0];
+          startX=lastX=t.clientX;startY=lastY=t.clientY;axis=null;active=true;
+        },{passive:true});
+
+        document.addEventListener('touchmove',e=>{
+          if(!active||e.touches.length!==1)return;
+          const t=e.touches[0];lastX=t.clientX;lastY=t.clientY;
+          const dx=lastX-startX,dy=lastY-startY;
+          if(!axis&&Math.max(Math.abs(dx),Math.abs(dy))>8){
+            axis=Math.abs(dx)>Math.abs(dy)*1.15?'x':'y';
+          }
+          if(axis==='x')e.preventDefault();
+        },{passive:false});
+
+        document.addEventListener('touchend',e=>{
+          if(!active){return}
+          active=false;
+          const dx=lastX-startX,dy=lastY-startY;
+          if(axis!=='x'||Math.abs(dx)<34||Math.abs(dx)<Math.abs(dy)*1.15)return;
+          const buttons=[...document.querySelectorAll('.calendar-top>button')];
+          const target=dx<0?buttons.at(-1):buttons[0];
+          target?.click();
+        },{passive:true});
+
+        document.addEventListener('touchcancel',()=>{active=false;axis=null},{passive:true});
+      })();
+      <\/script>`;
+      html=html.replace('</body>',betaGestures+'</body>');
 
       document.open();
       document.write(html);
