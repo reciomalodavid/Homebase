@@ -5,7 +5,6 @@
   let ticking = false;
   let accumulatedDown = 0;
   let accumulatedUp = 0;
-  let switching = false;
   let revealTimer = null;
   let hideTimer = null;
 
@@ -51,8 +50,6 @@
 
   function update(){
     ticking = false;
-    if (switching) return;
-
     const y = Math.max(0, window.scrollY || document.documentElement.scrollTop || 0);
     const delta = y - lastY;
 
@@ -96,49 +93,36 @@
     return button && button.closest('.bottom-nav');
   }
 
-  function beginPageSwitch(){
-    if (switching) return;
-    switching = true;
+  function resetForPageSwitch(){
     clearHeaderTimers();
-    const root = document.documentElement;
-    root.classList.add('hb-page-switching');
-    showHeaderNow();
     accumulatedDown = 0;
     accumulatedUp = 0;
-    window.scrollTo({ top:0, left:0, behavior:'auto' });
+    showHeaderNow();
+    document.documentElement.classList.add('hb-page-switching');
+    window.scrollTo(0,0);
     lastY = 0;
-  }
 
-  function finishPageSwitch(){
+    /* Nunca ocultamos la página. El estado temporal se limpia incluso si el manejador
+       original tarda o falla, evitando que la aplicación pueda quedarse en blanco. */
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        document.documentElement.classList.remove('hb-page-switching');
-        switching = false;
-        lastY = 0;
-        showHeaderNow();
-      });
+      document.documentElement.classList.remove('hb-page-switching');
     });
   }
 
   document.addEventListener('pointerdown', event => {
-    if (bottomNavigationTarget(event.target)) beginPageSwitch();
-  }, true);
-
-  document.addEventListener('click', event => {
-    if (bottomNavigationTarget(event.target)) finishPageSwitch();
+    if (bottomNavigationTarget(event.target)) resetForPageSwitch();
   }, true);
 
   window.addEventListener('scroll', onScroll, { passive:true });
   window.addEventListener('pageshow', () => {
+    document.documentElement.classList.remove('hb-page-switching');
     lastY = Math.max(0, window.scrollY || 0);
     accumulatedDown = 0;
     accumulatedUp = 0;
     if (lastY <= 8) showHeaderNow();
   });
 
-  const observer = new MutationObserver(() => {
-    const el = topbar();
-    if (el && !switching && (window.scrollY || 0) <= 8) el.classList.remove('hb-header-hidden');
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) document.documentElement.classList.remove('hb-page-switching');
   });
-  observer.observe(document.documentElement,{childList:true,subtree:true});
 })();
