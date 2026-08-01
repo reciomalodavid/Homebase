@@ -1,114 +1,72 @@
 <!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
-  <meta name="theme-color" content="#eef6fd">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="Homebase Beta">
-  <link rel="manifest" href="./manifest.webmanifest">
-  <link rel="apple-touch-icon" href="./beta-icon.svg">
-  <title>Homebase Beta</title>
-  <style>
-    html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:linear-gradient(180deg,#f5faff 0%,#eef6fd 48%,#e7f2fc 100%);color:#1d1d1f}
-    .beta-loader{min-height:100vh;display:grid;place-items:center;padding:28px;text-align:center}
-    .beta-loader-card{max-width:360px;padding:24px;border-radius:24px;background:rgba(255,255,255,.66);border:1px solid rgba(255,255,255,.92);box-shadow:0 18px 46px rgba(45,94,139,.12);-webkit-backdrop-filter:blur(28px) saturate(165%);backdrop-filter:blur(28px) saturate(165%)}
-    .beta-dot{width:44px;height:44px;margin:0 auto 14px;border-radius:14px;background:linear-gradient(135deg,#6f58c9,#9477df);display:grid;place-items:center;color:white;font-weight:900}
-    .beta-loader small{display:block;margin-top:8px;color:#657789}
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#eef6fd">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Homebase Beta">
+<link rel="manifest" href="./manifest.webmanifest?v=200">
+<link rel="apple-touch-icon" href="./beta-icon.svg?v=200">
+<title>Homebase Beta 2.0</title>
+<style>
+html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:linear-gradient(180deg,#f5faff,#eef6fd 48%,#e7f2fc);color:#1d1d1f}.loader{min-height:100vh;display:grid;place-items:center;padding:28px;text-align:center}.box{max-width:360px;padding:24px;border-radius:24px;background:rgba(255,255,255,.68);border:1px solid rgba(255,255,255,.92);box-shadow:0 18px 46px rgba(45,94,139,.12);backdrop-filter:blur(28px)}.b{width:46px;height:46px;margin:0 auto 14px;border-radius:14px;background:linear-gradient(135deg,#6f58c9,#9477df);display:grid;place-items:center;color:#fff;font-weight:900}.box small{display:block;margin-top:8px;color:#657789}
+</style>
 </head>
 <body>
-<div class="beta-loader"><div class="beta-loader-card"><div class="beta-dot">B</div><strong>Cargando Homebase Beta…</strong><small>La versión estable no se modifica.</small></div></div>
+<div class="loader"><div class="box"><div class="b">B</div><strong>Cargando Homebase Beta 2.0…</strong><small>Copia funcional de la versión estable.</small></div></div>
 <script>
 (async()=>{
-  try{
-    const response=await fetch('../index.html?betaSource='+Date.now(),{cache:'no-store'});
-    let html=await response.text();
-
-    html=html.replace(/<head>/i,'<head><base href="../">');
-    html=html.replace(/<title>[^<]*<\/title>/i,'<title>Homebase Beta</title>');
-    html=html.replace(/<meta\s+name=["']viewport["'][^>]*>/i,'<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">');
-    html=html.replace(/<meta\s+name=["']apple-mobile-web-app-title["'][^>]*>/i,'<meta name="apple-mobile-web-app-title" content="Homebase Beta">');
-    html=html.replace(/<meta\s+name=["']theme-color["'][^>]*>/i,'<meta name="theme-color" content="#eef6fd">');
-    html=html.replace(/<link\s+rel=["']manifest["'][^>]*>/i,'<link rel="manifest" href="./beta/manifest.webmanifest">');
-    html=html.replace(/<link\s+rel=["']apple-touch-icon["'][^>]*>/i,'<link rel="apple-touch-icon" href="./beta/beta-icon.svg">');
-    html=html.replaceAll('./service-worker.js','./beta/service-worker.js');
-
-    /* La beta usa la misma infraestructura autorizada, pero genera códigos BT distintos.
-       No se reutiliza ningún código de la estable. */
-    html=html.replace(/let\s+code\s*=\s*["']HB["']/,'let code="BT"');
-
-    const isolation=`<script data-homebase-beta-isolation>
-    (()=>{
-      const PREFIX='homebase_beta__';
-      const g=Storage.prototype.getItem,s=Storage.prototype.setItem,r=Storage.prototype.removeItem,k=Storage.prototype.key;
-      const local=x=>x===window.localStorage;
-      Storage.prototype.getItem=function(key){return g.call(this,local(this)?PREFIX+key:key)};
-      Storage.prototype.setItem=function(key,val){return s.call(this,local(this)?PREFIX+key:key,val)};
-      Storage.prototype.removeItem=function(key){return r.call(this,local(this)?PREFIX+key:key)};
-      Storage.prototype.key=function(i){const key=k.call(this,i);return local(this)&&key?.startsWith(PREFIX)?key.slice(PREFIX.length):key};
-      window.HOMEBASE_BETA=true;
-    })();
-    <\/script>`;
-    html=html.replace(/<head>/i,'<head>'+isolation);
-
-    const betaStyle=`<style data-homebase-beta-style>
-      :root{--beta-purple:#6f58c9;--bg:#eef6fd!important;--surface:rgba(255,255,255,.70)!important;--surface-2:rgba(244,249,254,.76)!important;--line:rgba(91,139,181,.14)!important;--shadow:0 14px 38px rgba(45,94,139,.10)!important}
-      html,body{background:radial-gradient(circle at 7% 2%,rgba(255,255,255,.92),transparent 30%),radial-gradient(circle at 96% 8%,rgba(170,218,255,.30),transparent 34%),linear-gradient(180deg,#f5faff 0%,#eef6fd 48%,#e7f2fc 100%)!important;background-attachment:fixed!important;-webkit-text-size-adjust:100%;touch-action:manipulation}
-      body::before{background:rgba(238,246,253,.88)!important}
-      .topbar,.bottom-nav,.card,.calendar-shell,dialog,.today-focus,.today-stats{background:rgba(255,255,255,.62)!important;border-color:rgba(255,255,255,.88)!important;box-shadow:0 14px 38px rgba(45,94,139,.10)!important;-webkit-backdrop-filter:blur(28px) saturate(170%)!important;backdrop-filter:blur(28px) saturate(170%)!important}
-      .topbar{background:rgba(242,249,255,.72)!important}.bottom-nav{background:rgba(247,251,255,.76)!important}
-      .calendar-shell{touch-action:pan-y!important;overscroll-behavior-x:contain}
-      .event-row,.task-row,.detail-row,.switch-line{border-color:rgba(91,139,181,.13)!important}
-      .icon-btn,.row-action,.calendar-top>button,.close{background:rgba(255,255,255,.74)!important}
-      body::after{content:'BETA';position:fixed;top:calc(7px + env(safe-area-inset-top));right:9px;z-index:9999;padding:5px 9px;border-radius:999px;background:rgba(111,88,201,.94);color:white;font:800 10px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.8px;box-shadow:0 5px 16px rgba(68,48,122,.22);pointer-events:none}
-      .brand-title::after{content:' Beta';color:var(--beta-purple);font-size:.58em;font-weight:850}
-      #betaSyncIndicator{display:grid;place-items:center;font-size:20px;font-weight:900;transition:.18s ease}
-      #betaSyncIndicator.ok{color:#1f9d62}#betaSyncIndicator.wait{color:#d9781f}#betaSyncIndicator.error{color:#d84a55}
-    </style>`;
-    html=html.replace('</head>',betaStyle+'</head>');
-
-    const runtime=`<script data-homebase-beta-runtime>
-    (()=>{
-      const prevent=e=>e.preventDefault();
-      document.addEventListener('gesturestart',prevent,{passive:false});
-      document.addEventListener('gesturechange',prevent,{passive:false});
-      document.addEventListener('gestureend',prevent,{passive:false});
-      let lastEnd=0;
-      document.addEventListener('touchend',e=>{const n=Date.now();if(n-lastEnd<320)e.preventDefault();lastEnd=n},{passive:false});
-
-      let sx=0,sy=0,lx=0,ly=0,axis=null,active=false;
-      const shell=t=>t.closest?.('.calendar-shell');
-      document.addEventListener('touchstart',e=>{if(e.touches.length!==1||!shell(e.target)){active=false;return}const t=e.touches[0];sx=lx=t.clientX;sy=ly=t.clientY;axis=null;active=true},{passive:true});
-      document.addEventListener('touchmove',e=>{if(!active||e.touches.length!==1)return;const t=e.touches[0];lx=t.clientX;ly=t.clientY;const dx=lx-sx,dy=ly-sy;if(!axis&&Math.max(Math.abs(dx),Math.abs(dy))>6)axis=Math.abs(dx)>Math.abs(dy)*1.05?'x':'y';if(axis==='x')e.preventDefault()},{passive:false});
-      document.addEventListener('touchend',()=>{if(!active)return;active=false;const dx=lx-sx,dy=ly-sy;if(axis!=='x'||Math.abs(dx)<28||Math.abs(dx)<Math.abs(dy)*1.05)return;const b=[...document.querySelectorAll('.calendar-top>button')];(dx<0?b.at(-1):b[0])?.click()},{passive:true});
-      document.addEventListener('touchcancel',()=>{active=false;axis=null},{passive:true});
-
-      function installStatus(){
-        const actions=document.querySelector('.top-actions');
-        if(!actions||document.getElementById('betaSyncIndicator'))return;
-        const btn=document.createElement('button');btn.id='betaSyncIndicator';btn.className='icon-btn wait';btn.type='button';btn.textContent='↻';btn.setAttribute('aria-label','Estado de sincronización');
-        btn.onclick=()=>{document.querySelector('.nav-btn[data-page="morePage"]')?.click();setTimeout(()=>document.getElementById('syncSection')?.scrollIntoView({behavior:'smooth',block:'center'}),80)};
-        actions.prepend(btn);
-        const update=()=>{
-          const title=document.getElementById('syncStatusTitle')?.textContent||'';
-          const dot=document.getElementById('syncDot');
-          btn.className='icon-btn '+(dot?.classList.contains('error')?'error':dot?.classList.contains('wait')?'wait':title.includes('activa')?'ok':'wait');
-          btn.textContent=btn.classList.contains('ok')?'✓':btn.classList.contains('error')?'!':'↻';
-        };
-        update();new MutationObserver(update).observe(document.getElementById('syncSection')||document.body,{subtree:true,childList:true,characterData:true,attributes:true});
-      }
-      if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',installStatus);else installStatus();
-    })();
-    <\/script>`;
-    html=html.replace('</body>',runtime+'</body>');
-
-    document.open();document.write(html);document.close();
-  }catch(error){
-    document.body.innerHTML='<div class="beta-loader"><div class="beta-loader-card"><div class="beta-dot">!</div><strong>No se pudo cargar la beta</strong><small>Comprueba la conexión y vuelve a abrirla.</small></div></div>';
-    console.error('Homebase Beta loader',error);
+ try{
+  if('serviceWorker' in navigator){
+   const regs=await navigator.serviceWorker.getRegistrations();
+   for(const reg of regs){if(reg.scope.includes('/Homebase/beta/'))await reg.unregister();}
   }
+  const response=await fetch('../index.html?beta2='+Date.now(),{cache:'no-store'});
+  if(!response.ok)throw new Error('No se pudo cargar la estable');
+  let html=await response.text();
+
+  html=html.replace(/<head>/i,'<head><base href="../">');
+  html=html.replace(/<title>[^<]*<\/title>/i,'<title>Homebase Beta 2.0</title>');
+  html=html.replace(/<meta\s+name=["']viewport["'][^>]*>/i,'<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">');
+  html=html.replace(/<meta\s+name=["']apple-mobile-web-app-title["'][^>]*>/i,'<meta name="apple-mobile-web-app-title" content="Homebase Beta">');
+  html=html.replace(/<meta\s+name=["']theme-color["'][^>]*>/i,'<meta name="theme-color" content="#eef6fd">');
+  html=html.replace(/<link\s+rel=["']manifest["'][^>]*>/i,'<link rel="manifest" href="./beta/manifest.webmanifest?v=200">');
+  html=html.replace(/<link\s+rel=["']apple-touch-icon["'][^>]*>/i,'<link rel="apple-touch-icon" href="./beta/beta-icon.svg?v=200">');
+
+  /* Sincronización beta: misma lógica que producción, documentos separados. */
+  html=html.replace(/let\s+code\s*=\s*["']HB["']/,'let code="BT"');
+  html=html.replace(/collection\(["']homebaseSyncs["']\)\.doc\(code\)/g,'collection("homebaseSyncs").doc("BETA_"+code)');
+  html=html.replace(/collection\(["']homebaseSyncs["']\)\.doc\(state\.syncCode\)/g,'collection("homebaseSyncs").doc("BETA_"+state.syncCode)');
+  html=html.replaceAll('./service-worker.js','./beta/service-worker.js?v=200');
+
+  const isolation=`<script data-beta-isolation>(()=>{const P='homebase_beta2__',g=Storage.prototype.getItem,s=Storage.prototype.setItem,r=Storage.prototype.removeItem,k=Storage.prototype.key,L=x=>x===localStorage;Storage.prototype.getItem=function(a){return g.call(this,L(this)?P+a:a)};Storage.prototype.setItem=function(a,b){return s.call(this,L(this)?P+a:a,b)};Storage.prototype.removeItem=function(a){return r.call(this,L(this)?P+a:a)};Storage.prototype.key=function(i){const a=k.call(this,i);return L(this)&&a?.startsWith(P)?a.slice(P.length):a};window.HOMEBASE_BETA=true;window.HOMEBASE_BETA_VERSION='2.0';})();<\/script>`;
+  html=html.replace(/<head>/i,'<head>'+isolation);
+
+  /* La estable recibe estas capas mediante su service worker. La beta las carga de forma explícita. */
+  const css=[
+   'homebase-ui-1.8.3.css','homebase-fixes-1.9.2.css','homebase-quality-1.9.7.css','homebase-apple-glass-1.10.2.css','homebase-shell-1.10.3.css'
+  ].map(f=>`<link rel="stylesheet" href="./${f}?beta=200">`).join('');
+  html=html.replace('</head>',css+'</head>');
+
+  const betaCss=`<style data-beta-theme>
+  :root{--beta-purple:#6f58c9;--bg:#eef6fd!important;--surface:rgba(255,255,255,.70)!important;--surface-2:rgba(244,249,254,.78)!important;--line:rgba(91,139,181,.14)!important;--shadow:0 14px 38px rgba(45,94,139,.10)!important}
+  html,body{background:radial-gradient(circle at 7% 2%,rgba(255,255,255,.94),transparent 30%),radial-gradient(circle at 96% 8%,rgba(170,218,255,.30),transparent 34%),linear-gradient(180deg,#f5faff 0%,#eef6fd 48%,#e7f2fc 100%)!important;background-attachment:fixed!important;-webkit-text-size-adjust:100%;touch-action:manipulation}
+  body::before{background:rgba(238,246,253,.88)!important}.topbar,.bottom-nav,.card,.calendar-shell,dialog,.today-focus,.today-stats{background:rgba(255,255,255,.64)!important;border-color:rgba(255,255,255,.88)!important;box-shadow:0 14px 38px rgba(45,94,139,.10)!important;-webkit-backdrop-filter:blur(28px) saturate(170%)!important;backdrop-filter:blur(28px) saturate(170%)!important}.topbar{background:rgba(242,249,255,.74)!important}.bottom-nav{background:rgba(247,251,255,.78)!important}.event-row,.task-row,.detail-row,.switch-line{border-color:rgba(91,139,181,.13)!important}.icon-btn,.row-action,.calendar-top>button,.close{background:rgba(255,255,255,.76)!important}.calendar-shell{overscroll-behavior-x:contain}
+  body::after{content:'BETA 2.0';position:fixed;top:calc(7px + env(safe-area-inset-top));right:9px;z-index:9999;padding:5px 9px;border-radius:999px;background:rgba(111,88,201,.95);color:#fff;font:800 10px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.7px;box-shadow:0 5px 16px rgba(68,48,122,.22);pointer-events:none}.brand-title::after{content:' Beta';color:var(--beta-purple);font-size:.58em;font-weight:850}
+  </style>`;
+  html=html.replace('</head>',betaCss+'</head>');
+
+  const scripts=[
+   'homebase-ui-1.8.3.js','roster-sync-fix.js','homebase-quality-1.9.7.js','homebase-shell-1.10.3.js'
+  ].map(f=>`<script src="./${f}?beta=200"><\/script>`).join('');
+
+  const gestures=`<script data-beta-runtime>(()=>{const stop=e=>e.preventDefault();['gesturestart','gesturechange','gestureend'].forEach(n=>document.addEventListener(n,stop,{passive:false}));let end=0;document.addEventListener('touchend',e=>{const n=Date.now();if(n-end<320)e.preventDefault();end=n},{passive:false});let sx=0,sy=0,lx=0,ly=0,axis='',on=false;document.addEventListener('touchstart',e=>{if(e.touches.length!==1||!e.target.closest?.('.calendar-shell')){on=false;return}const t=e.touches[0];sx=lx=t.clientX;sy=ly=t.clientY;axis='';on=true},{passive:true});document.addEventListener('touchmove',e=>{if(!on||e.touches.length!==1)return;const t=e.touches[0];lx=t.clientX;ly=t.clientY;const x=lx-sx,y=ly-sy;if(!axis&&Math.max(Math.abs(x),Math.abs(y))>6)axis=Math.abs(x)>Math.abs(y)*1.05?'x':'y';if(axis==='x')e.preventDefault()},{passive:false});document.addEventListener('touchend',()=>{if(!on)return;on=false;const x=lx-sx,y=ly-sy;if(axis!=='x'||Math.abs(x)<28||Math.abs(x)<Math.abs(y)*1.05)return;const b=[...document.querySelectorAll('.calendar-top>button')];(x<0?b.at(-1):b[0])?.click()},{passive:true});document.addEventListener('touchcancel',()=>{on=false;axis=''},{passive:true});})();<\/script>`;
+  html=html.replace('</body>',scripts+gestures+'</body>');
+
+  document.open();document.write(html);document.close();
+ }catch(error){document.body.innerHTML='<div class="loader"><div class="box"><div class="b">!</div><strong>No se pudo cargar la beta</strong><small>'+String(error.message||error)+'</small></div></div>';console.error(error)}
 })();
 </script>
 </body>
