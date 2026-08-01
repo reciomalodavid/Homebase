@@ -1,3 +1,4 @@
+/* Republished stable build: Homebase 1.10.9 */
 const SHELL_CACHE="homebase-1.10.9";
 const RUNTIME_CACHE="homebase-1.10.9";
 const SHELL=["./","./index.html","./manifest.webmanifest","./apple-touch-icon.png","./icon-192.png","./icon-512.png","./roster-sync-fix.js","./homebase-ui-1.8.3.js","./homebase-ui-1.8.3.css","./homebase-fixes-1.9.2.css","./homebase-quality-1.9.7.js","./homebase-quality-1.9.7.css","./homebase-apple-glass-1.10.2.css","./homebase-shell-1.10.3.css","./homebase-shell-1.10.3.js"];
