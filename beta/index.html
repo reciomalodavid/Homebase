@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
-  <meta name="theme-color" content="#dceeff">
+  <meta name="theme-color" content="#eef6fd">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="Homebase Beta">
@@ -11,10 +11,10 @@
   <link rel="apple-touch-icon" href="./beta-icon.svg">
   <title>Homebase Beta</title>
   <style>
-    html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:linear-gradient(180deg,#eaf6ff 0%,#dceeff 52%,#edf7ff 100%);color:#1d1d1f}
+    html,body{margin:0;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:linear-gradient(180deg,#f5faff 0%,#eef6fd 48%,#e7f2fc 100%);color:#1d1d1f}
     .beta-loader{min-height:100vh;display:grid;place-items:center;padding:28px;text-align:center}
-    .beta-loader-card{max-width:360px;padding:24px;border-radius:24px;background:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.9);box-shadow:0 18px 46px rgba(51,106,160,.14);backdrop-filter:blur(24px)}
-    .beta-dot{width:44px;height:44px;margin:0 auto 14px;border-radius:14px;background:linear-gradient(135deg,#4f9fe8,#7fc7ff);display:grid;place-items:center;color:white;font-weight:900}
+    .beta-loader-card{max-width:360px;padding:24px;border-radius:24px;background:rgba(255,255,255,.66);border:1px solid rgba(255,255,255,.92);box-shadow:0 18px 46px rgba(45,94,139,.12);-webkit-backdrop-filter:blur(28px) saturate(165%);backdrop-filter:blur(28px) saturate(165%)}
+    .beta-dot{width:44px;height:44px;margin:0 auto 14px;border-radius:14px;background:linear-gradient(135deg,#6f58c9,#9477df);display:grid;place-items:center;color:white;font-weight:900}
     .beta-loader small{display:block;margin-top:8px;color:#657789}
   </style>
 </head>
@@ -29,17 +29,13 @@
       html=html.replace(/<head>/i,'<head><base href="../">');
       html=html.replace(/<title>[^<]*<\/title>/i,'<title>Homebase Beta</title>');
       html=html.replace(/<meta\s+name=["']apple-mobile-web-app-title["'][^>]*>/i,'<meta name="apple-mobile-web-app-title" content="Homebase Beta">');
-      html=html.replace(/<meta\s+name=["']theme-color["'][^>]*>/i,'<meta name="theme-color" content="#dceeff">');
+      html=html.replace(/<meta\s+name=["']theme-color["'][^>]*>/i,'<meta name="theme-color" content="#eef6fd">');
       html=html.replace(/<link\s+rel=["']manifest["'][^>]*>/i,'<link rel="manifest" href="./beta/manifest.webmanifest">');
       html=html.replace(/<link\s+rel=["']apple-touch-icon["'][^>]*>/i,'<link rel="apple-touch-icon" href="./beta/beta-icon.svg">');
 
-      // Colección Firebase totalmente separada de la versión estable.
       html=html.replaceAll('homebaseSyncs','homebaseBetaSyncs');
-
-      // Service Worker propio, con alcance exclusivo de /beta/.
       html=html.replaceAll('./service-worker.js','./beta/service-worker.js');
 
-      // Almacenamiento local independiente.
       const isolation=`<script data-homebase-beta-isolation>
       (()=>{
         const PREFIX='homebase_beta__';
@@ -58,13 +54,35 @@
       html=html.replace(/<head>/i,'<head>'+isolation);
 
       const betaChrome=`<style data-homebase-beta-style>
-        :root{--beta-blue:#4f9fe8}
-        html,body{background:linear-gradient(180deg,#eaf6ff 0%,#dceeff 52%,#edf7ff 100%)!important;background-attachment:fixed!important}
-        body::before{background:rgba(220,238,255,.96)!important}
-        .topbar{background:rgba(226,242,255,.82)!important}
-        .bottom-nav{background:rgba(235,247,255,.82)!important}
-        body::after{content:'BETA';position:fixed;top:calc(7px + env(safe-area-inset-top));right:9px;z-index:9999;padding:5px 9px;border-radius:999px;background:rgba(79,159,232,.94);color:white;font:800 10px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.8px;box-shadow:0 5px 16px rgba(46,112,173,.24);pointer-events:none}
-        .brand-title::after{content:' Beta';color:var(--beta-blue);font-size:.58em;font-weight:850}
+        :root{
+          --beta-purple:#6f58c9;
+          --bg:#eef6fd!important;
+          --surface:rgba(255,255,255,.70)!important;
+          --surface-2:rgba(244,249,254,.76)!important;
+          --line:rgba(91,139,181,.14)!important;
+          --shadow:0 14px 38px rgba(45,94,139,.10)!important;
+        }
+        html,body{
+          background:
+            radial-gradient(circle at 7% 2%,rgba(255,255,255,.92),transparent 30%),
+            radial-gradient(circle at 96% 8%,rgba(170,218,255,.30),transparent 34%),
+            linear-gradient(180deg,#f5faff 0%,#eef6fd 48%,#e7f2fc 100%)!important;
+          background-attachment:fixed!important;
+        }
+        body::before{background:rgba(238,246,253,.88)!important}
+        .topbar,.bottom-nav,.card,.calendar-shell,dialog,.today-focus,.today-stats{
+          background:rgba(255,255,255,.62)!important;
+          border-color:rgba(255,255,255,.88)!important;
+          box-shadow:0 14px 38px rgba(45,94,139,.10)!important;
+          -webkit-backdrop-filter:blur(28px) saturate(170%)!important;
+          backdrop-filter:blur(28px) saturate(170%)!important;
+        }
+        .topbar{background:rgba(242,249,255,.72)!important}
+        .bottom-nav{background:rgba(247,251,255,.76)!important}
+        .event-row,.task-row,.detail-row,.switch-line{border-color:rgba(91,139,181,.13)!important}
+        .icon-btn,.row-action,.calendar-top>button,.close{background:rgba(255,255,255,.74)!important}
+        body::after{content:'BETA';position:fixed;top:calc(7px + env(safe-area-inset-top));right:9px;z-index:9999;padding:5px 9px;border-radius:999px;background:rgba(111,88,201,.94);color:white;font:800 10px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;letter-spacing:.8px;box-shadow:0 5px 16px rgba(68,48,122,.22);pointer-events:none}
+        .brand-title::after{content:' Beta';color:var(--beta-purple);font-size:.58em;font-weight:850}
       </style>`;
       html=html.replace('</head>',betaChrome+'</head>');
 
