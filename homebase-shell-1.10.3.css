@@ -1,26 +1,32 @@
-/* Homebase 1.10.6 · navegación estable + calendario más claro */
+/* Homebase 1.10.7 · cabecera fija móvil + navegación sin salto */
 
-/* Cabecera: movimiento vertical limpio. */
+html.hb-page-switching{scroll-behavior:auto!important}
+html.hb-page-switching .topbar{transition:none!important}
+html.hb-page-switching .page.active{visibility:hidden!important}
+
+/* Cabecera: movimiento exclusivamente vertical. */
 .topbar{
-  position:sticky!important;
-  top:max(5px,env(safe-area-inset-top))!important;
-  left:auto!important;
-  right:auto!important;
-  width:100%!important;
-  max-width:100%!important;
-  margin:0 0 18px!important;
   transform:translate3d(0,0,0)!important;
   transform-origin:center top!important;
   transition:transform .14s cubic-bezier(.22,.7,.25,1),opacity .12s ease!important;
   will-change:transform,opacity!important;
 }
 .topbar.hb-header-hidden{
-  transform:translate3d(0,calc(-100% - 10px),0)!important;
+  transform:translate3d(0,calc(-100% - 12px),0)!important;
   opacity:.98!important;
   pointer-events:none!important;
 }
-html.hb-page-switching{scroll-behavior:auto!important}
-html.hb-page-switching .topbar{transition:none!important}
+
+/* Nuevo: texto siempre legible sobre el fondo naranja. */
+.new-btn,
+#newBtn,
+button.new-btn,
+.hero-row .new-btn{
+  color:#fff!important;
+  text-shadow:0 1px 1px rgba(90,40,0,.18)!important;
+  border-color:rgba(255,255,255,.72)!important;
+}
+.new-btn *,#newBtn *{color:inherit!important}
 
 /* El botón Hoy debe parecer claramente pulsable. */
 .today-jump{
@@ -129,11 +135,32 @@ html.hb-page-switching .topbar{transition:none!important}
 body{padding-bottom:calc(96px + env(safe-area-inset-bottom))!important}
 .fab,button.fab,[aria-label="Nuevo"].floating,.floating-add{bottom:calc(96px + env(safe-area-inset-bottom))!important}
 
+/* En iPhone la cabecera es fija: así no puede quedarse flotando más abajo ni dejar huecos variables. */
+@media(max-width:767px){
+  .app{
+    padding-top:calc(92px + env(safe-area-inset-top))!important;
+  }
+  .topbar{
+    box-sizing:border-box!important;
+    position:fixed!important;
+    top:calc(6px + env(safe-area-inset-top))!important;
+    left:10px!important;
+    right:10px!important;
+    z-index:950!important;
+    width:calc(100vw - 20px)!important;
+    max-width:calc(100vw - 20px)!important;
+    margin:0!important;
+  }
+}
+
 @media(max-width:390px){
   .bottom-nav{left:6px!important;right:6px!important;width:calc(100vw - 12px)!important;max-width:calc(100vw - 12px)!important;gap:1px!important;padding:6px 4px!important;border-radius:23px!important}
   .bottom-nav button,.bottom-nav a,.bottom-nav .nav-item{font-size:10.5px!important;padding-left:0!important;padding-right:0!important}
+  .topbar{left:6px!important;right:6px!important;width:calc(100vw - 12px)!important;max-width:calc(100vw - 12px)!important}
+  .app{padding-top:calc(88px + env(safe-area-inset-top))!important}
 }
 @media(min-width:768px){
+  .topbar{position:sticky!important;top:max(5px,env(safe-area-inset-top))!important;width:100%!important;max-width:100%!important;margin:0 0 18px!important}
   .bottom-nav{left:50%!important;right:auto!important;width:min(760px,calc(100vw - 32px))!important;max-width:min(760px,calc(100vw - 32px))!important;transform:translateX(-50%)!important}
 }
 @media(prefers-reduced-motion:reduce){.topbar{transition:none!important}}
