@@ -1,4 +1,4 @@
-const CACHE='homebase-beta-0.1.0';
+const CACHE='homebase-beta-0.2.0';
 const SHELL=['./','./index.html','./manifest.webmanifest','./beta-icon.svg'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith('homebase-beta-')&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));
