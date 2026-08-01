@@ -1,19 +1,19 @@
-/* Homebase 1.10.7 · cabecera fija móvil + navegación sin salto */
+/* Homebase 1.10.8 · cabecera completa y transición natural */
 
 html.hb-page-switching{scroll-behavior:auto!important}
 html.hb-page-switching .topbar{transition:none!important}
 html.hb-page-switching .page.active{visibility:hidden!important}
 
-/* Cabecera: movimiento exclusivamente vertical. */
+/* Cabecera: movimiento exclusivamente vertical y transición más suave. */
 .topbar{
   transform:translate3d(0,0,0)!important;
   transform-origin:center top!important;
-  transition:transform .14s cubic-bezier(.22,.7,.25,1),opacity .12s ease!important;
+  transition:transform .28s cubic-bezier(.22,.61,.36,1),opacity .22s ease!important;
   will-change:transform,opacity!important;
 }
 .topbar.hb-header-hidden{
-  transform:translate3d(0,calc(-100% - 12px),0)!important;
-  opacity:.98!important;
+  transform:translate3d(0,calc(-100% - 16px),0)!important;
+  opacity:0!important;
   pointer-events:none!important;
 }
 
@@ -135,28 +135,31 @@ button.new-btn,
 body{padding-bottom:calc(96px + env(safe-area-inset-bottom))!important}
 .fab,button.fab,[aria-label="Nuevo"].floating,.floating-add{bottom:calc(96px + env(safe-area-inset-bottom))!important}
 
-/* En iPhone la cabecera es fija: así no puede quedarse flotando más abajo ni dejar huecos variables. */
+/* En iPhone ocupa todo el ancho útil de la pantalla. */
 @media(max-width:767px){
-  .app{
-    padding-top:calc(92px + env(safe-area-inset-top))!important;
-  }
+  .app{padding-top:calc(92px + env(safe-area-inset-top))!important}
   .topbar{
     box-sizing:border-box!important;
     position:fixed!important;
-    top:calc(6px + env(safe-area-inset-top))!important;
-    left:10px!important;
-    right:10px!important;
+    top:env(safe-area-inset-top)!important;
+    left:0!important;
+    right:0!important;
     z-index:950!important;
-    width:calc(100vw - 20px)!important;
-    max-width:calc(100vw - 20px)!important;
+    width:100vw!important;
+    max-width:100vw!important;
     margin:0!important;
+    padding-left:16px!important;
+    padding-right:16px!important;
+    border-left:0!important;
+    border-right:0!important;
+    border-radius:0 0 24px 24px!important;
   }
 }
 
 @media(max-width:390px){
   .bottom-nav{left:6px!important;right:6px!important;width:calc(100vw - 12px)!important;max-width:calc(100vw - 12px)!important;gap:1px!important;padding:6px 4px!important;border-radius:23px!important}
   .bottom-nav button,.bottom-nav a,.bottom-nav .nav-item{font-size:10.5px!important;padding-left:0!important;padding-right:0!important}
-  .topbar{left:6px!important;right:6px!important;width:calc(100vw - 12px)!important;max-width:calc(100vw - 12px)!important}
+  .topbar{padding-left:12px!important;padding-right:12px!important}
   .app{padding-top:calc(88px + env(safe-area-inset-top))!important}
 }
 @media(min-width:768px){
