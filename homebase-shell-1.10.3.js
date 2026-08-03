@@ -108,7 +108,14 @@
   }
 
   document.addEventListener('pointerdown', event => {
-    if (bottomNavigationTarget(event.target)) resetForPageSwitch();
+    if (!bottomNavigationTarget(event.target)) return;
+    if (window.HOMEBASE_BETA) {
+      /* En iOS, mover el scroll durante pointerdown puede cancelar el click.
+         En beta esperamos a que termine el tap para no perder la primera pulsación. */
+      setTimeout(resetForPageSwitch, 0);
+    } else {
+      resetForPageSwitch();
+    }
   }, true);
 
   window.addEventListener('scroll', onScroll, { passive:true });
