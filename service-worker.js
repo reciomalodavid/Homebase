@@ -1,6 +1,6 @@
-/* Homebase stable 1.10.10 · solo bloqueo de zoom */
-const SHELL_CACHE="homebase-1.10.10";
-const RUNTIME_CACHE="homebase-1.10.10";
+/* Homebase stable 1.10.11 · fotos de perfil en selector */
+const SHELL_CACHE="homebase-1.10.11";
+const RUNTIME_CACHE="homebase-1.10.11";
 const SHELL=["./","./index.html","./manifest.webmanifest","./apple-touch-icon.png","./icon-192.png","./icon-512.png","./roster-sync-fix.js","./homebase-ui-1.8.3.js","./homebase-ui-1.8.3.css","./homebase-fixes-1.9.2.css","./homebase-quality-1.9.7.js","./homebase-quality-1.9.7.css","./homebase-apple-glass-1.10.2.css","./homebase-shell-1.10.3.css","./homebase-shell-1.10.3.js","./homebase-nozoom-1.10.10.js"];
 
 async function prepareAppHtml(response){
@@ -17,11 +17,11 @@ async function prepareAppHtml(response){
  const critical='<style data-homebase-critical>:root{color-scheme:light!important;--glass-bg:rgba(255,255,255,.58);--glass-border:rgba(255,255,255,.84);--glass-shadow:0 18px 48px rgba(49,38,28,.10)}html,body{color-scheme:light!important;width:100%;max-width:100%;overflow-x:hidden;color:#1d1d1f!important}body{background:radial-gradient(circle at 4% 1%,rgba(255,179,92,.24),transparent 31%),radial-gradient(circle at 98% 7%,rgba(117,171,255,.20),transparent 32%),linear-gradient(180deg,#f8f3ed 0%,#f1f5fa 53%,#f7f2ec 100%)!important;background-attachment:fixed!important}.topbar,.bottom-nav,.card,.calendar-shell,dialog,.today-focus,.today-stats{border:1px solid var(--glass-border)!important;background:var(--glass-bg)!important;box-shadow:var(--glass-shadow)!important}.topbar,.bottom-nav,.card,.calendar-shell,dialog{-webkit-backdrop-filter:saturate(175%) blur(26px);backdrop-filter:saturate(175%) blur(26px)}</style>';
  if(!html.includes('data-homebase-critical'))html=html.replace('</head>',`${critical}\n</head>`);
 
- const mainStyle='<link rel="stylesheet" href="./homebase-ui-1.8.3.css?v=11010" data-homebase-ui="1.10.10">';
- const fixesStyle='<link rel="stylesheet" href="./homebase-fixes-1.9.2.css?v=11010" data-homebase-fixes="1.10.10">';
- const qualityStyle='<link rel="stylesheet" href="./homebase-quality-1.9.7.css?v=11010" data-homebase-quality="1.10.10">';
- const appleGlassStyle='<link rel="stylesheet" href="./homebase-apple-glass-1.10.2.css?v=11010" data-homebase-apple-glass="1.10.10">';
- const shellStyle='<link rel="stylesheet" href="./homebase-shell-1.10.3.css?v=11010" data-homebase-shell="1.10.10">';
+ const mainStyle='<link rel="stylesheet" href="./homebase-ui-1.8.3.css?v=11011" data-homebase-ui="1.10.11">';
+ const fixesStyle='<link rel="stylesheet" href="./homebase-fixes-1.9.2.css?v=11011" data-homebase-fixes="1.10.11">';
+ const qualityStyle='<link rel="stylesheet" href="./homebase-quality-1.9.7.css?v=11011" data-homebase-quality="1.10.11">';
+ const appleGlassStyle='<link rel="stylesheet" href="./homebase-apple-glass-1.10.2.css?v=11011" data-homebase-apple-glass="1.10.11">';
+ const shellStyle='<link rel="stylesheet" href="./homebase-shell-1.10.3.css?v=11011" data-homebase-shell="1.10.11">';
  if(!html.includes('data-homebase-ui='))html=html.replace('</head>',`${mainStyle}\n</head>`);
  if(!html.includes('homebase-fixes-1.9.2.css'))html=html.replace('</head>',`${fixesStyle}\n</head>`);
  if(!html.includes('homebase-quality-1.9.7.css'))html=html.replace('</head>',`${qualityStyle}\n</head>`);
@@ -29,11 +29,11 @@ async function prepareAppHtml(response){
  if(!html.includes('homebase-shell-1.10.3.css'))html=html.replace('</head>',`${shellStyle}\n</head>`);
 
  const scripts=[];
- if(!html.includes("homebase-ui-1.8.3.js"))scripts.push('<script src="./homebase-ui-1.8.3.js?v=11010"></script>');
- if(!html.includes("roster-sync-fix.js"))scripts.push('<script src="./roster-sync-fix.js?v=11010"></script>');
- if(!html.includes("homebase-quality-1.9.7.js"))scripts.push('<script src="./homebase-quality-1.9.7.js?v=11010"></script>');
- if(!html.includes("homebase-shell-1.10.3.js"))scripts.push('<script src="./homebase-shell-1.10.3.js?v=11010"></script>');
- if(!html.includes("homebase-nozoom-1.10.10.js"))scripts.push('<script src="./homebase-nozoom-1.10.10.js?v=11010"></script>');
+ if(!html.includes("homebase-ui-1.8.3.js"))scripts.push('<script src="./homebase-ui-1.8.3.js?v=11011"></script>');
+ if(!html.includes("roster-sync-fix.js"))scripts.push('<script src="./roster-sync-fix.js?v=11011"></script>');
+ if(!html.includes("homebase-quality-1.9.7.js"))scripts.push('<script src="./homebase-quality-1.9.7.js?v=11011"></script>');
+ if(!html.includes("homebase-shell-1.10.3.js"))scripts.push('<script src="./homebase-shell-1.10.3.js?v=11011"></script>');
+ if(!html.includes("homebase-nozoom-1.10.10.js"))scripts.push('<script src="./homebase-nozoom-1.10.10.js?v=11011"></script>');
  if(scripts.length)html=html.replace("</body>",`${scripts.join("\n")}\n</body>`);
 
  return new Response(html,{status:response.status,statusText:response.statusText,headers});
