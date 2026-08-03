@@ -18,8 +18,7 @@
   }
 
   function normaliseType(value){
-    const type=String(value||'').trim().toLowerCase()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    const type=String(value||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
     if(['person','persona','people'].includes(type))return 'person';
     if(['vehicle','vehiculo','vehiculos','car','coche'].includes(type))return 'vehicle';
     if(['pet','mascota','mascotas'].includes(type))return 'pet';
@@ -42,12 +41,14 @@
     return 'default';
   }
 
-  function enhanceCategoryForm(form){
-    if(!form||form.dataset.categoryLists==='1')return;
+  function enhanceCategoryForm(form,force=false){
+    if(!form)return;
     const select=form.elements.category;
     if(!select)return;
 
     const type=profileTypeForForm(form);
+    if(!force&&form.dataset.categoryType===type)return;
+
     const values=CATEGORY_LISTS[type]||CATEGORY_LISTS.default;
     const current=select.value;
     const customCurrent=current==='__other'||(current&&!values.includes(current));
@@ -56,8 +57,8 @@
     values.forEach(value=>select.add(new Option(value,value)));
     select.add(new Option('Otro…','__other'));
     select.value=customCurrent?'__other':(values.includes(current)?current:values[0]);
+    form.dataset.categoryType=type;
     select.dispatchEvent(new Event('change',{bubbles:true}));
-    form.dataset.categoryLists='1';
   }
 
   function enhanceReminderForm(form){
@@ -121,12 +122,22 @@
     },true);
   }
 
-  function enhance(root=document){
+  function enhance(root=document,force=false){
     root.querySelectorAll?.('.profile-doc-form').forEach(form=>{
-      enhanceCategoryForm(form);
+      enhanceCategoryForm(form,force);
       enhanceReminderForm(form);
     });
   }
+
+  document.addEventListener('click',event=>{
+    const add=event.target.closest('[data-doc-add]');
+    if(!add)return;
+    const section=add.closest('.profile-docs');
+    requestAnimationFrame(()=>{
+      const form=section?.querySelector('.profile-doc-form');
+      if(form)enhanceCategoryForm(form,true);
+    });
+  },true);
 
   const observer=new MutationObserver(mutations=>{
     for(const mutation of mutations){
@@ -137,7 +148,7 @@
   });
 
   function init(){
-    enhance();
+    enhance(document,true);
     observer.observe(document.documentElement,{childList:true,subtree:true});
   }
 
