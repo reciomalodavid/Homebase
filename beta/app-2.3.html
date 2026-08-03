@@ -33,7 +33,7 @@
  html=html.replace('</head>',css+'</head>');
  const scripts=['homebase-ui-1.8.3.js','roster-sync-fix.js','homebase-quality-1.9.7.js','homebase-shell-1.10.3.js'].map(f=>`<script src="./${f}?beta23clean=1"><\/script>`).join('');
  const memberPhotos='<script src="./beta/beta-member-photos.js?v=2"><\/script>';
- const expiries='<script src="./beta/beta-expiries-v1.js?v=1"><\/script>';
+ const expiries='<script src="./beta/beta-expiries-v1.js?v=2"><\/script>';
  const brand=`<script>(()=>{const apply=()=>{const img=document.querySelector('.brand img');if(img){img.src='./beta/beta-icon.svg?clean=1';img.alt='Homebase Beta';}};document.readyState==='loading'?document.addEventListener('DOMContentLoaded',apply,{once:true}):apply();})();<\/script>`;
  html=html.replace('</body>',scripts+memberPhotos+expiries+brand+'</body>');
  document.open();document.write(html);document.close();
