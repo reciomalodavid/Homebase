@@ -4,6 +4,8 @@
   const STORAGE_KEY='homebase_expiries_v1';
   let items=load();
   let editingId='';
+  let activeProfile='';
+  let observer=null;
 
   function load(){
     try{
@@ -12,19 +14,9 @@
     }catch{return []}
   }
 
-  function save(){
-    localStorage.setItem(STORAGE_KEY,JSON.stringify(items));
-  }
-
-  function uid(){
-    return (crypto.randomUUID?.()||`exp-${Date.now()}-${Math.random().toString(16).slice(2)}`);
-  }
-
-  function esc(value){
-    return String(value??'').replace(/[&<>"']/g,char=>({
-      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'
-    })[char]);
-  }
+  function save(){ localStorage.setItem(STORAGE_KEY,JSON.stringify(items)); }
+  function uid(){ return crypto.randomUUID?.()||`exp-${Date.now()}-${Math.random().toString(16).slice(2)}`; }
+  function esc(value){ return String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[char]); }
 
   function profiles(){
     try{
@@ -32,10 +24,6 @@
       if(Array.isArray(saved)&&saved.length)return saved;
     }catch{}
     return Array.isArray(window.PEOPLE)?window.PEOPLE:[];
-  }
-
-  function profileName(item){
-    return item.profileName||'Sin perfil';
   }
 
   function formatDate(value){
@@ -50,86 +38,156 @@
     const style=document.createElement('style');
     style.id='hb-expiries-styles';
     style.textContent=`
-      .expiry-panel{margin-top:18px;padding:16px;border-radius:20px;background:var(--surface,rgba(255,255,255,.82));border:1px solid var(--line,rgba(0,0,0,.08));box-shadow:var(--shadow,0 10px 30px rgba(0,0,0,.08))}
-      .expiry-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}.expiry-head h3{margin:0;font-size:18px}.expiry-head p{margin:3px 0 0;color:var(--muted,#7e8793);font-size:12px}
-      .expiry-add{border:0;border-radius:12px;padding:10px 12px;background:var(--accent,#d9781f);color:#fff;font-weight:850;white-space:nowrap}
-      .expiry-form{display:none;margin:12px 0;padding:14px;border-radius:16px;background:var(--surface-2,#f5f5f5);border:1px solid var(--line,#ddd)}.expiry-form.open{display:block}
-      .expiry-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.expiry-grid .full{grid-column:1/-1}.expiry-form label{margin:0 0 5px;display:block;font-size:12px;font-weight:800}.expiry-form input,.expiry-form select,.expiry-form textarea{width:100%;box-sizing:border-box}.expiry-form textarea{min-height:72px;resize:vertical}
-      .expiry-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}.expiry-actions button{border:0;border-radius:11px;padding:10px 13px;font-weight:800}.expiry-cancel{background:var(--surface,#fff);color:var(--text,#182230);border:1px solid var(--line,#ddd)!important}.expiry-save{background:var(--accent,#d9781f);color:#fff}
-      .expiry-list{display:grid;gap:9px}.expiry-empty{padding:18px;text-align:center;color:var(--muted,#7e8793);border:1px dashed var(--line,#ddd);border-radius:14px}
-      .expiry-item{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:12px;border-radius:14px;background:var(--surface-2,#f5f5f5);border:1px solid var(--line,#ddd)}.expiry-item strong{display:block}.expiry-meta{font-size:12px;color:var(--muted,#7e8793);margin-top:3px}.expiry-notes{font-size:12px;margin-top:6px;white-space:pre-wrap}.expiry-item-actions{display:flex;gap:6px}.expiry-item-actions button{border:0;border-radius:9px;padding:8px 9px;font-size:11px;font-weight:800}.expiry-edit{background:var(--accent-soft,#fff0df);color:var(--accent,#d9781f)}.expiry-delete{background:#fff0f1;color:var(--danger,#d84a55)}
-      @media(max-width:520px){.expiry-grid{grid-template-columns:1fr}.expiry-grid .full{grid-column:auto}.expiry-head{align-items:center}.expiry-item{grid-template-columns:1fr}.expiry-item-actions{justify-content:flex-end}}
+      #expiryPanel{display:none!important}
+      .profile-docs{margin:-2px 0 12px;padding:0 12px 12px;border:1px solid var(--line,rgba(0,0,0,.08));border-top:0;border-radius:0 0 18px 18px;background:color-mix(in srgb,var(--surface,#fff) 84%,#edf5ff)}
+      .profile-docs-summary{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 2px 4px;border:0;background:transparent;color:var(--text,#182230);text-align:left}
+      .profile-docs-summary strong{font-size:14px}.profile-docs-summary span{font-size:12px;color:var(--muted,#7e8793)}
+      .profile-docs-chevron{font-size:18px!important;color:var(--muted,#7e8793)!important;transition:transform .18s ease}.profile-docs.open .profile-docs-chevron{transform:rotate(180deg)}
+      .profile-docs-body{display:none;padding-top:10px}.profile-docs.open .profile-docs-body{display:block}
+      .profile-docs-list{display:grid;gap:8px}
+      .profile-docs-empty{padding:14px;text-align:center;color:var(--muted,#7e8793);font-size:12px;border:1px dashed var(--line,#d9e1e8);border-radius:13px;background:rgba(255,255,255,.34)}
+      .profile-doc{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:11px 12px;border-radius:13px;background:var(--surface,#fff);border:1px solid var(--line,#e5e7eb)}
+      .profile-doc strong{display:block;font-size:14px}.profile-doc-date{font-size:12px;color:var(--muted,#7e8793);margin-top:3px}.profile-doc-notes{font-size:12px;margin-top:5px;white-space:pre-wrap;color:var(--text,#182230)}
+      .profile-doc-actions{display:flex;gap:6px}.profile-doc-actions button{border:0;border-radius:9px;padding:7px 9px;font-size:11px;font-weight:800}.profile-doc-edit{background:var(--accent-soft,#fff0df);color:var(--accent,#d9781f)}.profile-doc-delete{background:#fff0f1;color:var(--danger,#d84a55)}
+      .profile-doc-add{width:100%;margin-top:9px;border:1px dashed color-mix(in srgb,var(--accent,#d9781f) 55%,transparent);border-radius:12px;padding:10px;background:color-mix(in srgb,var(--accent-soft,#fff0df) 65%,transparent);color:var(--accent,#d9781f);font-weight:850}
+      .profile-doc-form{display:none;margin-top:10px;padding:13px;border-radius:14px;background:var(--surface-2,#f5f5f5);border:1px solid var(--line,#ddd)}.profile-doc-form.open{display:block}
+      .profile-doc-form label{display:block;margin:0 0 5px;font-size:12px;font-weight:800}.profile-doc-form input,.profile-doc-form textarea{width:100%;box-sizing:border-box}.profile-doc-form textarea{min-height:68px;resize:vertical}
+      .profile-doc-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.profile-doc-grid .full{grid-column:1/-1}
+      .profile-doc-form-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:11px}.profile-doc-form-actions button{border:0;border-radius:10px;padding:9px 12px;font-weight:800}.profile-doc-cancel{background:var(--surface,#fff);color:var(--text,#182230);border:1px solid var(--line,#ddd)!important}.profile-doc-save{background:var(--accent,#d9781f);color:#fff}
+      @media(max-width:520px){.profile-doc{grid-template-columns:1fr}.profile-doc-actions{justify-content:flex-end}.profile-doc-grid{grid-template-columns:1fr}.profile-doc-grid .full{grid-column:auto}}
     `;
     document.head.appendChild(style);
   }
 
-  function mount(){
-    if(document.getElementById('expiryPanel'))return;
-    const profileForm=document.getElementById('profileForm');
-    const profileList=document.getElementById('profileList');
-    const anchor=profileForm||profileList;
-    if(!anchor)return;
+  function profileRows(){ return [...document.querySelectorAll('#profileList .profile-row')]; }
 
+  function removeOldGlobalPanel(){ document.getElementById('expiryPanel')?.remove(); }
+
+  function decorateProfiles(){
+    const list=document.getElementById('profileList');
+    if(!list)return;
+    removeOldGlobalPanel();
     ensureStyles();
-    const panel=document.createElement('section');
-    panel.id='expiryPanel';
-    panel.className='expiry-panel';
-    panel.innerHTML=`
-      <div class="expiry-head">
-        <div><h3>Caducidades</h3><p>DNI, pasaporte, Medical, ITV, seguros o cualquier otro concepto.</p></div>
-        <button type="button" class="expiry-add" id="expiryAdd">＋ Añadir</button>
-      </div>
-      <form class="expiry-form" id="expiryForm">
-        <div class="expiry-grid">
-          <div><label for="expiryProfile">Perfil</label><select id="expiryProfile" required></select></div>
-          <div><label for="expiryDate">Fecha (opcional)</label><input id="expiryDate" type="date"></div>
-          <div class="full"><label for="expiryTitle">Concepto</label><input id="expiryTitle" maxlength="60" required placeholder="Ej. DNI, Medical clase 1, ITV…"></div>
-          <div class="full"><label for="expiryNotes">Notas (opcional)</label><textarea id="expiryNotes" maxlength="300" placeholder="Número, lugar de renovación, observaciones…"></textarea></div>
+
+    const data=profiles();
+    profileRows().forEach((row,index)=>{
+      let name=data[index]?.name||'';
+      if(!name){
+        const candidates=[...row.querySelectorAll('strong,.event-title,h3,h4')].map(node=>node.textContent.trim()).filter(Boolean);
+        name=candidates[0]||'';
+      }
+      if(!name)return;
+
+      const next=row.nextElementSibling;
+      if(next?.classList.contains('profile-docs')){
+        next.dataset.profile=name;
+        renderProfile(name,next);
+        return;
+      }
+
+      const section=document.createElement('section');
+      section.className='profile-docs';
+      section.dataset.profile=name;
+      row.insertAdjacentElement('afterend',section);
+      renderProfile(name,section);
+    });
+  }
+
+  function renderProfile(name,section){
+    const own=items.filter(item=>item.profileName===name).sort((a,b)=>{
+      if(a.expiryDate&&b.expiryDate)return a.expiryDate.localeCompare(b.expiryDate);
+      if(a.expiryDate)return -1;if(b.expiryDate)return 1;
+      return a.title.localeCompare(b.title,'es');
+    });
+    const count=own.length;
+    const isOpen=section.classList.contains('open')||activeProfile===name;
+    section.classList.toggle('open',isOpen);
+    section.innerHTML=`
+      <button type="button" class="profile-docs-summary" data-doc-toggle="${esc(name)}">
+        <span><strong>Documentos y vencimientos</strong><br><span>${count?`${count} guardado${count===1?'':'s'}`:'DNI, pasaporte, seguros, ITV…'}</span></span>
+        <span class="profile-docs-chevron">⌄</span>
+      </button>
+      <div class="profile-docs-body">
+        <div class="profile-docs-list">
+          ${own.length?own.map(item=>`
+            <article class="profile-doc">
+              <div><strong>${esc(item.title)}</strong><div class="profile-doc-date">${esc(formatDate(item.expiryDate))}</div>${item.notes?`<div class="profile-doc-notes">${esc(item.notes)}</div>`:''}</div>
+              <div class="profile-doc-actions"><button type="button" class="profile-doc-edit" data-doc-edit="${esc(item.id)}">Editar</button><button type="button" class="profile-doc-delete" data-doc-delete="${esc(item.id)}">Eliminar</button></div>
+            </article>`).join(''):'<div class="profile-docs-empty">Todavía no hay documentos ni vencimientos para este perfil.</div>'}
         </div>
-        <div class="expiry-actions"><button type="button" class="expiry-cancel" id="expiryCancel">Cancelar</button><button type="submit" class="expiry-save">Guardar</button></div>
-      </form>
-      <div class="expiry-list" id="expiryList"></div>
-    `;
-    anchor.insertAdjacentElement('afterend',panel);
-
-    document.getElementById('expiryAdd').addEventListener('click',()=>openForm());
-    document.getElementById('expiryCancel').addEventListener('click',closeForm);
-    document.getElementById('expiryForm').addEventListener('submit',submit);
-    document.getElementById('expiryList').addEventListener('click',onListClick);
-    render();
+        <button type="button" class="profile-doc-add" data-doc-add="${esc(name)}">＋ Añadir documento o vencimiento</button>
+        <form class="profile-doc-form" data-doc-form="${esc(name)}">
+          <div class="profile-doc-grid">
+            <div class="full"><label>Concepto</label><input name="title" maxlength="60" required placeholder="Ej. DNI, Medical clase 1, ITV…"></div>
+            <div><label>Fecha (opcional)</label><input name="expiryDate" type="date"></div>
+            <div class="full"><label>Notas (opcional)</label><textarea name="notes" maxlength="300" placeholder="Número, lugar de renovación, observaciones…"></textarea></div>
+          </div>
+          <div class="profile-doc-form-actions"><button type="button" class="profile-doc-cancel">Cancelar</button><button type="submit" class="profile-doc-save">Guardar</button></div>
+        </form>
+      </div>`;
   }
 
-  function fillProfiles(selected=''){
-    const select=document.getElementById('expiryProfile');
-    if(!select)return;
-    const list=profiles();
-    select.innerHTML=list.map(profile=>`<option value="${esc(profile.name)}">${esc(profile.name)}</option>`).join('');
-    if(selected&&list.some(profile=>profile.name===selected))select.value=selected;
-  }
-
-  function openForm(item=null){
+  function openForm(section,item=null){
+    const name=section.dataset.profile;
+    activeProfile=name;
     editingId=item?.id||'';
-    fillProfiles(item?.profileName||'');
-    document.getElementById('expiryTitle').value=item?.title||'';
-    document.getElementById('expiryDate').value=item?.expiryDate||'';
-    document.getElementById('expiryNotes').value=item?.notes||'';
-    document.getElementById('expiryForm').classList.add('open');
-    requestAnimationFrame(()=>document.getElementById('expiryTitle').focus());
+    section.classList.add('open');
+    const form=section.querySelector('.profile-doc-form');
+    form.classList.add('open');
+    form.elements.title.value=item?.title||'';
+    form.elements.expiryDate.value=item?.expiryDate||'';
+    form.elements.notes.value=item?.notes||'';
+    requestAnimationFrame(()=>form.elements.title.focus());
   }
 
-  function closeForm(){
+  function closeForm(section){
     editingId='';
-    const form=document.getElementById('expiryForm');
+    const form=section.querySelector('.profile-doc-form');
     form?.reset();
     form?.classList.remove('open');
   }
 
-  function submit(event){
+  function onProfilesClick(event){
+    const section=event.target.closest('.profile-docs');
+    if(!section)return;
+    const name=section.dataset.profile;
+
+    if(event.target.closest('[data-doc-toggle]')){
+      const opening=!section.classList.contains('open');
+      activeProfile=opening?name:'';
+      section.classList.toggle('open',opening);
+      return;
+    }
+    if(event.target.closest('[data-doc-add]')){ openForm(section); return; }
+    if(event.target.closest('.profile-doc-cancel')){ closeForm(section); return; }
+
+    const edit=event.target.closest('[data-doc-edit]');
+    if(edit){
+      const item=items.find(entry=>entry.id===edit.dataset.docEdit);
+      if(item)openForm(section,item);
+      return;
+    }
+
+    const remove=event.target.closest('[data-doc-delete]');
+    if(remove){
+      const item=items.find(entry=>entry.id===remove.dataset.docDelete);
+      if(!item)return;
+      if(!confirm(`¿Eliminar “${item.title}” de ${item.profileName}?`))return;
+      items=items.filter(entry=>entry.id!==item.id);
+      save();
+      renderProfile(name,section);
+    }
+  }
+
+  function onProfilesSubmit(event){
+    const form=event.target.closest('.profile-doc-form');
+    if(!form)return;
     event.preventDefault();
-    const profileName=document.getElementById('expiryProfile').value.trim();
-    const title=document.getElementById('expiryTitle').value.trim();
-    const expiryDate=document.getElementById('expiryDate').value;
-    const notes=document.getElementById('expiryNotes').value.trim();
+    const section=form.closest('.profile-docs');
+    const profileName=section.dataset.profile;
+    const title=form.elements.title.value.trim();
+    const expiryDate=form.elements.expiryDate.value;
+    const notes=form.elements.notes.value.trim();
     if(!profileName||!title)return;
 
     const now=Date.now();
@@ -140,53 +198,33 @@
       items.push({id:uid(),profileName,title,expiryDate,notes,createdAt:now,updatedAt:now});
     }
     save();
-    closeForm();
-    render();
+    editingId='';
+    activeProfile=profileName;
+    renderProfile(profileName,section);
   }
 
-  function onListClick(event){
-    const edit=event.target.closest('[data-expiry-edit]');
-    if(edit){
-      const item=items.find(entry=>entry.id===edit.dataset.expiryEdit);
-      if(item)openForm(item);
-      return;
-    }
-    const remove=event.target.closest('[data-expiry-delete]');
-    if(remove){
-      const item=items.find(entry=>entry.id===remove.dataset.expiryDelete);
-      if(!item)return;
-      if(!confirm(`¿Eliminar “${item.title}” de ${profileName(item)}?`))return;
-      items=items.filter(entry=>entry.id!==item.id);
-      save();
-      render();
-    }
-  }
-
-  function render(){
-    const list=document.getElementById('expiryList');
-    if(!list)return;
-    if(!items.length){
-      list.innerHTML='<div class="expiry-empty">Todavía no hay ninguna caducidad guardada.</div>';
-      return;
-    }
-    const sorted=[...items].sort((a,b)=>{
-      if(a.expiryDate&&b.expiryDate)return a.expiryDate.localeCompare(b.expiryDate);
-      if(a.expiryDate)return -1;if(b.expiryDate)return 1;
-      return profileName(a).localeCompare(profileName(b),'es');
+  function watchProfileList(){
+    const list=document.getElementById('profileList');
+    if(!list||observer)return;
+    observer=new MutationObserver(mutations=>{
+      if(mutations.some(m=>[...m.addedNodes,...m.removedNodes].some(node=>node.nodeType===1&&!node.classList?.contains('profile-docs')))){
+        requestAnimationFrame(decorateProfiles);
+      }
     });
-    list.innerHTML=sorted.map(item=>`
-      <article class="expiry-item">
-        <div><strong>${esc(item.title)}</strong><div class="expiry-meta">${esc(profileName(item))} · ${esc(formatDate(item.expiryDate))}</div>${item.notes?`<div class="expiry-notes">${esc(item.notes)}</div>`:''}</div>
-        <div class="expiry-item-actions"><button type="button" class="expiry-edit" data-expiry-edit="${esc(item.id)}">Editar</button><button type="button" class="expiry-delete" data-expiry-delete="${esc(item.id)}">Eliminar</button></div>
-      </article>
-    `).join('');
+    observer.observe(list,{childList:true});
   }
 
   function init(){
-    mount();
-    document.querySelectorAll('.nav-btn').forEach(button=>button.addEventListener('click',()=>{
-      if(button.dataset.page==='morePage')requestAnimationFrame(()=>{mount();render()});
-    }));
+    ensureStyles();
+    const list=document.getElementById('profileList');
+    if(list){
+      list.addEventListener('click',onProfilesClick);
+      list.addEventListener('submit',onProfilesSubmit);
+      watchProfileList();
+    }
+    document.getElementById('openProfilesRow')?.addEventListener('click',()=>setTimeout(decorateProfiles,0));
+    document.getElementById('addProfileButton')?.addEventListener('click',()=>requestAnimationFrame(decorateProfiles));
+    decorateProfiles();
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});
