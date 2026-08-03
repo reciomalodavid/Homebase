@@ -13,13 +13,12 @@
     return String(value||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   }
 
-  function typeFromRow(section){
-    const row=section?.previousElementSibling;
-    const label=normalize(row?.textContent||'');
-    if(label.includes('persona'))return 'person';
-    if(label.includes('mascota'))return 'pet';
-    if(label.includes('vehiculo')||label.includes('coche'))return 'vehicle';
-    if(label.includes('vivienda')||label.includes('casa')||label.includes('hogar'))return 'home';
+  function canonicalType(value){
+    const type=normalize(value);
+    if(['person','persona','personas','people'].includes(type))return 'person';
+    if(['vehicle','vehiculo','vehiculos','car','coche','coches'].includes(type))return 'vehicle';
+    if(['pet','mascota','mascotas','animal'].includes(type))return 'pet';
+    if(['home','vivienda','viviendas','casa','casas','hogar','piso','pisos'].includes(type))return 'home';
     return '';
   }
 
@@ -28,17 +27,35 @@
     if(!name)return '';
     let profiles=[];
     try{profiles=JSON.parse(localStorage.getItem('homebase_profiles')||'[]')}catch{}
-    const profile=Array.isArray(profiles)?profiles.find(item=>item?.name===name):null;
-    const type=normalize(profile?.type);
-    if(['person','persona','people'].includes(type))return 'person';
-    if(['vehicle','vehiculo','vehiculos','car','coche'].includes(type))return 'vehicle';
-    if(['pet','mascota','mascotas'].includes(type))return 'pet';
-    if(['home','vivienda','casa','hogar'].includes(type))return 'home';
+    const profile=Array.isArray(profiles)?profiles.find(item=>normalize(item?.name)===normalize(name)):null;
+    return canonicalType(profile?.type);
+  }
+
+  function typeFromOwnRow(section){
+    const row=section?.previousElementSibling;
+    const label=normalize(row?.textContent||'');
+    if(label.includes('mascota')||label.includes('🐾'))return 'pet';
+    if(label.includes('vehiculo')||label.includes('coche')||label.includes('🚗'))return 'vehicle';
+    if(label.includes('vivienda')||label.includes('casa')||label.includes('hogar')||label.includes('piso')||label.includes('⌂')||label.includes('🏠'))return 'home';
+    if(label.includes('persona')||label.includes('👤'))return 'person';
+    return '';
+  }
+
+  function typeFromGroupHeading(section){
+    let node=section?.previousElementSibling||null;
+    while(node){
+      const text=normalize(node.textContent||'');
+      if(/^mascotas?$/.test(text)||text.includes('mascotas'))return 'pet';
+      if(/^vehiculos?$/.test(text)||text.includes('vehiculos'))return 'vehicle';
+      if(/^viviendas?$/.test(text)||text.includes('viviendas'))return 'home';
+      if(/^personas?$/.test(text)||text.includes('personas'))return 'person';
+      node=node.previousElementSibling;
+    }
     return '';
   }
 
   function profileTypeForSection(section){
-    return typeFromRow(section)||typeFromStoredProfile(section)||'default';
+    return typeFromOwnRow(section)||typeFromStoredProfile(section)||typeFromGroupHeading(section)||'default';
   }
 
   function rebuildCategorySelect(form,{preserve=false}={}){
@@ -78,6 +95,13 @@
     document.querySelectorAll('#profileList .profile-docs').forEach(section=>{
       if(section!==current)closeSection(section);
     });
+  }
+
+  function scrollFormToTop(form){
+    if(!form)return;
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      form.scrollIntoView({behavior:'smooth',block:'start',inline:'nearest'});
+    }));
   }
 
   function enhanceReminderForm(form){
@@ -171,6 +195,7 @@
         rebuildCategorySelect(form,{preserve:false});
         const custom=form.querySelector('.profile-doc-custom');
         if(custom)custom.hidden=true;
+        scrollFormToTop(form);
       });
     }
   },true);
