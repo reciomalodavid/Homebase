@@ -82,11 +82,18 @@
   function resetAndHideForm(form){
     if(!form)return;
     form.classList.remove('open');
+    form.style.display='none';
     form.reset();
     const custom=form.querySelector('.profile-doc-custom');
     if(custom)custom.hidden=true;
     const customReminder=form.querySelector('.profile-doc-reminder-custom');
     if(customReminder)customReminder.style.display='none';
+  }
+
+  function showForm(form){
+    if(!form)return;
+    form.style.removeProperty('display');
+    form.classList.add('open');
   }
 
   function closeSection(section){
@@ -101,18 +108,26 @@
     });
   }
 
-  function placeFormAtViewportTop(form){
-    if(!form)return;
+  function alignProfileAtTop(section){
+    if(!section)return;
+    const row=section.previousElementSibling||section;
+    const modal=section.closest('.modal');
     const align=()=>{
-      if(!form.classList.contains('open'))return;
       const active=document.activeElement;
-      if(active&&form.contains(active))active.blur();
-      const y=Math.max(0,window.scrollY+form.getBoundingClientRect().top-8);
-      window.scrollTo(0,y);
+      if(active&&section.contains(active))active.blur();
+      if(modal){
+        const modalRect=modal.getBoundingClientRect();
+        const rowRect=row.getBoundingClientRect();
+        modal.scrollTop=Math.max(0,modal.scrollTop+(rowRect.top-modalRect.top)-8);
+      }else{
+        const y=Math.max(0,window.scrollY+row.getBoundingClientRect().top-8);
+        window.scrollTo(0,y);
+      }
     };
     requestAnimationFrame(()=>requestAnimationFrame(align));
-    setTimeout(align,120);
-    setTimeout(align,320);
+    setTimeout(align,80);
+    setTimeout(align,220);
+    setTimeout(align,420);
   }
 
   function enhanceReminderForm(form){
@@ -183,13 +198,19 @@
     });
   }
 
+  function forceHideAfterCancel(form){
+    resetAndHideForm(form);
+    requestAnimationFrame(()=>resetAndHideForm(form));
+    setTimeout(()=>resetAndHideForm(form),40);
+    setTimeout(()=>resetAndHideForm(form),160);
+  }
+
   document.addEventListener('click',event=>{
     const cancel=event.target.closest('.profile-doc-cancel');
     if(cancel){
       event.preventDefault();
-      event.stopImmediatePropagation();
-      const form=cancel.closest('.profile-doc-form');
-      resetAndHideForm(form);
+      event.stopPropagation();
+      forceHideAfterCancel(cancel.closest('.profile-doc-form'));
       return;
     }
 
@@ -198,10 +219,15 @@
       const section=toggle.closest('.profile-docs');
       const willOpen=!section?.classList.contains('open');
       closeOtherSections(section);
-      if(willOpen)requestAnimationFrame(()=>{
-        const form=section?.querySelector('.profile-doc-form');
-        if(form)rebuildCategorySelect(form,{preserve:false});
-      });
+      if(willOpen){
+        requestAnimationFrame(()=>requestAnimationFrame(()=>{
+          const form=section?.querySelector('.profile-doc-form');
+          if(!form)return;
+          rebuildCategorySelect(form,{preserve:false});
+          showForm(form);
+          alignProfileAtTop(section);
+        }));
+      }
       return;
     }
 
@@ -215,7 +241,8 @@
         rebuildCategorySelect(form,{preserve:false});
         const custom=form.querySelector('.profile-doc-custom');
         if(custom)custom.hidden=true;
-        placeFormAtViewportTop(form);
+        showForm(form);
+        alignProfileAtTop(section);
       }));
     }
   },true);
