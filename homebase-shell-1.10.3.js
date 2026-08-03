@@ -110,8 +110,6 @@
   document.addEventListener('pointerdown', event => {
     if (!bottomNavigationTarget(event.target)) return;
     if (window.HOMEBASE_BETA) {
-      /* En iOS, mover el scroll durante pointerdown puede cancelar el click.
-         En beta esperamos a que termine el tap para no perder la primera pulsación. */
       setTimeout(resetForPageSwitch, 0);
     } else {
       resetForPageSwitch();
@@ -192,4 +190,34 @@
   } else {
     enhanceMemberPicker();
   }
+})();
+
+/* Production promotion: tested Documents and expiries module. Beta remains isolated. */
+(() => {
+  'use strict';
+  if (window.HOMEBASE_BETA || window.HOMEBASE_EXPIRIES_LOADER) return;
+  window.HOMEBASE_EXPIRIES_LOADER = true;
+
+  function loadScript(src){
+    return new Promise((resolve,reject)=>{
+      const script=document.createElement('script');
+      script.src=src;
+      script.async=false;
+      script.onload=resolve;
+      script.onerror=()=>reject(new Error(`No se pudo cargar ${src}`));
+      document.head.appendChild(script);
+    });
+  }
+
+  async function init(){
+    try{
+      await loadScript('./beta/beta-expiries-v1.js?production=1.10.12');
+      await loadScript('./homebase-expiry-reminders-1.10.12.js?v=1');
+    }catch(error){
+      console.error('Documentos y vencimientos',error);
+    }
+  }
+
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});
+  else init();
 })();
