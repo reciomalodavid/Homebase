@@ -9,6 +9,8 @@
     default:['Documento','Seguro','Impuesto','Revisión','Mantenimiento']
   };
 
+  const cancelledProfiles=new Set();
+
   function normalize(value){
     return String(value||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   }
@@ -79,10 +81,14 @@
     select.dispatchEvent(new Event('change',{bubbles:true}));
   }
 
+  function profileKey(section){
+    return normalize(section?.dataset.profile||'');
+  }
+
   function resetAndHideForm(form){
     if(!form)return;
     form.classList.remove('open');
-    form.style.display='none';
+    form.style.setProperty('display','none','important');
     form.reset();
     const custom=form.querySelector('.profile-doc-custom');
     if(custom)custom.hidden=true;
@@ -92,6 +98,8 @@
 
   function showForm(form){
     if(!form)return;
+    const section=form.closest('.profile-docs');
+    cancelledProfiles.delete(profileKey(section));
     form.style.removeProperty('display');
     form.classList.add('open');
   }
@@ -118,9 +126,12 @@
       if(modal){
         const modalRect=modal.getBoundingClientRect();
         const rowRect=row.getBoundingClientRect();
-        modal.scrollTop=Math.max(0,modal.scrollTop+(rowRect.top-modalRect.top)-8);
+        const header=modal.querySelector('.modal-head');
+        const headerRect=header?.getBoundingClientRect();
+        const headerOffset=headerRect?Math.max(0,headerRect.bottom-modalRect.top)+12:12;
+        modal.scrollTop=Math.max(0,modal.scrollTop+(rowRect.top-modalRect.top)-headerOffset);
       }else{
-        const y=Math.max(0,window.scrollY+row.getBoundingClientRect().top-8);
+        const y=Math.max(0,window.scrollY+row.getBoundingClientRect().top-12);
         window.scrollTo(0,y);
       }
     };
@@ -195,22 +206,36 @@
     root.querySelectorAll?.('.profile-doc-form').forEach(form=>{
       enhanceReminderForm(form);
       rebuildCategorySelect(form,{preserve:true});
+      const section=form.closest('.profile-docs');
+      if(cancelledProfiles.has(profileKey(section)))resetAndHideForm(form);
     });
   }
 
-  function forceHideAfterCancel(form){
+  function cancelForm(cancel,event){
+    if(!cancel)return false;
+    event?.preventDefault();
+    event?.stopImmediatePropagation();
+    const form=cancel.closest('.profile-doc-form');
+    const section=form?.closest('.profile-docs');
+    cancelledProfiles.add(profileKey(section));
     resetAndHideForm(form);
     requestAnimationFrame(()=>resetAndHideForm(form));
-    setTimeout(()=>resetAndHideForm(form),40);
-    setTimeout(()=>resetAndHideForm(form),160);
+    setTimeout(()=>resetAndHideForm(form),50);
+    setTimeout(()=>resetAndHideForm(form),180);
+    setTimeout(()=>resetAndHideForm(form),400);
+    return true;
   }
 
+  const captureCancel=event=>{
+    const cancel=event.target.closest?.('.profile-doc-cancel');
+    if(cancel)cancelForm(cancel,event);
+  };
+
+  document.addEventListener('pointerdown',captureCancel,true);
   document.addEventListener('click',event=>{
     const cancel=event.target.closest('.profile-doc-cancel');
     if(cancel){
-      event.preventDefault();
-      event.stopPropagation();
-      forceHideAfterCancel(cancel.closest('.profile-doc-form'));
+      cancelForm(cancel,event);
       return;
     }
 
@@ -220,6 +245,7 @@
       const willOpen=!section?.classList.contains('open');
       closeOtherSections(section);
       if(willOpen){
+        cancelledProfiles.delete(profileKey(section));
         requestAnimationFrame(()=>requestAnimationFrame(()=>{
           const form=section?.querySelector('.profile-doc-form');
           if(!form)return;
@@ -235,6 +261,7 @@
     if(add){
       const section=add.closest('.profile-docs');
       closeOtherSections(section);
+      cancelledProfiles.delete(profileKey(section));
       requestAnimationFrame(()=>requestAnimationFrame(()=>{
         const form=section?.querySelector('.profile-doc-form');
         if(!form)return;
