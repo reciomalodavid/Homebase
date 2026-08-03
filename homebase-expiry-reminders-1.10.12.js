@@ -97,11 +97,12 @@
     });
   }
 
-  function scrollFormToTop(form){
-    if(!form)return;
-    requestAnimationFrame(()=>requestAnimationFrame(()=>{
-      form.scrollIntoView({behavior:'smooth',block:'start',inline:'nearest'});
-    }));
+  function placeAtTop(element,delay=0){
+    if(!element)return;
+    setTimeout(()=>requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      const top=Math.max(0,window.scrollY+element.getBoundingClientRect().top-12);
+      window.scrollTo({top,behavior:'auto'});
+    })),delay);
   }
 
   function enhanceReminderForm(form){
@@ -178,10 +179,13 @@
       const section=toggle.closest('.profile-docs');
       const willOpen=!section?.classList.contains('open');
       closeOtherSections(section);
-      if(willOpen)requestAnimationFrame(()=>{
-        const form=section?.querySelector('.profile-doc-form');
-        if(form)rebuildCategorySelect(form,{preserve:false});
-      });
+      if(willOpen){
+        requestAnimationFrame(()=>{
+          const form=section?.querySelector('.profile-doc-form');
+          if(form)rebuildCategorySelect(form,{preserve:false});
+        });
+        placeAtTop(section,80);
+      }
       return;
     }
 
@@ -195,7 +199,7 @@
         rebuildCategorySelect(form,{preserve:false});
         const custom=form.querySelector('.profile-doc-custom');
         if(custom)custom.hidden=true;
-        scrollFormToTop(form);
+        placeAtTop(form,100);
       });
     }
   },true);
