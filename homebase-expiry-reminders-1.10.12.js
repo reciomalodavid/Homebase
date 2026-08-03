@@ -10,6 +10,7 @@
   };
 
   const cancelledProfiles=new Set();
+  let suppressClicksUntil=0;
 
   function normalize(value){
     return String(value||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
@@ -211,10 +212,8 @@
     });
   }
 
-  function cancelForm(cancel,event){
+  function cancelForm(cancel){
     if(!cancel)return false;
-    event?.preventDefault();
-    event?.stopImmediatePropagation();
     const form=cancel.closest('.profile-doc-form');
     const section=form?.closest('.profile-docs');
     cancelledProfiles.add(profileKey(section));
@@ -226,16 +225,39 @@
     return true;
   }
 
-  const captureCancel=event=>{
-    const cancel=event.target.closest?.('.profile-doc-cancel');
-    if(cancel)cancelForm(cancel,event);
-  };
+  function stopEvent(event){
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+  }
 
-  document.addEventListener('pointerdown',captureCancel,true);
-  document.addEventListener('click',event=>{
-    const cancel=event.target.closest('.profile-doc-cancel');
+  document.addEventListener('pointerdown',event=>{
+    const cancel=event.target.closest?.('.profile-doc-cancel');
     if(cancel){
-      cancelForm(cancel,event);
+      stopEvent(event);
+      return;
+    }
+    if(performance.now()<suppressClicksUntil)stopEvent(event);
+  },true);
+
+  document.addEventListener('pointerup',event=>{
+    const cancel=event.target.closest?.('.profile-doc-cancel');
+    if(!cancel)return;
+    stopEvent(event);
+    suppressClicksUntil=performance.now()+650;
+    setTimeout(()=>cancelForm(cancel),0);
+  },true);
+
+  document.addEventListener('click',event=>{
+    const cancel=event.target.closest?.('.profile-doc-cancel');
+    if(cancel){
+      stopEvent(event);
+      suppressClicksUntil=performance.now()+650;
+      setTimeout(()=>cancelForm(cancel),0);
+      return;
+    }
+    if(performance.now()<suppressClicksUntil){
+      stopEvent(event);
       return;
     }
 
