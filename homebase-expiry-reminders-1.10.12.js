@@ -79,16 +79,20 @@
     select.dispatchEvent(new Event('change',{bubbles:true}));
   }
 
+  function resetAndHideForm(form){
+    if(!form)return;
+    form.classList.remove('open');
+    form.reset();
+    const custom=form.querySelector('.profile-doc-custom');
+    if(custom)custom.hidden=true;
+    const customReminder=form.querySelector('.profile-doc-reminder-custom');
+    if(customReminder)customReminder.style.display='none';
+  }
+
   function closeSection(section){
     if(!section)return;
     section.classList.remove('open');
-    const form=section.querySelector('.profile-doc-form');
-    if(form){
-      form.classList.remove('open');
-      form.reset();
-      const custom=form.querySelector('.profile-doc-custom');
-      if(custom)custom.hidden=true;
-    }
+    resetAndHideForm(section.querySelector('.profile-doc-form'));
   }
 
   function closeOtherSections(current){
@@ -97,12 +101,18 @@
     });
   }
 
-  function placeAtTop(element,delay=0){
-    if(!element)return;
-    setTimeout(()=>requestAnimationFrame(()=>requestAnimationFrame(()=>{
-      const top=Math.max(0,window.scrollY+element.getBoundingClientRect().top-12);
-      window.scrollTo({top,behavior:'auto'});
-    })),delay);
+  function placeFormAtViewportTop(form){
+    if(!form)return;
+    const align=()=>{
+      if(!form.classList.contains('open'))return;
+      const active=document.activeElement;
+      if(active&&form.contains(active))active.blur();
+      const y=Math.max(0,window.scrollY+form.getBoundingClientRect().top-8);
+      window.scrollTo(0,y);
+    };
+    requestAnimationFrame(()=>requestAnimationFrame(align));
+    setTimeout(align,120);
+    setTimeout(align,320);
   }
 
   function enhanceReminderForm(form){
@@ -174,18 +184,24 @@
   }
 
   document.addEventListener('click',event=>{
+    const cancel=event.target.closest('.profile-doc-cancel');
+    if(cancel){
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      const form=cancel.closest('.profile-doc-form');
+      resetAndHideForm(form);
+      return;
+    }
+
     const toggle=event.target.closest('[data-doc-toggle]');
     if(toggle){
       const section=toggle.closest('.profile-docs');
       const willOpen=!section?.classList.contains('open');
       closeOtherSections(section);
-      if(willOpen){
-        requestAnimationFrame(()=>{
-          const form=section?.querySelector('.profile-doc-form');
-          if(form)rebuildCategorySelect(form,{preserve:false});
-        });
-        placeAtTop(section,80);
-      }
+      if(willOpen)requestAnimationFrame(()=>{
+        const form=section?.querySelector('.profile-doc-form');
+        if(form)rebuildCategorySelect(form,{preserve:false});
+      });
       return;
     }
 
@@ -193,14 +209,14 @@
     if(add){
       const section=add.closest('.profile-docs');
       closeOtherSections(section);
-      requestAnimationFrame(()=>{
+      requestAnimationFrame(()=>requestAnimationFrame(()=>{
         const form=section?.querySelector('.profile-doc-form');
         if(!form)return;
         rebuildCategorySelect(form,{preserve:false});
         const custom=form.querySelector('.profile-doc-custom');
         if(custom)custom.hidden=true;
-        placeAtTop(form,100);
-      });
+        placeFormAtViewportTop(form);
+      }));
     }
   },true);
 
