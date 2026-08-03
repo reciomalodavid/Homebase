@@ -9,74 +9,75 @@
     default:['Documento','Seguro','Impuesto','Revisión','Mantenimiento']
   };
 
-  function normaliseType(value){
-    const type=String(value||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  function normalize(value){
+    return String(value||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  }
+
+  function typeFromRow(section){
+    const row=section?.previousElementSibling;
+    const label=normalize(row?.textContent||'');
+    if(label.includes('persona'))return 'person';
+    if(label.includes('mascota'))return 'pet';
+    if(label.includes('vehiculo')||label.includes('coche'))return 'vehicle';
+    if(label.includes('vivienda')||label.includes('casa')||label.includes('hogar'))return 'home';
+    return '';
+  }
+
+  function typeFromStoredProfile(section){
+    const name=section?.dataset.profile||'';
+    if(!name)return '';
+    let profiles=[];
+    try{profiles=JSON.parse(localStorage.getItem('homebase_profiles')||'[]')}catch{}
+    const profile=Array.isArray(profiles)?profiles.find(item=>item?.name===name):null;
+    const type=normalize(profile?.type);
     if(['person','persona','people'].includes(type))return 'person';
     if(['vehicle','vehiculo','vehiculos','car','coche'].includes(type))return 'vehicle';
     if(['pet','mascota','mascotas'].includes(type))return 'pet';
     if(['home','vivienda','casa','hogar'].includes(type))return 'home';
-    return 'default';
+    return '';
   }
 
-  function rowForSection(section){
-    let node=section?.previousElementSibling||null;
-    while(node&&node.parentElement===section?.parentElement){
-      if(node.classList?.contains('profile-row'))return node;
-      node=node.previousElementSibling;
-    }
-    return null;
+  function profileTypeForSection(section){
+    return typeFromRow(section)||typeFromStoredProfile(section)||'default';
   }
 
-  function rowProfileName(row){
-    if(!row)return '';
-    const candidates=[...row.querySelectorAll('strong,.event-title,h3,h4')]
-      .map(node=>node.textContent.trim()).filter(Boolean);
-    return candidates[0]||'';
-  }
-
-  function rowProfileType(row){
-    const label=row?.textContent||'';
-    if(/persona/i.test(label))return 'person';
-    if(/veh[ií]culo|coche/i.test(label))return 'vehicle';
-    if(/mascota/i.test(label))return 'pet';
-    if(/vivienda|casa|hogar/i.test(label))return 'home';
-    return 'default';
-  }
-
-  function repairSectionIdentity(section){
-    if(!section)return {name:'',type:'default'};
-    const row=rowForSection(section);
-    const name=rowProfileName(row);
-    const type=rowProfileType(row);
-    if(name)section.dataset.profile=name;
-    section.dataset.profileType=type;
-    return {name,type};
-  }
-
-  function profileTypeForForm(form){
-    const section=form.closest('.profile-docs');
-    const repaired=repairSectionIdentity(section);
-    return repaired.type||normaliseType(section?.dataset.profileType)||'default';
-  }
-
-  function enhanceCategoryForm(form,force=false){
+  function rebuildCategorySelect(form,{preserve=false}={}){
     if(!form)return;
     const select=form.elements.category;
     if(!select)return;
-
-    const type=profileTypeForForm(form);
-    if(!force&&form.dataset.categoryType===type)return;
-
+    const section=form.closest('.profile-docs');
+    const type=profileTypeForSection(section);
     const values=CATEGORY_LISTS[type]||CATEGORY_LISTS.default;
-    const current=select.value;
-    const customCurrent=current==='__other'||(current&&!values.includes(current));
+    const previous=preserve?select.value:'';
 
     select.innerHTML='';
     values.forEach(value=>select.add(new Option(value,value)));
     select.add(new Option('Otro…','__other'));
-    select.value=customCurrent?'__other':(values.includes(current)?current:values[0]);
+
+    if(preserve&&values.includes(previous))select.value=previous;
+    else if(preserve&&previous==='__other')select.value='__other';
+    else select.value=values[0];
+
     form.dataset.categoryType=type;
     select.dispatchEvent(new Event('change',{bubbles:true}));
+  }
+
+  function closeSection(section){
+    if(!section)return;
+    section.classList.remove('open');
+    const form=section.querySelector('.profile-doc-form');
+    if(form){
+      form.classList.remove('open');
+      form.reset();
+      const custom=form.querySelector('.profile-doc-custom');
+      if(custom)custom.hidden=true;
+    }
+  }
+
+  function closeOtherSections(current){
+    document.querySelectorAll('#profileList .profile-docs').forEach(section=>{
+      if(section!==current)closeSection(section);
+    });
   }
 
   function enhanceReminderForm(form){
@@ -140,42 +141,50 @@
     },true);
   }
 
-  function enhance(root=document,force=false){
-    root.querySelectorAll?.('.profile-docs').forEach(repairSectionIdentity);
+  function enhance(root=document){
     root.querySelectorAll?.('.profile-doc-form').forEach(form=>{
-      enhanceCategoryForm(form,force);
       enhanceReminderForm(form);
+      rebuildCategorySelect(form,{preserve:true});
     });
   }
 
   document.addEventListener('click',event=>{
-    const section=event.target.closest('.profile-docs');
-    if(!section)return;
-    repairSectionIdentity(section);
-    if(event.target.closest('[data-doc-add],[data-doc-edit]')){
+    const toggle=event.target.closest('[data-doc-toggle]');
+    if(toggle){
+      const section=toggle.closest('.profile-docs');
+      const willOpen=!section?.classList.contains('open');
+      closeOtherSections(section);
+      if(willOpen)requestAnimationFrame(()=>{
+        const form=section?.querySelector('.profile-doc-form');
+        if(form)rebuildCategorySelect(form,{preserve:false});
+      });
+      return;
+    }
+
+    const add=event.target.closest('[data-doc-add]');
+    if(add){
+      const section=add.closest('.profile-docs');
+      closeOtherSections(section);
       requestAnimationFrame(()=>{
-        const form=section.querySelector('.profile-doc-form');
-        if(form)enhanceCategoryForm(form,true);
+        const form=section?.querySelector('.profile-doc-form');
+        if(!form)return;
+        rebuildCategorySelect(form,{preserve:false});
+        const custom=form.querySelector('.profile-doc-custom');
+        if(custom)custom.hidden=true;
       });
     }
-  },true);
-
-  document.addEventListener('submit',event=>{
-    const form=event.target.closest('.profile-doc-form');
-    if(!form)return;
-    repairSectionIdentity(form.closest('.profile-docs'));
   },true);
 
   const observer=new MutationObserver(mutations=>{
     for(const mutation of mutations){
       for(const node of mutation.addedNodes){
-        if(node.nodeType===1)enhance(node,true);
+        if(node.nodeType===1)enhance(node);
       }
     }
   });
 
   function init(){
-    enhance(document,true);
+    enhance(document);
     observer.observe(document.documentElement,{childList:true,subtree:true});
   }
 
