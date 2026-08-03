@@ -102,8 +102,6 @@
     window.scrollTo(0,0);
     lastY = 0;
 
-    /* Nunca ocultamos la página. El estado temporal se limpia incluso si el manejador
-       original tarda o falla, evitando que la aplicación pueda quedarse en blanco. */
     requestAnimationFrame(() => {
       document.documentElement.classList.remove('hb-page-switching');
     });
@@ -157,7 +155,7 @@
   document.head.appendChild(style);
 
   function enhanceMemberPicker(){
-    if (typeof window.avatarHtml !== 'function' || typeof window.esc !== 'function') return;
+    if (typeof avatarHtml !== 'function' || typeof esc !== 'function') return;
 
     document.querySelectorAll('#personPicks .member-pick').forEach(label => {
       const input = label.querySelector('input[name="eventPerson"]');
@@ -168,7 +166,7 @@
       if (text.dataset.photoEnhanced === name) return;
 
       text.classList.add('member-pick-content');
-      text.innerHTML = `${window.avatarHtml(name)}<span class="member-pick-name">${window.esc(name)}</span>`;
+      text.innerHTML = `${avatarHtml(name)}<span class="member-pick-name">${esc(name)}</span>`;
       text.dataset.photoEnhanced = name;
     });
   }
