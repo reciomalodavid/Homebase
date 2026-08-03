@@ -1,6 +1,65 @@
 (()=>{
   'use strict';
 
+  const CATEGORY_LISTS={
+    person:['DNI','Pasaporte','Permiso de conducir','Tarjeta sanitaria','Medical clase 1','Visado','Seguro médico','Revisión médica','Vacuna'],
+    vehicle:['Seguro','Impuesto de circulación','ITV','Revisión','Cambio de aceite','Neumáticos','Garantía'],
+    pet:['Vacuna','Desparasitación','Seguro','Revisión veterinaria','Microchip'],
+    home:['Seguro del hogar','IBI','Comunidad','Revisión de caldera','Revisión de aire acondicionado','Certificado energético','Revisión de instalaciones','Alarma'],
+    default:['Documento','Seguro','Impuesto','Revisión','Mantenimiento']
+  };
+
+  function profiles(){
+    try{
+      const saved=JSON.parse(localStorage.getItem('homebase_profiles')||'[]');
+      if(Array.isArray(saved))return saved;
+    }catch{}
+    return Array.isArray(window.PEOPLE)?window.PEOPLE:[];
+  }
+
+  function normaliseType(value){
+    const type=String(value||'').trim().toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    if(['person','persona','people'].includes(type))return 'person';
+    if(['vehicle','vehiculo','vehiculos','car','coche'].includes(type))return 'vehicle';
+    if(['pet','mascota','mascotas'].includes(type))return 'pet';
+    if(['home','vivienda','casa','hogar'].includes(type))return 'home';
+    return 'default';
+  }
+
+  function profileTypeForForm(form){
+    const section=form.closest('.profile-docs');
+    const name=section?.dataset.profile||'';
+    const profile=profiles().find(item=>item?.name===name);
+    if(profile?.type)return normaliseType(profile.type);
+
+    const row=section?.previousElementSibling;
+    const label=row?.textContent||'';
+    if(/persona/i.test(label))return 'person';
+    if(/veh[ií]culo|coche/i.test(label))return 'vehicle';
+    if(/mascota/i.test(label))return 'pet';
+    if(/vivienda|casa|hogar/i.test(label))return 'home';
+    return 'default';
+  }
+
+  function enhanceCategoryForm(form){
+    if(!form||form.dataset.categoryLists==='1')return;
+    const select=form.elements.category;
+    if(!select)return;
+
+    const type=profileTypeForForm(form);
+    const values=CATEGORY_LISTS[type]||CATEGORY_LISTS.default;
+    const current=select.value;
+    const customCurrent=current==='__other'||(current&&!values.includes(current));
+
+    select.innerHTML='';
+    values.forEach(value=>select.add(new Option(value,value)));
+    select.add(new Option('Otro…','__other'));
+    select.value=customCurrent?'__other':(values.includes(current)?current:values[0]);
+    select.dispatchEvent(new Event('change',{bubbles:true}));
+    form.dataset.categoryLists='1';
+  }
+
   function enhanceReminderForm(form){
     if(!form||form.dataset.longReminders==='1')return;
     const select=form.elements.reminderDays;
@@ -63,7 +122,10 @@
   }
 
   function enhance(root=document){
-    root.querySelectorAll?.('.profile-doc-form').forEach(enhanceReminderForm);
+    root.querySelectorAll?.('.profile-doc-form').forEach(form=>{
+      enhanceCategoryForm(form);
+      enhanceReminderForm(form);
+    });
   }
 
   const observer=new MutationObserver(mutations=>{
