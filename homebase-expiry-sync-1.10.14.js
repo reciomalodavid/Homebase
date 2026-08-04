@@ -2,8 +2,10 @@
   'use strict';
 
   const STORAGE_KEY='homebase_expiries_v1';
+  const STAMP_KEY='homebase_expiries_updated_at';
   let applyingRemote=false;
   let saveTimer=null;
+  let unsubscribe=null;
 
   function readExpiries(){
     try{
@@ -12,77 +14,102 @@
     }catch{return []}
   }
 
-  function same(a,b){
-    try{return JSON.stringify(a||[])===JSON.stringify(b||[])}catch{return false}
+  function readStamp(){ return Number(localStorage.getItem(STAMP_KEY)||0); }
+  function syncCode(){ return String(localStorage.getItem('homebase_sync_code')||'').trim(); }
+
+  function db(){
+    try{return window.firebase?.firestore?.()||null}catch{return null}
   }
 
-  function scheduleExpiryCloudSave(){
+  function docRef(){
+    const code=syncCode(),store=db();
+    return code&&store?store.collection('homebaseSyncs').doc(code):null;
+  }
+
+  function notifyUpdated(source){
+    window.dispatchEvent(new CustomEvent('homebase:expiries-updated',{detail:{source}}));
+  }
+
+  async function writeExpiries(){
+    const ref=docRef();
+    if(!ref||applyingRemote)return;
+    const stamp=Math.max(Date.now(),readStamp()+1);
+    localStorage.setItem(STAMP_KEY,String(stamp));
+    try{
+      await ref.set({
+        expiries:readExpiries(),
+        expiriesVersion:2,
+        expiriesUpdatedAt:stamp
+      },{merge:true});
+    }catch(error){
+      console.error('Expiry cloud save',error);
+    }
+  }
+
+  function scheduleWrite(){
     if(applyingRemote)return;
     clearTimeout(saveTimer);
-    saveTimer=setTimeout(()=>{
-      try{
-        if(typeof window.scheduleCloudSave==='function')window.scheduleCloudSave();
-        else if(typeof scheduleCloudSave==='function')scheduleCloudSave();
-      }catch(error){console.error('Expiry cloud save',error)}
-    },350);
+    saveTimer=setTimeout(writeExpiries,450);
   }
 
-  function wrapCloudPayload(){
-    const original=window.cloudPayload;
-    if(typeof original!=='function'||original.__expirySyncWrapped)return false;
-    const wrapped=function(...args){
-      const payload=original.apply(this,args)||{};
-      return {...payload,expiries:readExpiries(),expiriesVersion:1};
-    };
-    wrapped.__expirySyncWrapped=true;
-    window.cloudPayload=wrapped;
-    return true;
+  function applySnapshot(data){
+    const remote=Array.isArray(data?.expiries)?data.expiries:null;
+    if(!remote)return;
+    const remoteStamp=Number(data.expiriesUpdatedAt||0);
+    const localStamp=readStamp();
+    if(remoteStamp&&remoteStamp<=localStamp)return;
+
+    applyingRemote=true;
+    try{
+      localStorage.setItem(STORAGE_KEY,JSON.stringify(remote));
+      localStorage.setItem(STAMP_KEY,String(remoteStamp||Date.now()));
+    }finally{
+      applyingRemote=false;
+    }
+    notifyUpdated('cloud');
+    setTimeout(()=>location.reload(),120);
   }
 
-  function wrapRemoteApply(){
-    const original=window.applyRemotePayload;
-    if(typeof original!=='function'||original.__expirySyncWrapped)return false;
-    const wrapped=function(data,...args){
-      const remote=Array.isArray(data?.expiries)?data.expiries:null;
-      const local=readExpiries();
-      const changed=remote&&!same(local,remote);
-      if(changed){
-        applyingRemote=true;
-        try{localStorage.setItem(STORAGE_KEY,JSON.stringify(remote))}
-        finally{applyingRemote=false}
-      }
-      const result=original.call(this,data,...args);
-      if(changed){
-        window.dispatchEvent(new CustomEvent('homebase:expiries-updated',{detail:{source:'cloud'}}));
-        setTimeout(()=>location.reload(),80);
-      }
-      return result;
-    };
-    wrapped.__expirySyncWrapped=true;
-    window.applyRemotePayload=wrapped;
-    return true;
+  function startListener(){
+    unsubscribe?.();
+    unsubscribe=null;
+    const ref=docRef();
+    if(!ref)return;
+    unsubscribe=ref.onSnapshot(snapshot=>{
+      if(snapshot.exists)applySnapshot(snapshot.data()||{});
+    },error=>console.error('Expiry cloud listener',error));
   }
 
   const originalSetItem=Storage.prototype.setItem;
-  if(!originalSetItem.__expirySyncWrapped){
+  if(!originalSetItem.__expiryDirectSyncWrapped){
     const wrappedSetItem=function(key,value){
       const previous=key===STORAGE_KEY?this.getItem(key):null;
       const result=originalSetItem.call(this,key,value);
       if(key===STORAGE_KEY&&previous!==String(value)&&!applyingRemote){
-        scheduleExpiryCloudSave();
-        window.dispatchEvent(new CustomEvent('homebase:expiries-updated',{detail:{source:'local'}}));
+        originalSetItem.call(this,STAMP_KEY,String(Date.now()));
+        scheduleWrite();
+        notifyUpdated('local');
       }
+      if(key==='homebase_sync_code'&&previous!==String(value))setTimeout(startListener,0);
       return result;
     };
-    wrappedSetItem.__expirySyncWrapped=true;
+    wrappedSetItem.__expiryDirectSyncWrapped=true;
     Storage.prototype.setItem=wrappedSetItem;
   }
 
-  function install(){
-    const payloadReady=wrapCloudPayload();
-    const remoteReady=wrapRemoteApply();
-    if(!payloadReady||!remoteReady)setTimeout(install,250);
+  window.addEventListener('online',()=>{startListener();scheduleWrite()});
+  window.addEventListener('focus',startListener);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)startListener()});
+
+  function init(){
+    startListener();
+    // Publica los vencimientos locales que ya existían antes de activar esta versión.
+    if(readExpiries().length&&!readStamp()){
+      localStorage.setItem(STAMP_KEY,String(Date.now()));
+      scheduleWrite();
+    }
   }
 
-  install();
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});
+  else init();
 })();
