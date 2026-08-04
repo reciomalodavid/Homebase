@@ -1,0 +1,78 @@
+(()=>{
+  'use strict';
+
+  function ensureStyles(){
+    if(document.getElementById('hb-profile-enhancements-style'))return;
+    const style=document.createElement('style');
+    style.id='hb-profile-enhancements-style';
+    style.textContent=`
+      #profilePhotoOverlay{border:0;padding:0;background:transparent;max-width:none;max-height:none;width:100%;height:100%;overflow:visible}
+      #profilePhotoOverlay::backdrop{background:rgba(9,15,24,.72);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px)}
+      .profile-photo-shell{width:100%;height:100%;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box}
+      .profile-photo-card{width:min(100%,420px);padding:18px;border-radius:26px;background:rgba(255,255,255,.96);box-shadow:0 28px 80px rgba(0,0,0,.32);text-align:center;color:#182230}
+      .profile-photo-card img{display:block;width:min(72vw,320px);height:min(72vw,320px);max-width:320px;max-height:320px;margin:0 auto;border-radius:24px;object-fit:cover;background:#eef1f4}
+      .profile-photo-card h3{margin:14px 0 4px;font-size:20px}.profile-photo-card p{margin:0 0 16px;color:#687587;font-size:13px}
+      .profile-photo-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}.profile-photo-actions button{min-height:48px;border:0;border-radius:13px;padding:12px;font-weight:850;display:flex;align-items:center;justify-content:center;text-align:center}
+      .profile-photo-change{background:#fff0df;color:#b85d00}.profile-photo-remove{background:#fff0f1;color:#c53d49}.profile-photo-close{grid-column:1/-1;background:#eef1f4;color:#182230}
+      #profileList .profile-row .avatar{cursor:zoom-in}
+      #profileList .profile-row .profile-upload,#profileList .profile-row .profile-edit,#profileList .profile-row .profile-remove{min-width:112px;height:48px;padding:0 14px!important;margin:0!important;display:inline-flex!important;align-items:center!important;justify-content:center!important;line-height:1.1!important;text-align:center!important;vertical-align:middle!important;box-sizing:border-box}
+      #profileList .profile-row{align-items:center}
+      @media(max-width:430px){#profileList .profile-row .profile-upload,#profileList .profile-row .profile-edit,#profileList .profile-row .profile-remove{min-width:96px;padding:0 10px!important;font-size:14px}}
+    `;
+    document.head.appendChild(style);
+  }
+
+  function ensurePhotoOverlay(){
+    let overlay=document.getElementById('profilePhotoOverlay');
+    if(overlay)return overlay;
+    overlay=document.createElement('dialog');
+    overlay.id='profilePhotoOverlay';
+    overlay.innerHTML=`<div class="profile-photo-shell"><div class="profile-photo-card"><img alt="Foto de perfil"><h3></h3><p>Foto del perfil</p><div class="profile-photo-actions"><button type="button" class="profile-photo-change">Cambiar foto</button><button type="button" class="profile-photo-remove">Eliminar foto</button><button type="button" class="profile-photo-close">Cerrar</button></div></div></div>`;
+    document.body.appendChild(overlay);
+    overlay.addEventListener('click',event=>{if(event.target===overlay||event.target.classList.contains('profile-photo-shell')||event.target.closest('.profile-photo-close'))closePhotoOverlay()});
+    overlay.addEventListener('cancel',event=>{event.preventDefault();closePhotoOverlay()});
+    return overlay;
+  }
+
+  function closePhotoOverlay(){
+    const overlay=document.getElementById('profilePhotoOverlay');
+    if(overlay?.open)overlay.close();
+    if(overlay)delete overlay.dataset.profileIndex;
+  }
+
+  function profileNameFromRow(row){return row?.querySelector('strong,.event-title,h3,h4')?.textContent?.trim()||'Perfil'}
+
+  function openPhotoOverlay(row){
+    const avatar=row?.querySelector('.avatar');
+    const image=avatar?.querySelector('img');
+    const upload=row?.querySelector('.profile-upload,input[type="file"]');
+    if(!image){if(upload?.matches('input[type="file"]'))upload.click();else upload?.click();return}
+    const overlay=ensurePhotoOverlay();
+    const rows=[...document.querySelectorAll('#profileList .profile-row')];
+    overlay.dataset.profileIndex=String(rows.indexOf(row));
+    overlay.querySelector('img').src=image.currentSrc||image.src;
+    overlay.querySelector('h3').textContent=profileNameFromRow(row);
+    overlay.querySelector('.profile-photo-remove').hidden=!row.querySelector('.profile-remove');
+    if(!overlay.open)overlay.showModal();
+  }
+
+  function currentPhotoRow(){
+    const overlay=document.getElementById('profilePhotoOverlay');
+    const index=Number(overlay?.dataset.profileIndex);
+    return Number.isInteger(index)?document.querySelectorAll('#profileList .profile-row')[index]:null;
+  }
+
+  document.addEventListener('click',event=>{
+    const avatar=event.target.closest('#profileList .profile-row .avatar');
+    if(avatar){event.preventDefault();event.stopPropagation();openPhotoOverlay(avatar.closest('.profile-row'));return}
+    if(event.target.closest('.profile-photo-change')){
+      const row=currentPhotoRow();closePhotoOverlay();
+      const control=row?.querySelector('.profile-upload,input[type="file"]');
+      if(control?.matches('input[type="file"]'))control.click();else control?.click();return;
+    }
+    if(event.target.closest('.profile-photo-remove')){const row=currentPhotoRow();closePhotoOverlay();row?.querySelector('.profile-remove')?.click()}
+  },true);
+
+  function init(){ensureStyles();ensurePhotoOverlay()}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
+})();
