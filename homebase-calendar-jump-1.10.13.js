@@ -66,20 +66,27 @@
     input.type='date';
     input.className='hb-native-date-input';
     input.setAttribute('aria-label','Buscar una fecha');
+    let pendingValue='';
 
     const prepare=()=>{
       const current=currentMonth()||{year:new Date().getFullYear(),month:new Date().getMonth()};
       input.value=localDateValue(current.year,current.month,1);
+      pendingValue='';
+    };
+
+    const applyPending=()=>{
+      const value=pendingValue||input.value;
+      pendingValue='';
+      if(!value)return;
+      const [year,month]=value.split('-').map(Number);
+      if(Number.isFinite(year)&&Number.isFinite(month))jumpTo(year,month-1);
     };
 
     input.addEventListener('pointerdown',prepare,{passive:true});
     input.addEventListener('touchstart',prepare,{passive:true});
     input.addEventListener('focus',prepare);
-    input.addEventListener('change',()=>{
-      if(!input.value)return;
-      const [year,month]=input.value.split('-').map(Number);
-      jumpTo(year,month-1);
-    });
+    input.addEventListener('change',()=>{pendingValue=input.value||'';});
+    input.addEventListener('blur',()=>setTimeout(applyPending,80));
 
     label.appendChild(input);
     return label;
