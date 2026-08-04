@@ -8,12 +8,12 @@
     const style=document.createElement('style');
     style.id='hb-calendar-jump-style';
     style.textContent=`
-      .calendar-title.hb-jump-ready{display:flex;align-items:center;justify-content:center;gap:10px}
-      .hb-native-date-trigger{position:relative;display:inline-grid;place-items:center;width:46px;height:46px;flex:0 0 46px;border:1px solid color-mix(in srgb,var(--accent,#d9781f) 42%,transparent);border-radius:14px;background:color-mix(in srgb,var(--accent,#d9781f) 10%,var(--surface,#fff));box-shadow:0 5px 14px rgba(0,0,0,.08);overflow:hidden}
-      .hb-native-date-trigger::before{content:'📅';font-size:25px;line-height:1;filter:saturate(1.08)}
-      .hb-native-date-trigger:active{transform:scale(.96);background:color-mix(in srgb,var(--accent,#d9781f) 18%,var(--surface,#fff))}
-      .hb-native-date-input{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;border:0;opacity:0;cursor:pointer;-webkit-appearance:none;appearance:none}
-      .hb-native-date-input::-webkit-calendar-picker-indicator{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;cursor:pointer}
+      .calendar-title.hb-jump-ready{display:flex!important;align-items:center!important;justify-content:center!important;gap:10px!important}
+      .hb-native-date-trigger{position:relative;display:inline-grid!important;place-items:center;width:48px;height:48px;flex:0 0 48px;border:1px solid color-mix(in srgb,var(--accent,#d9781f) 48%,transparent);border-radius:15px;background:color-mix(in srgb,var(--accent,#d9781f) 12%,var(--surface,#fff));box-shadow:0 5px 14px rgba(0,0,0,.10);overflow:hidden;vertical-align:middle}
+      .hb-native-date-trigger::before{content:'📅';display:block;font-size:27px;line-height:1;filter:saturate(1.08)}
+      .hb-native-date-trigger:active{transform:scale(.96);background:color-mix(in srgb,var(--accent,#d9781f) 19%,var(--surface,#fff))}
+      .hb-native-date-input{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;margin:0!important;padding:0!important;border:0!important;opacity:.001!important;cursor:pointer!important;-webkit-appearance:none!important;appearance:none!important;z-index:2}
+      .hb-native-date-input::-webkit-calendar-picker-indicator{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;margin:0!important;padding:0!important;cursor:pointer!important}
     `;
     document.head.appendChild(style);
   }
@@ -25,8 +25,9 @@
   function currentMonth(){
     const title=document.querySelector('.calendar-title');
     if(!title)return null;
-    const text=normalize(title.childNodes[0]?.textContent||title.textContent||'');
-    const match=text.match(/([a-z]+)\s+(\d{4})/i);
+    const clone=title.cloneNode(true);
+    clone.querySelectorAll('.hb-native-date-trigger').forEach(node=>node.remove());
+    const match=normalize(clone.textContent||'').match(/([a-z]+)\s+(\d{4})/i);
     if(!match)return null;
     const month=MONTHS.indexOf(match[1]);
     return month<0?null:{year:Number(match[2]),month};
@@ -41,11 +42,9 @@
     if(!current)return;
     const delta=(year-current.year)*12+(month-current.month);
     if(!delta)return;
-
     const buttons=document.querySelectorAll('.calendar-top>button');
     const button=delta>0?buttons[buttons.length-1]:buttons[0];
     if(!button)return;
-
     let remaining=Math.min(Math.abs(delta),2400);
     const step=()=>{
       const amount=Math.min(remaining,12);
@@ -56,20 +55,10 @@
     requestAnimationFrame(step);
   }
 
-  function enhance(){
-    ensureStyles();
-    const title=document.querySelector('.calendar-title');
-    if(!title||title.dataset.jumpReady==='native')return;
-
-    title.dataset.jumpReady='native';
-    title.classList.add('hb-jump-ready');
-    title.removeAttribute('role');
-    title.removeAttribute('tabindex');
-    title.setAttribute('aria-label','Mes mostrado y selector de fecha');
-
+  function buildTrigger(){
     const trigger=document.createElement('span');
     trigger.className='hb-native-date-trigger';
-    trigger.setAttribute('title','Buscar una fecha');
+    trigger.title='Buscar una fecha';
     trigger.setAttribute('aria-label','Abrir calendario para buscar una fecha');
 
     const input=document.createElement('input');
@@ -91,13 +80,35 @@
     });
 
     trigger.appendChild(input);
-    title.appendChild(trigger);
+    return trigger;
   }
 
-  const observer=new MutationObserver(()=>requestAnimationFrame(enhance));
+  function enhance(){
+    ensureStyles();
+    const title=document.querySelector('.calendar-title');
+    if(!title)return;
+
+    title.classList.add('hb-jump-ready');
+    title.setAttribute('aria-label','Mes mostrado y selector de fecha');
+
+    if(!title.querySelector('.hb-native-date-trigger')){
+      title.querySelectorAll('.hb-native-date-trigger').forEach(node=>node.remove());
+      title.appendChild(buildTrigger());
+    }
+  }
+
+  let scheduled=false;
+  const scheduleEnhance=()=>{
+    if(scheduled)return;
+    scheduled=true;
+    requestAnimationFrame(()=>{scheduled=false;enhance()});
+  };
+
+  const observer=new MutationObserver(scheduleEnhance);
   function init(){
     enhance();
-    observer.observe(document.documentElement,{childList:true,subtree:true});
+    observer.observe(document.documentElement,{childList:true,subtree:true,characterData:true});
+    setInterval(enhance,1200);
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});
