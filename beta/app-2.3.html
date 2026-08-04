@@ -29,9 +29,9 @@
  html=html.replaceAll('./service-worker.js','./beta/service-worker-disabled.js');
  const isolation=`<script>(()=>{const P='homebase_beta2__',g=Storage.prototype.getItem,s=Storage.prototype.setItem,r=Storage.prototype.removeItem,L=x=>x===localStorage;Storage.prototype.getItem=function(a){return g.call(this,L(this)?P+a:a)};Storage.prototype.setItem=function(a,b){return s.call(this,L(this)?P+a:a,b)};Storage.prototype.removeItem=function(a){return r.call(this,L(this)?P+a:a)};window.HOMEBASE_BETA=true;window.HOMEBASE_BETA_VERSION='2.3-live';})();<\/script>`;
  html=html.replace(/<head>/i,'<head>'+isolation);
- const css=['homebase-ui-1.8.3.css','homebase-fixes-1.9.2.css','homebase-quality-1.9.7.css','homebase-apple-glass-1.10.2.css','homebase-shell-1.10.3.css'].map(f=>`<link rel="stylesheet" href="./${f}?beta23live=4">`).join('')+'<link rel="stylesheet" href="./beta/beta-theme-2.3.css?beta23live=4">';
+ const css=['homebase-ui-1.8.3.css','homebase-fixes-1.9.2.css','homebase-quality-1.9.7.css','homebase-apple-glass-1.10.2.css','homebase-shell-1.10.3.css'].map(f=>`<link rel="stylesheet" href="./${f}?beta23live=5">`).join('')+'<link rel="stylesheet" href="./beta/beta-theme-2.3.css?beta23live=5">';
  html=html.replace('</head>',css+'</head>');
- const scripts=['homebase-ui-1.8.3.js','roster-sync-fix.js','homebase-quality-1.9.7.js','homebase-shell-1.10.3.js'].map(f=>`<script src="./${f}?beta23live=4"><\/script>`).join('');
+ const scripts=['homebase-ui-1.8.3.js','roster-sync-fix.js','homebase-quality-1.9.7.js','homebase-shell-1.10.3.js'].map(f=>`<script src="./${f}?beta23live=5"><\/script>`).join('');
  const memberPhotos='<script src="./beta/beta-member-photos.js?v=4"><\/script>';
  const expiries='<script src="./beta/beta-expiries-v2.js?v=2"><\/script>';
  const expiryUiFixes='<script src="./beta/beta-expiry-ui-fixes.js?v=3"><\/script>';
@@ -39,8 +39,9 @@
  const profileEnhancements='<script src="./beta/beta-profile-enhancements.js?v=4"><\/script>';
  const calendarJump='<script src="./beta/beta-calendar-jump.js?v=7"><\/script>';
  const stability='<script src="./beta/beta-stability-fixes.js?v=2"><\/script>';
- const brand=`<script>(()=>{const apply=()=>{const img=document.querySelector('.brand img');if(img){img.src='./beta/beta-icon.svg?beta23live=4';img.alt='Homebase Beta';}};document.readyState==='loading'?document.addEventListener('DOMContentLoaded',apply,{once:true}):apply();})();<\/script>`;
- html=html.replace('</body>',scripts+memberPhotos+expiries+expiryUiFixes+expiryPolish+profileEnhancements+calendarJump+stability+brand+'</body>');
+ const finalUi='<script src="./beta/beta-final-ui-fix.js?v=1"><\/script>';
+ const brand=`<script>(()=>{const apply=()=>{const img=document.querySelector('.brand img');if(img){img.src='./beta/beta-icon.svg?beta23live=5';img.alt='Homebase Beta';}};document.readyState==='loading'?document.addEventListener('DOMContentLoaded',apply,{once:true}):apply();})();<\/script>`;
+ html=html.replace('</body>',scripts+memberPhotos+expiries+expiryUiFixes+expiryPolish+profileEnhancements+calendarJump+stability+finalUi+brand+'</body>');
  document.open();document.write(html);document.close();
 }catch(error){document.body.innerHTML='<div class="loader"><div class="box"><div class="b">!</div><strong>No se pudo cargar la beta</strong><small>'+String(error.message||error)+'</small></div></div>';console.error(error)}})();
 </script>
