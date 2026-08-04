@@ -15,7 +15,7 @@
 <div class="loader"><div class="box"><div class="b">B</div><strong>Cargando Homebase Beta 2.3…</strong><small>Perfiles vinculados por ID estable.</small></div></div>
 <script>
 (async()=>{try{
- const response=await fetch('../index.html?beta23live='+Date.now(),{cache:'no-store'});
+ const response=await fetch('../index.html?beta23restore='+Date.now(),{cache:'no-store'});
  if(!response.ok)throw new Error('No se pudo cargar Homebase');
  let html=await response.text();
  html=html.replace(/<head>/i,'<head><base href="../">');
@@ -27,28 +27,23 @@
  html=html.replace(/collection\(["']homebaseSyncs["']\)\.doc\(code\)/g,'collection("homebaseSyncs").doc("BETA_"+code)');
  html=html.replace(/collection\(["']homebaseSyncs["']\)\.doc\(state\.syncCode\)/g,'collection("homebaseSyncs").doc("BETA_"+state.syncCode)');
  html=html.replaceAll('./service-worker.js','./beta/service-worker-disabled.js');
- const isolation=`<script>(()=>{const P='homebase_beta2__',g=Storage.prototype.getItem,s=Storage.prototype.setItem,r=Storage.prototype.removeItem,L=x=>x===localStorage;Storage.prototype.getItem=function(a){return g.call(this,L(this)?P+a:a)};Storage.prototype.setItem=function(a,b){return s.call(this,L(this)?P+a:a,b)};Storage.prototype.removeItem=function(a){return r.call(this,L(this)?P+a:a)};window.HOMEBASE_BETA=true;window.HOMEBASE_BETA_VERSION='2.3-live';})();<\/script>`;
+ const isolation=`<script>(()=>{const P='homebase_beta2__',g=Storage.prototype.getItem,s=Storage.prototype.setItem,r=Storage.prototype.removeItem,L=x=>x===localStorage;Storage.prototype.getItem=function(a){return g.call(this,L(this)?P+a:a)};Storage.prototype.setItem=function(a,b){return s.call(this,L(this)?P+a:a,b)};Storage.prototype.removeItem=function(a){return r.call(this,L(this)?P+a:a)};window.HOMEBASE_BETA=true;window.HOMEBASE_BETA_VERSION='2.3-restored';})();<\/script>`;
  html=html.replace(/<head>/i,'<head>'+isolation);
- const css=['homebase-ui-1.8.3.css','homebase-fixes-1.9.2.css','homebase-quality-1.9.7.css','homebase-apple-glass-1.10.2.css','homebase-shell-1.10.3.css'].map(f=>`<link rel="stylesheet" href="./${f}?beta23live=6">`).join('')+'<link rel="stylesheet" href="./beta/beta-theme-2.3.css?beta23live=6">';
+ const css=['homebase-ui-1.8.3.css','homebase-fixes-1.9.2.css','homebase-quality-1.9.7.css','homebase-apple-glass-1.10.2.css','homebase-shell-1.10.3.css'].map(f=>`<link rel="stylesheet" href="./${f}?beta23restore=1">`).join('')+'<link rel="stylesheet" href="./beta/beta-theme-2.3.css?beta23restore=1">';
  html=html.replace('</head>',css+'</head>');
- const scripts=['homebase-ui-1.8.3.js','roster-sync-fix.js','homebase-quality-1.9.7.js','homebase-shell-1.10.3.js'].map(f=>`<script src="./${f}?beta23live=6"><\/script>`).join('');
- const memberPhotos='<script src="./beta/beta-member-photos.js?v=4"><\/script>';
- const expiryResponse=await fetch('./beta/beta-expiries-v2.js?directDate=1',{cache:'no-store'});
- if(!expiryResponse.ok)throw new Error('No se pudo cargar el módulo de vencimientos');
- let expirySource=await expiryResponse.text();
- const oldMeta="${esc(p?.name||x.profileName||'Sin asignar')} · ${esc(statusFor(x).label)}";
- const newMeta="${esc(p?.name||x.profileName||'Sin asignar')} · ${esc(formatDate(x.expiryDate))} · ${esc(statusFor(x).label)}";
- if(!expirySource.includes(oldMeta))throw new Error('No se encontró la plantilla de vencimientos');
- expirySource=expirySource.replace(oldMeta,newMeta);
- const expiries='<script>'+expirySource.replace(/<\/script/gi,'<\\/script')+'<\/script>';
- const expiryUiFixes='<script src="./beta/beta-expiry-ui-fixes.js?v=3"><\/script>';
- const expiryPolish='<script src="./beta/beta-expiries-v2-polish.js?v=2"><\/script>';
- const profileEnhancements='<script src="./beta/beta-profile-enhancements.js?v=4"><\/script>';
- const calendarJump='<script src="./beta/beta-calendar-jump.js?v=7"><\/script>';
- const stability='<script src="./beta/beta-stability-fixes.js?v=2"><\/script>';
- const finalUi='<script src="./beta/beta-final-ui-fix.js?v=3"><\/script>';
- const brand=`<script>(()=>{const apply=()=>{const img=document.querySelector('.brand img');if(img){img.src='./beta/beta-icon.svg?beta23live=6';img.alt='Homebase Beta';}};document.readyState==='loading'?document.addEventListener('DOMContentLoaded',apply,{once:true}):apply();})();<\/script>`;
- html=html.replace('</body>',scripts+memberPhotos+expiries+expiryUiFixes+expiryPolish+profileEnhancements+calendarJump+stability+finalUi+brand+'</body>');
+ const scripts=['homebase-ui-1.8.3.js','roster-sync-fix.js','homebase-quality-1.9.7.js','homebase-shell-1.10.3.js'].map(f=>`<script src="./${f}?beta23restore=1"><\/script>`).join('');
+ const extras=[
+  'beta/beta-member-photos.js?v=4',
+  'beta/beta-expiries-v2.js?v=3',
+  'beta/beta-expiry-ui-fixes.js?v=3',
+  'beta/beta-expiries-v2-polish.js?v=2',
+  'beta/beta-profile-enhancements.js?v=4',
+  'beta/beta-calendar-jump.js?v=7',
+  'beta/beta-stability-fixes.js?v=2',
+  'beta/beta-final-ui-fix.js?v=4'
+ ].map(src=>`<script src="./${src}"><\/script>`).join('');
+ const brand=`<script>(()=>{const apply=()=>{const img=document.querySelector('.brand img');if(img){img.src='./beta/beta-icon.svg?beta23restore=1';img.alt='Homebase Beta';}};document.readyState==='loading'?document.addEventListener('DOMContentLoaded',apply,{once:true}):apply();})();<\/script>`;
+ html=html.replace('</body>',scripts+extras+brand+'</body>');
  document.open();document.write(html);document.close();
 }catch(error){document.body.innerHTML='<div class="loader"><div class="box"><div class="b">!</div><strong>No se pudo cargar la beta</strong><small>'+String(error.message||error)+'</small></div></div>';console.error(error)}})();
 </script>
