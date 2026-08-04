@@ -16,7 +16,7 @@
         width:100%!important;
         max-width:none!important;
         margin:0!important;
-        padding:8px 10px calc(8px + env(safe-area-inset-bottom))!important;
+        padding:5px 10px max(7px,env(safe-area-inset-bottom))!important;
         border-radius:0!important;
         border-top:1px solid rgba(60,60,67,.12)!important;
         background:rgba(255,255,255,.94)!important;
@@ -33,14 +33,14 @@
         flex-direction:column!important;
         align-items:center!important;
         justify-content:center!important;
-        min-height:58px!important;
-        padding:8px 4px!important;
+        min-height:56px!important;
+        padding:5px 4px!important;
         touch-action:manipulation!important;
         pointer-events:auto!important;
       }
-      .bottom-nav .nav-btn span{pointer-events:none!important}
-      .app{padding-bottom:calc(104px + env(safe-area-inset-bottom))!important}
-      .event-fab{bottom:calc(92px + env(safe-area-inset-bottom))!important}
+      .bottom-nav .nav-btn span{pointer-events:none!important;margin-bottom:2px!important}
+      .app{padding-bottom:calc(84px + env(safe-area-inset-bottom))!important}
+      .event-fab{bottom:calc(78px + env(safe-area-inset-bottom))!important}
     `;
     document.head.appendChild(style);
   }
