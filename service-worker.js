@@ -35,6 +35,8 @@ async function prepareAppHtml(response){
  if(!html.includes("homebase-profile-enhancements-1.10.16.js"))scripts.push('<script src="./homebase-profile-enhancements-1.10.16.js?v=11020"></script>');
  if(!html.includes("homebase-expiry-owner-fix-1.10.18.js"))scripts.push('<script src="./homebase-expiry-owner-fix-1.10.18.js?v=11020"></script>');
  if(!html.includes("homebase-expiry-owner-hotfix-1.10.19.js"))scripts.push('<script src="./homebase-expiry-owner-hotfix-1.10.19.js?v=11020"></script>');
+ if(!html.includes("production-tools.js"))scripts.push('<script src="./production-tools.js?v=11021"></script>');
+ if(!html.includes("homebase-expiries-1.10.21.js"))scripts.push('<script src="./homebase-expiries-1.10.21.js?v=11021"></script>');
  if(scripts.length)html=html.replace("</body>",`${scripts.join("\n")}\n</body>`);
  return new Response(html,{status:response.status,statusText:response.statusText,headers});
 }
