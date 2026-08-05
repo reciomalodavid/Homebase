@@ -1,0 +1,49 @@
+name: Sync Beta production changes
+
+on:
+  push:
+    paths:
+      - '.github/workflows/sync-beta-production-changes.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fix Beta expiry form lifecycle
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('beta/beta-expiries-v3.js')
+          s=p.read_text()
+          s=s.replace('.profile-doc-form{display:none;', '.profile-doc-form[hidden]{display:none!important}.profile-doc-form{display:none;', 1)
+          s=s.replace('<form class="profile-doc-form">', '<form class="profile-doc-form" hidden>', 1)
+          s=s.replace("form?.classList.remove('open');\n    if(form)syncCustom(form);", "form?.classList.remove('open');\n    if(form){form.hidden=true;syncCustom(form);}", 1)
+          s=s.replace("section.classList.add('open');\n    form.classList.add('open');", "section.classList.add('open');\n    form.hidden=false;\n    form.classList.add('open');", 1)
+          p.write_text(s)
+          PY
+          git config user.name "homebase-maintenance"
+          git config user.email "actions@users.noreply.github.com"
+          git add beta/beta-expiries-v3.js
+          git commit -m "fix(beta): close expiry forms after cancel or save"
+      - name: Load Beta backup control and refreshed expiries
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('beta/app-2.3.html')
+          s=p.read_text()
+          s=s.replace("'beta/beta-member-photos.js?v=5',", "'beta/beta-member-photos.js?v=5',\n  'beta/beta-backup-tools.js?v=1',", 1)
+          s=s.replace("'beta/beta-expiries-v3.js?v=1',", "'beta/beta-expiries-v3.js?v=2',", 1)
+          p.write_text(s)
+          PY
+          git add beta/app-2.3.html
+          git commit -m "feat(beta): load collapsible backup and form fixes"
+      - name: Remove one-shot workflow
+        run: |
+          rm .github/workflows/sync-beta-production-changes.yml
+          git add .github/workflows/sync-beta-production-changes.yml
+          git commit -m "chore: remove Beta parity installer"
+          git push
