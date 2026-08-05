@@ -1,7 +1,7 @@
-/* Homebase stable 1.10.20 · beta siempre desde red */
-const SHELL_CACHE="homebase-1.10.20";
-const RUNTIME_CACHE="homebase-1.10.20";
-const SHELL=["./","./index.html","./manifest.webmanifest","./apple-touch-icon.png","./icon-192.png","./icon-512.png","./roster-sync-fix.js","./homebase-ui-1.8.3.js","./homebase-ui-1.8.3.css","./homebase-fixes-1.9.2.css","./homebase-quality-1.9.7.js","./homebase-quality-1.9.7.css","./homebase-apple-glass-1.10.2.css","./homebase-shell-1.10.3.css","./homebase-shell-1.10.3.js","./homebase-nozoom-1.10.10.js","./homebase-calendar-jump-1.10.13.js","./homebase-expiry-sync-1.10.14.js","./homebase-profile-enhancements-1.10.16.js","./homebase-expiry-owner-fix-1.10.18.js","./homebase-expiry-owner-hotfix-1.10.19.js"];
+/* Homebase stable 1.10.21 · beta siempre desde red */
+const SHELL_CACHE="homebase-1.10.21";
+const RUNTIME_CACHE="homebase-1.10.21";
+const SHELL=["./backup.html","./production-tools.js","./homebase-expiries-1.10.21.js","./","./index.html","./manifest.webmanifest","./apple-touch-icon.png","./icon-192.png","./icon-512.png","./roster-sync-fix.js","./homebase-ui-1.8.3.js","./homebase-ui-1.8.3.css","./homebase-fixes-1.9.2.css","./homebase-quality-1.9.7.js","./homebase-quality-1.9.7.css","./homebase-apple-glass-1.10.2.css","./homebase-shell-1.10.3.css","./homebase-shell-1.10.3.js","./homebase-nozoom-1.10.10.js","./homebase-calendar-jump-1.10.13.js","./homebase-expiry-sync-1.10.14.js","./homebase-profile-enhancements-1.10.16.js","./homebase-expiry-owner-fix-1.10.18.js","./homebase-expiry-owner-hotfix-1.10.19.js"];
 
 async function prepareAppHtml(response){
  const headers=new Headers(response.headers);
