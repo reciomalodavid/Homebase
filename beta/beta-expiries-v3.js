@@ -100,7 +100,7 @@
       .profile-doc-status{display:inline-flex;margin-top:6px;padding:4px 7px;border-radius:999px;font-size:10px;font-weight:850}.profile-doc-status.ok{background:#e7f7ef;color:#24845f}.profile-doc-status.soon{background:#fff4d8;color:#a36a00}.profile-doc-status.urgent{background:#fff0df;color:#bd5d00}.profile-doc-status.expired{background:#fff0f1;color:#c53d49}.profile-doc-status.none{background:#eef1f4;color:#687587}
       .profile-doc-actions{display:flex;gap:6px}.profile-doc-actions button{border:0;border-radius:9px;padding:7px 9px;font-size:11px;font-weight:800}.profile-doc-edit{background:var(--accent-soft,#fff0df);color:var(--accent,#d9781f)}.profile-doc-delete{background:#fff0f1;color:var(--danger,#d84a55)}
       .profile-doc-add{width:100%;margin-top:9px;border:1px dashed color-mix(in srgb,var(--accent,#d9781f) 55%,transparent);border-radius:12px;padding:10px;background:color-mix(in srgb,var(--accent-soft,#fff0df) 65%,transparent);color:var(--accent,#d9781f);font-weight:850}
-      .profile-doc-form{display:none;margin-top:10px;padding:13px;border-radius:14px;background:var(--surface-2,#f5f5f5);border:1px solid var(--line,#ddd)}.profile-doc-form.open{display:block}.profile-doc-form label{display:block;margin:0 0 5px;font-size:12px;font-weight:800}.profile-doc-form input,.profile-doc-form select,.profile-doc-form textarea{width:100%;box-sizing:border-box}.profile-doc-form textarea{min-height:68px}
+      .profile-doc-form[hidden]{display:none!important}.profile-doc-form{display:none;margin-top:10px;padding:13px;border-radius:14px;background:var(--surface-2,#f5f5f5);border:1px solid var(--line,#ddd)}.profile-doc-form.open{display:block}.profile-doc-form label{display:block;margin:0 0 5px;font-size:12px;font-weight:800}.profile-doc-form input,.profile-doc-form select,.profile-doc-form textarea{width:100%;box-sizing:border-box}.profile-doc-form textarea{min-height:68px}
       .profile-doc-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.profile-doc-grid .full{grid-column:1/-1}.profile-doc-custom[hidden]{display:none}
       .profile-doc-form-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:11px}.profile-doc-form-actions button{border:0;border-radius:10px;padding:9px 12px;font-weight:800}.profile-doc-cancel{background:var(--surface,#fff);color:var(--text,#182230);border:1px solid var(--line,#ddd)!important}.profile-doc-save{background:var(--accent,#d9781f);color:#fff}
       .expiry-mini{display:inline-flex;align-items:center;justify-content:center;min-width:15px;height:15px;padding:0 2px;border-radius:6px;background:var(--expiry-color,#687587);color:#fff;font-size:9px;font-weight:900}
@@ -154,7 +154,7 @@
           return `<article class="profile-doc"><div><strong>${esc(item.title)}</strong><div class="profile-doc-date">${esc(formatDate(item.expiryDate))}</div><div class="profile-doc-owner">${esc(profile.name)}</div><span class="profile-doc-status ${status.key}">${esc(status.label)}</span></div><div class="profile-doc-actions"><button type="button" class="profile-doc-edit" data-doc-edit="${esc(item.id)}">Editar</button><button type="button" class="profile-doc-delete" data-doc-delete="${esc(item.id)}">Eliminar</button></div></article>`;
         }).join(''):'<div class="profile-docs-empty">Todavía no hay documentos ni vencimientos para este perfil.</div>'}</div>
         <button type="button" class="profile-doc-add" data-doc-add>＋ Añadir documento o vencimiento</button>
-        <form class="profile-doc-form">
+        <form class="profile-doc-form" hidden>
           <input type="hidden" name="profileId" value="${esc(profileId)}">
           <div class="profile-doc-grid">
             <div class="full"><label>Tipo</label><select name="category">${categoryOptions(profileId)}</select></div>
@@ -179,7 +179,7 @@
     const form=section?.querySelector('.profile-doc-form');
     form?.reset();
     form?.classList.remove('open');
-    if(form)syncCustom(form);
+    if(form){form.hidden=true;syncCustom(form);}
   }
 
   function openForm(section,item=null){
@@ -191,6 +191,7 @@
     activeProfileId=profileId;
     editingId=item?.id||'';
     section.classList.add('open');
+    form.hidden=false;
     form.classList.add('open');
     form.elements.profileId.value=profileId;
     form.elements.category.innerHTML=categoryOptions(profileId,item?.title||'');
