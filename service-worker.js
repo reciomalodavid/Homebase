@@ -1,6 +1,6 @@
-/* Homebase stable 1.10.23 · beta siempre desde red */
-const SHELL_CACHE="homebase-1.10.23";
-const RUNTIME_CACHE="homebase-1.10.23";
+/* Homebase stable 1.10.24 · beta siempre desde red */
+const SHELL_CACHE="homebase-1.10.24";
+const RUNTIME_CACHE="homebase-1.10.24";
 const SHELL=["./backup.html","./production-tools.js","./homebase-expiries-1.10.21.js","./","./index.html","./manifest.webmanifest","./apple-touch-icon.png","./icon-192.png","./icon-512.png","./roster-sync-fix.js","./homebase-ui-1.8.3.js","./homebase-ui-1.8.3.css","./homebase-fixes-1.9.2.css","./homebase-quality-1.9.7.js","./homebase-quality-1.9.7.css","./homebase-apple-glass-1.10.2.css","./homebase-shell-1.10.3.css","./homebase-shell-1.10.3.js","./homebase-nozoom-1.10.10.js","./homebase-calendar-jump-1.10.13.js","./homebase-expiry-sync-1.10.14.js","./homebase-profile-enhancements-1.10.16.js","./homebase-expiry-owner-fix-1.10.18.js","./homebase-expiry-owner-hotfix-1.10.19.js"];
 
 async function prepareAppHtml(response){
@@ -35,7 +35,7 @@ async function prepareAppHtml(response){
  if(!html.includes("homebase-profile-enhancements-1.10.16.js"))scripts.push('<script src="./homebase-profile-enhancements-1.10.16.js?v=11020"></script>');
  if(!html.includes("homebase-expiry-owner-fix-1.10.18.js"))scripts.push('<script src="./homebase-expiry-owner-fix-1.10.18.js?v=11020"></script>');
  if(!html.includes("homebase-expiry-owner-hotfix-1.10.19.js"))scripts.push('<script src="./homebase-expiry-owner-hotfix-1.10.19.js?v=11020"></script>');
- if(!html.includes("production-tools.js"))scripts.push('<script src="./production-tools.js?v=11023"></script>');
+ if(!html.includes("production-tools.js"))scripts.push('<script src="./production-tools.js?v=11024"></script>');
  if(!html.includes("homebase-expiries-1.10.21.js"))scripts.push('<script src="./homebase-expiries-1.10.21.js?v=11023"></script>');
  if(scripts.length)html=html.replace("</body>",`${scripts.join("\n")}\n</body>`);
  return new Response(html,{status:response.status,statusText:response.statusText,headers});
@@ -60,7 +60,6 @@ self.addEventListener("fetch",event=>{
  const url=new URL(request.url);
  if(request.method!=="GET")return;
 
- // La beta nunca debe recibir HTML ni módulos antiguos desde la caché de producción.
  if(url.origin===self.location.origin && url.pathname.includes('/beta/')){
   event.respondWith(fetch(new Request(request,{cache:"no-store"})).catch(()=>caches.match(request)));
   return;
