@@ -1,0 +1,65 @@
+name: Fix expiry form close
+
+on:
+  push:
+    paths:
+      - '.github/workflows/fix-expiry-form-close.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fix production expiry form lifecycle
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p=Path('homebase-expiries-1.10.21.js')
+          s=p.read_text()
+          s=s.replace(
+            ".profile-doc-form{display:none;margin-top:10px;padding:13px;border-radius:14px;background:var(--surface-2,#f5f5f5);border:1px solid var(--line,#ddd)}.profile-doc-form.open{display:block}",
+            ".profile-doc-form{display:none;margin-top:10px;padding:13px;border-radius:14px;background:var(--surface-2,#f5f5f5);border:1px solid var(--line,#ddd)}.profile-doc-form[hidden]{display:none!important}.profile-doc-form.open:not([hidden]){display:block!important}"
+          )
+          s=s.replace('<form class="profile-doc-form">','<form class="profile-doc-form" hidden>')
+          s=s.replace(
+            "    form?.reset();\n    form?.classList.remove('open');\n    if(form)syncCustom(form);",
+            "    if(form){\n      form.hidden=true;\n      form.classList.remove('open');\n      form.reset();\n      syncCustom(form);\n    }"
+          )
+          s=s.replace(
+            "    section.classList.add('open');\n    form.classList.add('open');",
+            "    section.classList.add('open');\n    form.hidden=false;\n    form.classList.add('open');"
+          )
+          s=s.replace(
+            "      section?.classList.add('open');\n      closeForm(section);",
+            "      section?.classList.add('open');\n      closeForm(section);\n      const savedForm=section?.querySelector('.profile-doc-form');\n      if(savedForm)savedForm.hidden=true;"
+          )
+          p.write_text(s)
+
+          sw=Path('service-worker.js')
+          t=sw.read_text()
+          t=t.replace('Homebase stable 1.10.22','Homebase stable 1.10.23')
+          t=t.replace('Homebase stable 1.10.21','Homebase stable 1.10.23')
+          t=t.replace('homebase-1.10.22','homebase-1.10.23')
+          t=t.replace('homebase-1.10.21','homebase-1.10.23')
+          t=t.replace(',"./homebase-expiry-form-fix-1.10.22.js"','')
+          t=t.replace('"./homebase-expiry-form-fix-1.10.22.js",','')
+          t='\n'.join(line for line in t.splitlines() if 'homebase-expiry-form-fix-1.10.22.js' not in line)+'\n'
+          t=t.replace('homebase-expiries-1.10.21.js?v=11021','homebase-expiries-1.10.21.js?v=11023')
+          t=t.replace('production-tools.js?v=11021','production-tools.js?v=11023')
+          sw.write_text(t)
+          PY
+      - name: Remove obsolete hotfix and workflow
+        run: |
+          rm -f homebase-expiry-form-fix-1.10.22.js
+          rm .github/workflows/fix-expiry-form-close.yml
+      - name: Commit definitive fix
+        run: |
+          git config user.name "homebase-maintenance"
+          git config user.email "actions@users.noreply.github.com"
+          git add homebase-expiries-1.10.21.js service-worker.js homebase-expiry-form-fix-1.10.22.js .github/workflows/fix-expiry-form-close.yml
+          git commit -m "fix: close expiry form after cancel and save"
+          git push
