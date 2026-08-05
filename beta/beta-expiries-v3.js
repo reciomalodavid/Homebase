@@ -14,7 +14,7 @@
   let items=[];
   let editingId='';
   let activeProfileId='';
-  let observer=null;
+  let refreshFrame=0;
 
   const esc=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[char]);
   const norm=value=>String(value||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
@@ -56,9 +56,9 @@
 
   function persist(){
     localStorage.setItem(STORAGE_KEY,JSON.stringify(items));
-    window.dispatchEvent(new CustomEvent('homebase:expiries-updated',{detail:{source:'beta-v3'}}));
     renderCalendarMarkers();
     renderSelectedDay();
+    window.dispatchEvent(new CustomEvent('homebase:expiries-updated',{detail:{source:'beta-v3'}}));
   }
 
   function parseDate(value){
@@ -101,7 +101,7 @@
       .profile-doc-actions{display:flex;gap:6px}.profile-doc-actions button{border:0;border-radius:9px;padding:7px 9px;font-size:11px;font-weight:800}.profile-doc-edit{background:var(--accent-soft,#fff0df);color:var(--accent,#d9781f)}.profile-doc-delete{background:#fff0f1;color:var(--danger,#d84a55)}
       .profile-doc-add{width:100%;margin-top:9px;border:1px dashed color-mix(in srgb,var(--accent,#d9781f) 55%,transparent);border-radius:12px;padding:10px;background:color-mix(in srgb,var(--accent-soft,#fff0df) 65%,transparent);color:var(--accent,#d9781f);font-weight:850}
       .profile-doc-form{display:none;margin-top:10px;padding:13px;border-radius:14px;background:var(--surface-2,#f5f5f5);border:1px solid var(--line,#ddd)}.profile-doc-form.open{display:block}.profile-doc-form label{display:block;margin:0 0 5px;font-size:12px;font-weight:800}.profile-doc-form input,.profile-doc-form select,.profile-doc-form textarea{width:100%;box-sizing:border-box}.profile-doc-form textarea{min-height:68px}
-      .profile-doc-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.profile-doc-grid .full{grid-column:1/-1}.profile-doc-owner-field{display:none!important}.profile-doc-custom[hidden]{display:none}
+      .profile-doc-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.profile-doc-grid .full{grid-column:1/-1}.profile-doc-custom[hidden]{display:none}
       .profile-doc-form-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:11px}.profile-doc-form-actions button{border:0;border-radius:10px;padding:9px 12px;font-weight:800}.profile-doc-cancel{background:var(--surface,#fff);color:var(--text,#182230);border:1px solid var(--line,#ddd)!important}.profile-doc-save{background:var(--accent,#d9781f);color:#fff}
       .expiry-mini{display:inline-flex;align-items:center;justify-content:center;min-width:15px;height:15px;padding:0 2px;border-radius:6px;background:var(--expiry-color,#687587);color:#fff;font-size:9px;font-weight:900}
       .expiry-day-block{margin-top:10px;padding-top:10px;border-top:1px solid var(--line,#ddd)}.expiry-day-title{font-size:12px;font-weight:850;color:var(--muted,#7e8793);margin-bottom:7px}.expiry-day-row{display:grid;grid-template-columns:4px 1fr;gap:9px;padding:9px 0}.expiry-day-bar{border-radius:99px;background:var(--expiry-color,#687587)}.expiry-day-meta{font-size:11px;color:var(--muted,#7e8793);margin-top:2px}
@@ -297,22 +297,55 @@
     list.addEventListener('submit',onSubmit);
   }
 
-  function refresh(){
-    bind();
+  function refreshCalendar(){
     renderCalendarMarkers();
     renderSelectedDay();
+  }
+
+  function queueRefresh({profiles:refreshProfiles=false,calendar=true}={}){
+    cancelAnimationFrame(refreshFrame);
+    refreshFrame=requestAnimationFrame(()=>{
+      refreshFrame=0;
+      bind();
+      if(refreshProfiles)renderProfiles();
+      if(calendar)refreshCalendar();
+    });
+  }
+
+  function wrapRender(name,options){
+    const original=window[name];
+    if(typeof original!=='function'||original.__betaExpiriesWrapped)return;
+    function wrapped(...args){
+      const result=original.apply(this,args);
+      queueRefresh(options);
+      return result;
+    }
+    wrapped.__betaExpiriesWrapped=true;
+    wrapped.__betaExpiriesOriginal=original;
+    window[name]=wrapped;
+  }
+
+  function connectToAppRenders(){
+    wrapRender('renderMonth',{calendar:true});
+    wrapRender('renderWeek',{calendar:true});
+    wrapRender('renderCalendar',{calendar:true});
+    wrapRender('renderProfiles',{profiles:true,calendar:false});
+    wrapRender('render',{calendar:true});
   }
 
   function init(){
     items=load();
     ensureStyles();
     bind();
+    connectToAppRenders();
     renderProfiles();
-    refresh();
-    document.getElementById('openProfilesRow')?.addEventListener('click',()=>setTimeout(renderProfiles,0));
-    observer=new MutationObserver(()=>requestAnimationFrame(refresh));
-    observer.observe(document.documentElement,{childList:true,subtree:true});
-    window.addEventListener('homebase:expiries-updated',refresh);
+    refreshCalendar();
+    document.getElementById('openProfilesRow')?.addEventListener('click',()=>queueRefresh({profiles:true,calendar:false}));
+    window.addEventListener('homebase:expiries-updated',event=>{
+      if(event.detail?.source==='beta-v3')return;
+      items=load();
+      queueRefresh({profiles:true,calendar:true});
+    });
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});
