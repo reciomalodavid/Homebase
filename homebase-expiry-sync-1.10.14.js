@@ -6,6 +6,7 @@
   let applyingRemote=false;
   let saveTimer=null;
   let unsubscribe=null;
+  let suspended=false;
 
   function readExpiries(){
     try{
@@ -32,7 +33,7 @@
 
   async function writeExpiries(){
     const ref=docRef();
-    if(!ref||applyingRemote)return;
+    if(!ref||applyingRemote||suspended)return;
     const stamp=Math.max(Date.now(),readStamp()+1);
     localStorage.setItem(STAMP_KEY,String(stamp));
     try{
@@ -47,12 +48,13 @@
   }
 
   function scheduleWrite(){
-    if(applyingRemote)return;
+    if(applyingRemote||suspended)return;
     clearTimeout(saveTimer);
     saveTimer=setTimeout(writeExpiries,450);
   }
 
   function applySnapshot(data){
+    if(suspended)return;
     const remote=Array.isArray(data?.expiries)?data.expiries:null;
     if(!remote)return;
     const remoteStamp=Number(data.expiriesUpdatedAt||0);
@@ -70,9 +72,16 @@
     setTimeout(()=>location.reload(),120);
   }
 
-  function startListener(){
+  function stopListener(){
+    clearTimeout(saveTimer);
+    saveTimer=null;
     unsubscribe?.();
     unsubscribe=null;
+  }
+
+  function startListener(){
+    stopListener();
+    if(suspended)return;
     const ref=docRef();
     if(!ref)return;
     unsubscribe=ref.onSnapshot(snapshot=>{
@@ -80,12 +89,23 @@
     },error=>console.error('Expiry cloud listener',error));
   }
 
+  function suspend(){
+    suspended=true;
+    stopListener();
+  }
+
+  function resume({write=false}={}){
+    suspended=false;
+    startListener();
+    if(write)scheduleWrite();
+  }
+
   const originalSetItem=Storage.prototype.setItem;
   if(!originalSetItem.__expiryDirectSyncWrapped){
     const wrappedSetItem=function(key,value){
       const previous=key===STORAGE_KEY?this.getItem(key):null;
       const result=originalSetItem.call(this,key,value);
-      if(key===STORAGE_KEY&&previous!==String(value)&&!applyingRemote){
+      if(key===STORAGE_KEY&&previous!==String(value)&&!applyingRemote&&!suspended){
         originalSetItem.call(this,STAMP_KEY,String(Date.now()));
         scheduleWrite();
         notifyUpdated('local');
@@ -97,13 +117,14 @@
     Storage.prototype.setItem=wrappedSetItem;
   }
 
-  window.addEventListener('online',()=>{startListener();scheduleWrite()});
-  window.addEventListener('focus',startListener);
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden)startListener()});
+  window.addEventListener('online',()=>{if(!suspended){startListener();scheduleWrite()}});
+  window.addEventListener('focus',()=>{if(!suspended)startListener()});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!suspended)startListener()});
+
+  window.HOMEBASE_EXPIRY_SYNC={suspend,resume,isSuspended:()=>suspended};
 
   function init(){
     startListener();
-    // Publica los vencimientos locales que ya existían antes de activar esta versión.
     if(readExpiries().length&&!readStamp()){
       localStorage.setItem(STAMP_KEY,String(Date.now()));
       scheduleWrite();
