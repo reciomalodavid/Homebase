@@ -3,8 +3,22 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Rollout strategy:
+    // - BETA_* home documents use the permanent authenticated/device-membership model.
+    // - Production home documents keep the current temporary access window until
+    //   production is migrated deliberately. This prevents a Beta security rollout
+    //   from breaking the live app.
+
     function signedIn() {
       return request.auth != null;
+    }
+
+    function isBetaHome(homeId) {
+      return homeId.matches('BETA_.*');
+    }
+
+    function productionWindowOpen() {
+      return request.time < timestamp.date(2026, 12, 31);
     }
 
     function hasMemberList(data) {
@@ -13,6 +27,7 @@ service cloud.firestore {
 
     function memberOfHome(homeId) {
       return signedIn()
+        && isBetaHome(homeId)
         && exists(/databases/$(database)/documents/homebaseSyncs/$(homeId))
         && get(/databases/$(database)/documents/homebaseSyncs/$(homeId)).data.authorizedUids is list
         && request.auth.uid in get(/databases/$(database)/documents/homebaseSyncs/$(homeId)).data.authorizedUids;
@@ -62,13 +77,19 @@ service cloud.firestore {
     }
 
     match /homebaseSyncs/{homeId} {
-      allow get: if isCurrentMember();
+      // Production remains on the temporary legacy rule during migration.
+      // BETA_* is explicitly excluded from this rule.
+      allow read, write: if !isBetaHome(homeId) && productionWindowOpen();
+
+      // Permanent Beta security model.
+      allow get: if isBetaHome(homeId) && isCurrentMember();
       allow list: if false;
 
-      allow create: if createsOwnHome();
+      allow create: if isBetaHome(homeId) && createsOwnHome();
 
-      allow update: if (isCurrentMember() && keepsCurrentUserAuthorized())
-                    || joinsWithoutRemovingMembers(homeId);
+      allow update: if isBetaHome(homeId)
+                    && ((isCurrentMember() && keepsCurrentUserAuthorized())
+                        || joinsWithoutRemovingMembers(homeId));
 
       allow delete: if false;
     }
@@ -80,6 +101,7 @@ service cloud.firestore {
 
       allow create: if signedIn()
                     && request.resource.data.homeId is string
+                    && request.resource.data.homeId.matches('BETA_.*')
                     && memberOfHome(request.resource.data.homeId)
                     && request.resource.data.createdByUid == request.auth.uid
                     && request.resource.data.claimedUid == null
@@ -100,6 +122,7 @@ service cloud.firestore {
                         || memberOfHome(resource.data.homeId));
     }
 
+    // Everything else is closed.
     match /{document=**} {
       allow read, write: if false;
     }
