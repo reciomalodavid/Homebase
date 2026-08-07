@@ -1,8 +1,10 @@
 (()=>{
 'use strict';
 
-const VERSION='2';
+const VERSION='3';
 const FIREBASE_PROJECT='homebase-85f2b';
+const INVITE_COLLECTION='homebaseDeviceInvites';
+const INVITE_TTL_MS=10*60*1000;
 let currentUid='';
 let authorizedUids=[];
 let authPromise=null;
@@ -17,9 +19,20 @@ function ensureStatusUi(){
   const box=document.createElement('div');
   box.id='betaSecurityStatus';
   box.style.cssText='margin:10px 0;padding:11px 12px;border-radius:13px;background:rgba(111,88,201,.08);border:1px solid rgba(111,88,201,.18);font-size:12px;line-height:1.35;color:#4b416f';
-  box.innerHTML='<strong>Seguridad Beta</strong><div id="betaSecurityStatusText" style="margin-top:3px">Preparando autenticación…</div>';
+  box.innerHTML=`<strong>Seguridad Beta</strong><div id="betaSecurityStatusText" style="margin-top:3px">Preparando autenticación…</div><div id="betaSecurityActions" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:9px"><button id="betaAuthorizeDevice" type="button" style="border:0;border-radius:10px;padding:8px 10px;background:#6f58c9;color:white;font-weight:800">Autorizar otro dispositivo</button><button id="betaJoinDevice" type="button" style="border:1px solid rgba(111,88,201,.28);border-radius:10px;padding:8px 10px;background:white;color:#5f4bb4;font-weight:800">Vincular con código temporal</button></div>`;
   details.prepend(box);
+  byId('betaAuthorizeDevice')?.addEventListener('click',createPairingInvite);
+  byId('betaJoinDevice')?.addEventListener('click',joinWithPairingCode);
+  refreshPairingUi();
   return box;
+}
+
+function refreshPairingUi(){
+  const linked=!!state?.syncCode;
+  const authorize=byId('betaAuthorizeDevice');
+  const join=byId('betaJoinDevice');
+  if(authorize) authorize.hidden=!linked;
+  if(join) join.hidden=linked;
 }
 
 function setStatus(text,isError=false){
@@ -28,6 +41,7 @@ function setStatus(text,isError=false){
   if(!el) return;
   el.textContent=text;
   el.style.color=isError?'#b42318':'#4b416f';
+  refreshPairingUi();
 }
 
 function errorText(error){
@@ -35,6 +49,7 @@ function errorText(error){
   if(code==='auth/operation-not-allowed') return `Firebase rechaza el acceso anónimo en el proyecto ${FIREBASE_PROJECT}. Comprueba que Anónimo esté habilitado en ese proyecto.`;
   if(code==='auth/network-request-failed') return 'Firebase Auth no pudo conectar con la red. Comprueba la conexión e inténtalo de nuevo.';
   if(code==='auth/unauthorized-domain') return 'Este dominio no está autorizado en Firebase Auth.';
+  if(code==='permission-denied') return 'Firestore ha rechazado la operación de seguridad. No cambies las reglas todavía y avisa antes de continuar.';
   if(code) return `Error de seguridad Beta: ${code}`;
   return `Error de seguridad Beta: ${String(error?.message||error||'desconocido')}`;
 }
@@ -55,7 +70,7 @@ function patchCloudPayload(){
     const payload=original();
     if(currentUid){
       payload.authorizedUids=mergeUid(authorizedUids,currentUid);
-      payload.securityVersion=1;
+      payload.securityVersion=2;
     }
     return payload;
   };
@@ -106,10 +121,108 @@ async function enrollCurrentDevice(){
   const FieldValue=firebase.firestore.FieldValue;
   await ref.set({
     authorizedUids:FieldValue.arrayUnion(currentUid),
-    securityVersion:1,
+    securityVersion:2,
     securityUpdatedAt:Date.now()
   },{merge:true});
   authorizedUids=mergeUid(authorizedUids,currentUid);
+}
+
+function randomToken(){
+  const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const bytes=new Uint8Array(20);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes,b=>alphabet[b%alphabet.length]).join('');
+}
+
+function formatToken(token){return String(token||'').replace(/(.{4})/g,'$1-').replace(/-$/,'')}
+function cleanToken(value){return String(value||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,20)}
+function betaHomeId(){return state?.syncCode?`BETA_${state.syncCode}`:''}
+
+async function createPairingInvite(){
+  try{
+    await ensureAnonymousAuth();
+    if(!cloudDb||!state?.syncCode) throw new Error('Este dispositivo todavía no está vinculado a un hogar Beta');
+    const token=randomToken();
+    const now=Date.now();
+    const ref=cloudDb.collection(INVITE_COLLECTION).doc(token);
+    await ref.set({
+      homeId:betaHomeId(),
+      createdByUid:currentUid,
+      createdAt:firebase.firestore.Timestamp.fromMillis(now),
+      expiresAt:firebase.firestore.Timestamp.fromMillis(now+INVITE_TTL_MS),
+      claimedUid:null,
+      securityVersion:2
+    });
+    const shown=formatToken(token);
+    setStatus(`Código temporal creado. Caduca en 10 minutos: ${shown}`);
+    try{
+      await navigator.clipboard.writeText(shown);
+      alert(`Código temporal copiado.\n\n${shown}\n\nEn el dispositivo nuevo: Homebase Beta → Más → Sincronización familiar → Vincular con código temporal.`);
+    }catch{
+      prompt('Copia este código temporal. Caduca en 10 minutos.',shown);
+    }
+  }catch(error){
+    console.error('Beta pairing invite',error);
+    setStatus(errorText(error),true);
+  }
+}
+
+async function joinWithPairingCode(){
+  const entered=prompt('Introduce el código temporal generado desde un dispositivo ya autorizado.');
+  const token=cleanToken(entered);
+  if(!token) return;
+  if(token.length!==20){setStatus('El código temporal no tiene el formato esperado.',true);return}
+  try{
+    await ensureAnonymousAuth();
+    if(!cloudDb) throw new Error('Firestore no está disponible');
+    setStatus('Comprobando código temporal…');
+    const inviteRef=cloudDb.collection(INVITE_COLLECTION).doc(token);
+    const inviteSnap=await inviteRef.get();
+    if(!inviteSnap.exists) throw new Error('Código temporal no válido o ya eliminado');
+    const invite=inviteSnap.data()||{};
+    const expiresMs=invite.expiresAt?.toMillis?.()||0;
+    if(!invite.homeId||!String(invite.homeId).startsWith('BETA_')) throw new Error('Invitación Beta inválida');
+    if(!expiresMs||expiresMs<Date.now()) throw new Error('El código temporal ha caducado');
+    if(invite.claimedUid&&invite.claimedUid!==currentUid) throw new Error('Este código temporal ya ha sido utilizado');
+
+    await inviteRef.update({
+      claimedUid:currentUid,
+      claimedAt:firebase.firestore.Timestamp.now()
+    });
+
+    const FieldValue=firebase.firestore.FieldValue;
+    const homeRef=cloudDb.collection('homebaseSyncs').doc(invite.homeId);
+    await homeRef.set({
+      authorizedUids:FieldValue.arrayUnion(currentUid),
+      securityJoinToken:token,
+      securityVersion:2,
+      securityUpdatedAt:Date.now()
+    },{merge:true});
+
+    state.syncCode=String(invite.homeId).slice('BETA_'.length);
+    localStorage.setItem('homebase_sync_code',state.syncCode);
+    authorizedUids=mergeUid([],currentUid);
+    patchCloudPayload();
+
+    const snap=await homeRef.get();
+    if(snap.exists&&typeof applyRemotePayload==='function'){
+      state.applyingRemote=true;
+      applyRemotePayload(snap.data()||{});
+      localStorage.setItem('homebase_v2_items',JSON.stringify(state.items));
+      localStorage.setItem('homebase_roster_meta',JSON.stringify(state.rosterMeta));
+      localStorage.setItem('homebase_profile_photos',JSON.stringify(profilePhotos));
+      state.applyingRemote=false;
+    }
+
+    try{await homeRef.set({securityJoinToken:FieldValue.delete()},{merge:true})}catch{}
+    try{await inviteRef.delete()}catch{}
+    if(typeof startCloudListener==='function') startCloudListener();
+    if(typeof render==='function') render();
+    setStatus('Dispositivo autorizado y vinculado correctamente en Beta.');
+  }catch(error){
+    console.error('Beta pairing join',error);
+    setStatus(errorText(error),true);
+  }
 }
 
 function bindProtectedActions(){
@@ -146,7 +259,7 @@ function bindProtectedActions(){
         setStatus('Autenticación activa · dispositivo vinculado y autorizado en Beta.');
       }catch(error){
         console.error('Beta secure link',error);
-        setStatus(errorText(error),true);
+        setStatus('No se pudo vincular con el código familiar. Cuando las reglas seguras estén activas, usa “Vincular con código temporal”.',true);
       }
     };
   }
@@ -179,7 +292,7 @@ async function start(){
       setStatus('Autenticación activa · este dispositivo está autorizado en Beta.');
     }else{
       authorizedUids=mergeUid([],currentUid);
-      setStatus('Autenticación activa · crea o vincula un hogar Beta para completar la autorización.');
+      setStatus('Autenticación activa · crea un hogar Beta o vincula este dispositivo con un código temporal.');
     }
   }catch(error){
     console.error('Beta security auth',error);
@@ -187,7 +300,7 @@ async function start(){
   }
 }
 
-window.HOMEBASE_BETA_SECURITY={version:VERSION,getUid:()=>currentUid,getAuthorizedUids:()=>[...authorizedUids],ensureAuth:ensureAnonymousAuth,enroll:enrollCurrentDevice};
+window.HOMEBASE_BETA_SECURITY={version:VERSION,getUid:()=>currentUid,getAuthorizedUids:()=>[...authorizedUids],ensureAuth:ensureAnonymousAuth,enroll:enrollCurrentDevice,createPairingInvite,joinWithPairingCode};
 
 document.readyState==='loading'?document.addEventListener('DOMContentLoaded',start,{once:true}):start();
 })();
