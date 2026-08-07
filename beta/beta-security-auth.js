@@ -1,7 +1,8 @@
 (()=>{
 'use strict';
 
-const VERSION='1';
+const VERSION='2';
+const FIREBASE_PROJECT='homebase-85f2b';
 let currentUid='';
 let authorizedUids=[];
 let authPromise=null;
@@ -27,6 +28,15 @@ function setStatus(text,isError=false){
   if(!el) return;
   el.textContent=text;
   el.style.color=isError?'#b42318':'#4b416f';
+}
+
+function errorText(error){
+  const code=String(error?.code||'');
+  if(code==='auth/operation-not-allowed') return `Firebase rechaza el acceso anónimo en el proyecto ${FIREBASE_PROJECT}. Comprueba que Anónimo esté habilitado en ese proyecto.`;
+  if(code==='auth/network-request-failed') return 'Firebase Auth no pudo conectar con la red. Comprueba la conexión e inténtalo de nuevo.';
+  if(code==='auth/unauthorized-domain') return 'Este dominio no está autorizado en Firebase Auth.';
+  if(code) return `Error de seguridad Beta: ${code}`;
+  return `Error de seguridad Beta: ${String(error?.message||error||'desconocido')}`;
 }
 
 function mergeUid(list,uid){
@@ -119,7 +129,7 @@ function bindProtectedActions(){
         setStatus('Autenticación activa · este dispositivo está autorizado en Beta.');
       }catch(error){
         console.error('Beta secure create',error);
-        setStatus('No se pudo activar la sincronización segura. Revisa que Anonymous Auth esté habilitado.',true);
+        setStatus(errorText(error),true);
       }
     };
   }
@@ -136,7 +146,7 @@ function bindProtectedActions(){
         setStatus('Autenticación activa · dispositivo vinculado y autorizado en Beta.');
       }catch(error){
         console.error('Beta secure link',error);
-        setStatus('No se pudo vincular. Con reglas seguras, el dispositivo debe estar autorizado por el hogar.',true);
+        setStatus(errorText(error),true);
       }
     };
   }
@@ -149,7 +159,7 @@ function bindProtectedActions(){
         await writeCloud();
       }catch(error){
         console.error('Beta secure sync',error);
-        setStatus('No se pudo sincronizar con autenticación.',true);
+        setStatus(errorText(error),true);
       }
     };
   }
@@ -173,7 +183,7 @@ async function start(){
     }
   }catch(error){
     console.error('Beta security auth',error);
-    setStatus('Anonymous Auth todavía no está habilitado en Firebase. Beta seguirá sin endurecer las reglas hasta completar ese paso.',true);
+    setStatus(errorText(error),true);
   }
 }
 
