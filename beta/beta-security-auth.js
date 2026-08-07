@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 
-const VERSION='4';
+const VERSION='5';
 const FIREBASE_PROJECT='homebase-85f2b';
 const INVITE_COLLECTION='homebaseDeviceInvites';
 const INVITE_TTL_MS=10*60*1000;
@@ -51,7 +51,7 @@ function errorText(error){
   if(code==='auth/operation-not-allowed') return `Firebase rechaza el acceso anónimo en el proyecto ${FIREBASE_PROJECT}. Comprueba que Anónimo esté habilitado en ese proyecto.`;
   if(code==='auth/network-request-failed') return 'Firebase Auth no pudo conectar con la red. Comprueba la conexión e inténtalo de nuevo.';
   if(code==='auth/unauthorized-domain') return 'Este dominio no está autorizado en Firebase Auth.';
-  if(code==='permission-denied') return 'Firestore ha rechazado la operación de seguridad. No cambies las reglas todavía y avisa antes de continuar.';
+  if(code==='permission-denied') return 'Firestore ha rechazado la operación de seguridad. El código puede haber caducado o este dispositivo no está autorizado.';
   if(code) return `Error de seguridad Beta: ${code}`;
   return `Error de seguridad Beta: ${String(error?.message||error||'desconocido')}`;
 }
@@ -134,9 +134,8 @@ async function joinWithPairingCode(){
     await ensureAnonymousAuth();if(!cloudDb)throw new Error('Firestore no está disponible');setStatus('Comprobando código temporal…');
     const inviteRef=cloudDb.collection(INVITE_COLLECTION).doc(token),inviteSnap=await inviteRef.get();
     if(!inviteSnap.exists)throw new Error('Código temporal no válido o ya eliminado');
-    const invite=inviteSnap.data()||{},expiresMs=invite.expiresAt?.toMillis?.()||0;
+    const invite=inviteSnap.data()||{};
     if(!invite.homeId||!String(invite.homeId).startsWith('BETA_'))throw new Error('Invitación Beta inválida');
-    if(!expiresMs||expiresMs<Date.now())throw new Error('El código temporal ha caducado');
     if(invite.claimedUid&&invite.claimedUid!==currentUid)throw new Error('Este código temporal ya ha sido utilizado');
     await inviteRef.update({claimedUid:currentUid,claimedAt:firebase.firestore.Timestamp.now()});
     const FieldValue=firebase.firestore.FieldValue,homeRef=cloudDb.collection('homebaseSyncs').doc(invite.homeId);
