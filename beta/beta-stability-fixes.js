@@ -41,11 +41,58 @@
       .bottom-nav .nav-btn span{pointer-events:none!important;margin-bottom:2px!important}
       .app{padding-bottom:calc(84px + env(safe-area-inset-bottom))!important}
       .event-fab{bottom:calc(78px + env(safe-area-inset-bottom))!important}
+      #morePage .hb-beta-management-section>.section-head{
+        margin-bottom:9px!important;
+      }
+      #morePage .hb-beta-management-section>.section-head h2{
+        margin:0!important;
+      }
     `;
     document.head.appendChild(style);
   }
 
-  function init(){installStyles()}
+  function improveMorePage(){
+    const morePage=document.getElementById('morePage');
+    const filtersRow=document.getElementById('openFiltersRow');
+    const profilesRow=document.getElementById('openProfilesRow');
+    const trashRow=document.getElementById('openTrashRow');
+    const syncSection=document.getElementById('syncSection');
+    if(!morePage||!filtersRow||!profilesRow||!trashRow||!syncSection)return;
+
+    const managementSection=filtersRow.closest('.section');
+    const managementCard=filtersRow.closest('.card');
+    if(!managementSection||!managementCard)return;
+
+    managementSection.classList.add('hb-beta-management-section');
+
+    let heading=managementSection.querySelector(':scope > .section-head');
+    if(!heading){
+      heading=document.createElement('div');
+      heading.className='section-head';
+      heading.innerHTML='<h2>Gestión familiar</h2><span></span>';
+      managementSection.insertBefore(heading,managementSection.firstChild);
+    }else{
+      const title=heading.querySelector('h2');
+      if(title)title.textContent='Gestión familiar';
+    }
+
+    const profileTitle=profilesRow.querySelector('.event-title');
+    const profileMeta=profilesRow.querySelector('.event-meta');
+    if(profileTitle)profileTitle.textContent='Perfiles y vencimientos';
+    if(profileMeta)profileMeta.textContent='Personas, mascotas, vehículos, viviendas y sus vencimientos';
+
+    managementCard.append(profilesRow,filtersRow,trashRow);
+
+    if(syncSection.nextElementSibling!==managementSection){
+      morePage.insertBefore(syncSection,managementSection);
+    }
+  }
+
+  function init(){
+    installStyles();
+    improveMorePage();
+  }
+
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});
   else init();
 })();
