@@ -1,0 +1,53 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function hasMemberList(data) {
+      return data.authorizedUids is list;
+    }
+
+    function isCurrentMember() {
+      return signedIn()
+        && hasMemberList(resource.data)
+        && request.auth.uid in resource.data.authorizedUids;
+    }
+
+    function createsOwnHome() {
+      return signedIn()
+        && hasMemberList(request.resource.data)
+        && request.resource.data.authorizedUids.size() == 1
+        && request.resource.data.authorizedUids[0] == request.auth.uid;
+    }
+
+    function keepsCurrentUserAuthorized() {
+      return hasMemberList(request.resource.data)
+        && request.auth.uid in request.resource.data.authorizedUids;
+    }
+
+    match /homebaseSyncs/{homeId} {
+      // Exact-document access only. Listing all family documents is blocked.
+      allow get: if isCurrentMember();
+      allow list: if false;
+
+      // A signed-in device may create a new home only if it authorizes itself.
+      allow create: if createsOwnHome();
+
+      // Existing members may update their home while keeping themselves authorized.
+      // This deliberately allows an authorized device to add/remove other device UIDs later.
+      allow update: if isCurrentMember() && keepsCurrentUserAuthorized();
+
+      // Home deletion is intentionally disabled from the client.
+      allow delete: if false;
+    }
+
+    // Everything else is denied by default.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
