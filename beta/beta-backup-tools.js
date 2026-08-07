@@ -10,7 +10,7 @@
   const CHUNK_SIZE=350000;
   const AUTO_MIN_INTERVAL_MS=5*60*1000;
   const AUTO_DEBOUNCE_MS=12000;
-  const PENDING_SYNC_SESSION_KEY='homebaseBetaRestorePendingSyncCode';
+  const PENDING_SYNC_KEY='homebase_restore_pending_sync_code';
   const LAST_HASH_KEY='homebase_backup_cloud_last_hash';
   const LAST_AT_KEY='homebase_backup_cloud_last_at';
 
@@ -50,6 +50,7 @@
       #homebaseBetaBackupCard .hb-cloud-status strong,#homebaseBetaBackupCard .hb-restore-preview strong,#homebaseBetaBackupCard .hb-restore-paused strong{display:block;margin-bottom:5px}
       #homebaseBetaBackupCard .hb-restore-meta{font-size:12px;color:var(--muted);line-height:1.45}
       #homebaseBetaBackupCard .hb-cloud-list{display:grid;gap:8px;margin-top:10px}
+      #homebaseBetaBackupCard .hb-cloud-list[hidden]{display:none}
       #homebaseBetaBackupCard .hb-cloud-row{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:left;border:1px solid var(--line);background:var(--surface);color:var(--text);border-radius:12px;padding:11px}
       #homebaseBetaBackupCard .hb-cloud-row span{display:block}
       #homebaseBetaBackupCard .hb-cloud-row small{display:block;margin-top:2px;color:var(--muted);font-size:11px}
@@ -128,7 +129,7 @@
   }
 
   async function ensureCloudReady(){
-    if(!window.HOMEBASE_BETA||!window.cloudDb&&!globalThis.cloudDb)throw new Error('Firebase todavía no está disponible.');
+    if(!window.HOMEBASE_BETA)throw new Error('Firebase todavía no está disponible.');
     if(!state?.syncCode)throw new Error('Vincula primero la sincronización familiar en Beta.');
     if(window.HOMEBASE_BETA_SECURITY?.ensureAuth)await window.HOMEBASE_BETA_SECURITY.ensureAuth();
     if(!firebase.auth?.().currentUser)throw new Error('No hay una sesión autenticada para guardar copias.');
@@ -253,7 +254,7 @@
       list.innerHTML=cloudRows.map(row=>{
         const s=row.summary||{};
         const label=new Date(Number(row.createdAt)||0).toLocaleString('es-ES');
-        const reason=row.reason==='pre-restore'?'Antes de restaurar':'Automática';
+        const reason=row.reason==='pre-restore'?'Antes de restaurar':row.reason==='manual'?'Guardada manualmente':'Automática';
         return `<button type="button" class="hb-cloud-row" data-cloud-restore="${escapeHtml(row.id)}"><span><strong>${escapeHtml(label)}</strong><small>${reason} · ${Number(s.events||0)} eventos · ${Number(s.tasks||0)} pendientes · ${Number(s.expiries||0)} vencimientos</small></span><b>›</b></button>`;
       }).join('');
       list.querySelectorAll('[data-cloud-restore]').forEach(button=>button.onclick=()=>previewCloudRestore(button.dataset.cloudRestore));
@@ -307,8 +308,8 @@
       const currentSyncCode=localStorage.getItem('homebase_sync_code')||'';
       const backupSyncCode=typeof data.localStorage.homebase_sync_code==='string'?data.localStorage.homebase_sync_code:'';
       const pendingSyncCode=backupSyncCode||currentSyncCode;
-      if(pendingSyncCode)sessionStorage.setItem(PENDING_SYNC_SESSION_KEY,pendingSyncCode);
-      else sessionStorage.removeItem(PENDING_SYNC_SESSION_KEY);
+      if(pendingSyncCode)localStorage.setItem(PENDING_SYNC_KEY,pendingSyncCode);
+      else localStorage.removeItem(PENDING_SYNC_KEY);
 
       localStorage.removeItem('homebase_sync_code');
       for(const key of RESTORE_DATA_KEYS)localStorage.removeItem(key);
@@ -327,18 +328,18 @@
   }
 
   function showRestorePausedState(card){
-    const pendingCode=sessionStorage.getItem(PENDING_SYNC_SESSION_KEY)||'';
+    const pendingCode=localStorage.getItem(PENDING_SYNC_KEY)||'';
     const justCompleted=sessionStorage.getItem('homebaseBetaRestoreJustCompleted')==='1';
     if(!pendingCode&&!justCompleted)return;
     sessionStorage.removeItem('homebaseBetaRestoreJustCompleted');
     const box=card.querySelector('#homebaseBetaRestorePaused');
     box.hidden=false;
-    box.innerHTML=`<strong>Restauración aplicada</strong><div class="hb-restore-meta">Comprueba eventos, perfiles, roster y vencimientos. La sincronización familiar está en pausa para proteger lo restaurado.</div>${pendingCode?'<div class="hb-backup-actions"><button type="button" class="hb-backup-secondary" id="homebaseBetaResumeSync">Reactivar sincronización familiar</button></div>':''}`;
+    box.innerHTML=`<strong>Restauración aplicada</strong><div class="hb-restore-meta">Comprueba eventos, perfiles, roster y vencimientos. La sincronización familiar está en pausa para proteger lo restaurado. El código queda guardado y no se perderá aunque cierres la app.</div>${pendingCode?'<div class="hb-backup-actions"><button type="button" class="hb-backup-secondary" id="homebaseBetaResumeSync">Reactivar sincronización familiar</button></div>':''}`;
     const resume=byId('homebaseBetaResumeSync');
     if(resume)resume.onclick=()=>{
       if(!confirm('¿Reactivar ahora la sincronización familiar? Firebase volverá a combinar los datos de esta Beta con el estado remoto.'))return;
       localStorage.setItem('homebase_sync_code',pendingCode);
-      sessionStorage.removeItem(PENDING_SYNC_SESSION_KEY);
+      localStorage.removeItem(PENDING_SYNC_KEY);
       location.reload();
     };
   }
@@ -378,14 +379,14 @@
         <span aria-hidden="true" style="font-size:20px;color:var(--muted);transition:transform .2s">⌄</span>
       </button>
       <div id="homebaseBetaBackupBody" class="hb-backup-body" hidden>
-        <p class="hb-backup-copy">Homebase Beta guarda versiones automáticamente cuando detecta cambios. Conserva hasta ${CLOUD_KEEP} versiones. La descarga JSON queda solo como copia manual de emergencia.</p>
+        <p class="hb-backup-copy">Homebase Beta guarda versiones automáticamente cuando detecta cambios y conserva hasta ${CLOUD_KEEP}. También puedes guardar una versión en cualquier momento.</p>
         <div class="hb-cloud-status"><strong>Backup automático</strong><div id="homebaseBetaCloudStatusText" class="hb-restore-meta">Preparando Firebase…</div></div>
         <div class="hb-backup-actions" style="margin-top:10px">
-          <button type="button" id="homebaseBetaCloudRefresh" class="hb-backup-secondary">Ver versiones guardadas</button>
+          <button type="button" id="homebaseBetaCloudRefresh" class="hb-backup-secondary" aria-expanded="false">Ver versiones guardadas</button>
           <button type="button" id="homebaseBetaCloudNow" class="hb-backup-secondary">Guardar una versión ahora</button>
         </div>
-        <div id="homebaseBetaCloudList" class="hb-cloud-list"></div>
-        <details style="margin-top:12px"><summary style="font-size:12px;color:var(--muted);cursor:pointer">Opciones manuales de emergencia</summary><div class="hb-backup-actions" style="margin-top:9px"><button type="button" id="homebaseBetaBackupButton" class="hb-backup-secondary">Descargar JSON</button><button type="button" id="homebaseBetaRestoreButton" class="hb-backup-secondary">Restaurar JSON</button></div><input type="file" id="homebaseBetaRestoreInput" accept="application/json,.json" hidden></details>
+        <div id="homebaseBetaCloudList" class="hb-cloud-list" hidden></div>
+        <details style="margin-top:12px"><summary style="font-size:12px;color:var(--muted);cursor:pointer">Opciones manuales de emergencia</summary><div class="hb-backup-actions" style="margin-top:9px"><button type="button" id="homebaseBetaBackupButton" class="hb-backup-secondary">Descargar copia manual</button><button type="button" id="homebaseBetaRestoreButton" class="hb-backup-secondary">Restaurar copia manual</button></div><input type="file" id="homebaseBetaRestoreInput" accept="application/json,.json" hidden></details>
         <div id="homebaseBetaRestorePreview" class="hb-restore-preview" hidden></div>
         <div id="homebaseBetaRestorePaused" class="hb-restore-paused" hidden></div>
       </div>`;
@@ -397,11 +398,26 @@
     toggle.addEventListener('click',event=>{
       event.preventDefault();event.stopPropagation();
       const opening=body.hidden;body.hidden=!opening;toggle.setAttribute('aria-expanded',String(opening));chevron.style.transform=opening?'rotate(180deg)':'';
-      if(opening)listCloudSnapshots();
     },true);
 
-    byId('homebaseBetaCloudRefresh').onclick=listCloudSnapshots;
-    byId('homebaseBetaCloudNow').onclick=async()=>{cloudStatus('Guardando versión…');await createCloudSnapshot({force:true,reason:'manual'});await listCloudSnapshots()};
+    const versionsButton=byId('homebaseBetaCloudRefresh');
+    const versionsList=byId('homebaseBetaCloudList');
+    versionsButton.onclick=async()=>{
+      const opening=versionsList.hidden;
+      versionsList.hidden=!opening;
+      versionsButton.setAttribute('aria-expanded',String(opening));
+      versionsButton.textContent=opening?'Ocultar versiones':'Ver versiones guardadas';
+      if(opening)await listCloudSnapshots();
+    };
+
+    byId('homebaseBetaCloudNow').onclick=async()=>{
+      cloudStatus('Guardando versión…');
+      await createCloudSnapshot({force:true,reason:'manual'});
+      versionsList.hidden=false;
+      versionsButton.setAttribute('aria-expanded','true');
+      versionsButton.textContent='Ocultar versiones';
+      await listCloudSnapshots();
+    };
 
     byId('homebaseBetaBackupButton').onclick=()=>{
       const data=snapshot();
@@ -416,7 +432,7 @@
       try{
         if(file.size>15*1024*1024)throw new Error('La copia supera 15 MB.');
         const data=validateBackup(JSON.parse(await file.text()));
-        renderDataPreview(data,'Copia JSON lista para restaurar',()=>restoreBackup(data,{cloud:false}));
+        renderDataPreview(data,'Copia manual lista para restaurar',()=>restoreBackup(data,{cloud:false}));
       }catch(error){alert(error?.message||'No se pudo leer esta copia.')}
     };
 
