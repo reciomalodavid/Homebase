@@ -27,12 +27,15 @@
  html=html.replace(/collection\(["']homebaseSyncs["']\)\.doc\(code\)/g,'collection("homebaseSyncs").doc("BETA_"+code)');
  html=html.replace(/collection\(["']homebaseSyncs["']\)\.doc\(state\.syncCode\)/g,'collection("homebaseSyncs").doc("BETA_"+state.syncCode)');
  html=html.replaceAll('./service-worker.js','./beta/service-worker-disabled.js');
- const isolation=`<script>(()=>{const P='homebase_beta2__',g=Storage.prototype.getItem,s=Storage.prototype.setItem,r=Storage.prototype.removeItem,L=x=>x===localStorage;Storage.prototype.getItem=function(a){return g.call(this,L(this)?P+a:a)};Storage.prototype.setItem=function(a,b){return s.call(this,L(this)?P+a:a,b)};Storage.prototype.removeItem=function(a){return r.call(this,L(this)?P+a:a)};window.HOMEBASE_BETA=true;window.HOMEBASE_BETA_VERSION='2.3-clean-expiries';})();<\/script>`;
+ html=html.replace('<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>','<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>');
+ const isolation=`<script>(()=>{const P='homebase_beta2__',g=Storage.prototype.getItem,s=Storage.prototype.setItem,r=Storage.prototype.removeItem,L=x=>x===localStorage;Storage.prototype.getItem=function(a){return g.call(this,L(this)?P+a:a)};Storage.prototype.setItem=function(a,b){return s.call(this,L(this)?P+a:a,b)};Storage.prototype.removeItem=function(a){return r.call(this,L(this)?P+a:a)};window.HOMEBASE_BETA=true;window.HOMEBASE_BETA_AUTH_REQUIRED=true;window.HOMEBASE_BETA_VERSION='2.3-clean-expiries';})();<\/script>`;
  html=html.replace(/<head>/i,'<head>'+isolation);
+ html=html.replace('if(state.syncCode){startCloudListener();refreshWhenActive()}','if(state.syncCode&&!window.HOMEBASE_BETA_AUTH_REQUIRED){startCloudListener();refreshWhenActive()}');
  const css=['homebase-ui-1.8.3.css','homebase-fixes-1.9.2.css','homebase-quality-1.9.7.css','homebase-apple-glass-1.10.2.css','homebase-shell-1.10.3.css'].map(f=>`<link rel="stylesheet" href="./${f}?beta23clean=1">`).join('')+'<link rel="stylesheet" href="./beta/beta-theme-2.3.css?beta23clean=1">';
  html=html.replace('</head>',css+'</head>');
  const scripts=['homebase-ui-1.8.3.js','roster-sync-fix.js','homebase-quality-1.9.7.js','homebase-shell-1.10.3.js'].map(f=>`<script src="./${f}?beta23clean=1"><\/script>`).join('');
  const extras=[
+  'beta/beta-security-auth.js?v=1',
   'beta/beta-member-photos.js?v=5',
   'beta/beta-backup-tools.js?v=1',
   'beta/beta-expiries-v3.js?v=2',
