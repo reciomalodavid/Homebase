@@ -83,8 +83,13 @@
 
     managementCard.append(profilesRow,filtersRow,trashRow);
 
-    if(syncSection.nextElementSibling!==managementSection){
-      morePage.insertBefore(syncSection,managementSection);
+    const backupCard=document.getElementById('homebaseBetaBackupCard');
+    if(backupCard&&backupCard.parentElement===morePage){
+      morePage.insertBefore(syncSection,backupCard);
+      morePage.insertBefore(managementSection,syncSection);
+    }else{
+      morePage.appendChild(syncSection);
+      morePage.insertBefore(managementSection,syncSection);
     }
   }
 
