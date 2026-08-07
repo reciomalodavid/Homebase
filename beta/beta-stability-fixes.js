@@ -47,8 +47,81 @@
       #morePage .hb-beta-management-section>.section-head h2{
         margin:0!important;
       }
+      #openFiltersRow{
+        cursor:pointer!important;
+      }
+      #openFiltersRow .hb-beta-filter-chevron{
+        font-size:20px!important;
+        color:var(--muted)!important;
+        transition:transform .2s ease!important;
+      }
+      #openFiltersRow[aria-expanded="true"] .hb-beta-filter-chevron{
+        transform:rotate(180deg)!important;
+      }
+      #hbBetaInlineFilters{
+        border-top:1px solid var(--line)!important;
+        padding:10px 14px 14px!important;
+      }
+      #hbBetaInlineFilters[hidden]{display:none!important}
+      #hbBetaInlineFilters .filter-list{
+        margin:0!important;
+      }
     `;
     document.head.appendChild(style);
+  }
+
+  function installInlineFilters(filtersRow,managementCard){
+    if(!filtersRow||!managementCard)return;
+
+    const filterDialog=document.getElementById('filterDialog');
+    const filterList=document.getElementById('filterList');
+    if(!filterList)return;
+
+    let inline=document.getElementById('hbBetaInlineFilters');
+    if(!inline){
+      inline=document.createElement('div');
+      inline.id='hbBetaInlineFilters';
+      inline.hidden=true;
+      managementCard.appendChild(inline);
+    }
+
+    if(filterList.parentElement!==inline)inline.appendChild(filterList);
+    if(filterDialog)filterDialog.hidden=true;
+
+    const meta=filtersRow.querySelector('.event-meta');
+    if(meta)meta.textContent='Elegir qué perfiles mostrar';
+
+    const trailing=filtersRow.lastElementChild;
+    if(trailing){
+      trailing.textContent='⌄';
+      trailing.classList.add('hb-beta-filter-chevron');
+    }
+
+    filtersRow.setAttribute('role','button');
+    filtersRow.setAttribute('tabindex','0');
+    filtersRow.setAttribute('aria-expanded','false');
+    filtersRow.setAttribute('aria-controls','hbBetaInlineFilters');
+
+    const toggle=()=>{
+      const opening=inline.hidden;
+      if(opening){
+        try{if(typeof window.renderFilters==='function')window.renderFilters()}catch(error){console.error('Homebase Beta filters',error)}
+      }
+      inline.hidden=!opening;
+      filtersRow.setAttribute('aria-expanded',String(opening));
+      try{if(opening&&typeof window.bindDynamic==='function')window.bindDynamic()}catch(error){console.error('Homebase Beta filters',error)}
+    };
+
+    filtersRow.onclick=event=>{
+      event.preventDefault();
+      event.stopPropagation();
+      toggle();
+    };
+    filtersRow.onkeydown=event=>{
+      if(event.key!=='Enter'&&event.key!==' ')return;
+      event.preventDefault();
+      toggle();
+    };
   }
 
   function improveMorePage(){
@@ -81,7 +154,8 @@
     if(profileTitle)profileTitle.textContent='Perfiles y vencimientos';
     if(profileMeta)profileMeta.textContent='Personas, mascotas, vehículos, viviendas y sus vencimientos';
 
-    managementCard.append(profilesRow,filtersRow,trashRow);
+    managementCard.append(profilesRow,trashRow,filtersRow);
+    installInlineFilters(filtersRow,managementCard);
 
     const backupCard=document.getElementById('homebaseBetaBackupCard');
     if(backupCard&&backupCard.parentElement===morePage){
