@@ -3,11 +3,10 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Rollout strategy:
-    // - BETA_* home documents use the permanent authenticated/device-membership model.
-    // - Production home documents keep the current temporary access window until
-    //   production is migrated deliberately. This prevents a Beta security rollout
-    //   from breaking the live app.
+    // Beta-first rollout:
+    // - BETA_* homes use strict authenticated device membership.
+    // - Production keeps its current authenticated temporary access window while
+    //   Beta is validated. Production will be migrated only after explicit approval.
 
     function signedIn() {
       return request.auth != null;
@@ -21,11 +20,17 @@ service cloud.firestore {
       return request.time < timestamp.date(2026, 12, 31);
     }
 
+    function legacyProductionAccess(homeId) {
+      return signedIn()
+        && !isBetaHome(homeId)
+        && productionWindowOpen();
+    }
+
     function hasMemberList(data) {
       return data.authorizedUids is list;
     }
 
-    function memberOfHome(homeId) {
+    function memberOfBetaHome(homeId) {
       return signedIn()
         && isBetaHome(homeId)
         && exists(/databases/$(database)/documents/homebaseSyncs/$(homeId))
@@ -77,11 +82,10 @@ service cloud.firestore {
     }
 
     match /homebaseSyncs/{homeId} {
-      // Production remains on the temporary legacy rule during migration.
-      // BETA_* is explicitly excluded from this rule.
-      allow read, write: if !isBetaHome(homeId) && productionWindowOpen();
+      // Production: preserve current authenticated access during Beta validation.
+      allow read, write: if legacyProductionAccess(homeId);
 
-      // Permanent Beta security model.
+      // Beta: strict permanent device-membership model.
       allow get: if isBetaHome(homeId) && isCurrentMember();
       allow list: if false;
 
@@ -94,6 +98,7 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // Temporary one-use pairing codes. Only Beta homes use these during this phase.
     match /homebaseDeviceInvites/{token} {
       allow get: if signedIn()
                  && resource.data.expiresAt > request.time;
@@ -102,7 +107,7 @@ service cloud.firestore {
       allow create: if signedIn()
                     && request.resource.data.homeId is string
                     && request.resource.data.homeId.matches('BETA_.*')
-                    && memberOfHome(request.resource.data.homeId)
+                    && memberOfBetaHome(request.resource.data.homeId)
                     && request.resource.data.createdByUid == request.auth.uid
                     && request.resource.data.claimedUid == null
                     && request.resource.data.expiresAt > request.time;
@@ -119,7 +124,25 @@ service cloud.firestore {
       allow delete: if signedIn()
                     && (resource.data.createdByUid == request.auth.uid
                         || resource.data.claimedUid == request.auth.uid
-                        || memberOfHome(resource.data.homeId));
+                        || memberOfBetaHome(resource.data.homeId));
+    }
+
+    // Versioned cloud backups.
+    // Beta backups inherit strict membership from BETA_<code>.
+    // Production backups keep the same temporary authenticated access as production
+    // sync so this Beta rollout cannot break the live recovery system.
+    match /homebaseBackups/{homeId} {
+      allow read, write: if false;
+
+      match /snapshots/{snapshotId} {
+        allow read, create, update, delete: if (isBetaHome(homeId) && memberOfBetaHome(homeId))
+                                            || legacyProductionAccess(homeId);
+
+        match /chunks/{chunkId} {
+          allow read, create, update, delete: if (isBetaHome(homeId) && memberOfBetaHome(homeId))
+                                              || legacyProductionAccess(homeId);
+        }
+      }
     }
 
     // Everything else is closed.
