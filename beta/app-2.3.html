@@ -72,7 +72,7 @@
   'beta/beta-profile-enhancements.js?v=5',
   'beta/beta-calendar-jump.js?v=8',
   'beta/beta-stability-fixes.js?v=3',
-  'beta/beta-quick-add.js?v=2'
+  'beta/beta-quick-add.js?v=3'
  ].map(src=>`<script src="./${src}"><\/script>`).join('');
  const brand=`<script>(()=>{const apply=()=>{const img=document.querySelector('.brand img');if(img){img.src='./beta/beta-icon.svg?beta23clean=1';img.alt='Homebase Beta';}};document.readyState==='loading'?document.addEventListener('DOMContentLoaded',apply,{once:true}):apply();})();<\/script>`;
  html=html.replace('</body>',scripts+extras+brand+'</body>');
