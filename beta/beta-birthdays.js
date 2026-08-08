@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 
-const VERSION='1';
+const VERSION='2';
 const EXTERNAL_MARKER='__homebase_birthday_external__';
 
 function todayIso(){
@@ -29,6 +29,16 @@ function readProfiles(){
 function defaultDate(){
   try{if(typeof state!=='undefined'&&state&&state.selectedDate)return state.selectedDate}catch{}
   return todayIso();
+}
+function currentItems(){
+  try{if(typeof state!=='undefined'&&state&&Array.isArray(state.items))return state.items}catch{}
+  try{return JSON.parse(localStorage.getItem('homebase_v2_items')||'[]')||[]}catch{return []}
+}
+function isExternalBirthdayItem(item){
+  return !!item&&isBirthdayLikeTitle(item.title)&&item.categoryOther===EXTERNAL_MARKER;
+}
+function externalBirthdayTitles(){
+  return new Set(currentItems().filter(isExternalBirthdayItem).map(item=>normalizeText(item.title)));
 }
 
 function installStyles(){
@@ -59,7 +69,7 @@ function buildDialog(){
     <p class="beta-birthday-note">Se guardará como día completo y se repetirá cada año hasta que lo elimines.</p>
     <div class="beta-birthday-field"><label for="betaBirthdayName">Cumpleaños de…</label><input id="betaBirthdayName" maxlength="100" required placeholder="Ej. Marta"></div>
     <div class="beta-birthday-field"><label for="betaBirthdayDate">Fecha</label><input id="betaBirthdayDate" type="date" required></div>
-    <div class="beta-birthday-field"><label for="betaBirthdayProfile">Relacionado con <span style="font-weight:500;color:var(--muted)">(opcional)</span></label><select id="betaBirthdayProfile"><option value="">Persona externa / sin perfil</option></select><div class="beta-birthday-hint">Elige un perfil solo si esa persona ya existe en Homebase.</div></div>
+    <div class="beta-birthday-field"><label for="betaBirthdayProfile">Relacionado con <span style="font-weight:500;color:var(--muted)">(opcional)</span></label><select id="betaBirthdayProfile"><option value="">Sin vincular a un perfil</option></select><div class="beta-birthday-hint">Puedes vincularlo a una persona o mascota que ya exista en Homebase.</div></div>
     <button class="beta-birthday-save" type="submit">Guardar cumpleaños</button>
   </form>`;
   dialog.querySelector('.beta-birthday-close').addEventListener('click',()=>dialog.close());
@@ -73,11 +83,13 @@ function fillProfiles(){
   const select=document.getElementById('betaBirthdayProfile');
   if(!select)return;
   const current=select.value;
-  select.innerHTML='<option value="">Persona externa / sin perfil</option>';
+  select.innerHTML='<option value="">Sin vincular a un perfil</option>';
   for(const p of readProfiles()){
-    if(p.type&&p.type!=='person')continue;
+    if(p.type!=='person'&&p.type!=='pet')continue;
     const option=document.createElement('option');
-    option.value=p.name;option.textContent=p.name;select.appendChild(option);
+    option.value=p.name;
+    option.textContent=(p.type==='pet'?'🐾 ':'')+p.name;
+    select.appendChild(option);
   }
   if([...select.options].some(o=>o.value===current))select.value=current;
 }
@@ -161,13 +173,47 @@ function saveBirthday(e){
       form.requestSubmit();
       setTimeout(()=>{
         if(nativeDialog)nativeDialog.style.visibility='';
+        cleanExternalBirthdayPresentation();
         if(nativeDialog?.open){
           console.warn('Birthday bridge validation kept native editor open');
           nativeDialog.style.visibility='';
         }
-      },120);
+      },140);
     }else if(nativeDialog){nativeDialog.style.visibility='';}
   },70);
+}
+
+function cleanExternalBirthdayPresentation(){
+  const titles=externalBirthdayTitles();
+  if(!titles.size)return;
+
+  for(const row of document.querySelectorAll('.event-row')){
+    const text=normalizeText(row.textContent);
+    const title=[...titles].find(t=>text.includes(t));
+    if(!title)continue;
+    for(const meta of row.querySelectorAll('.event-meta')){
+      const raw=normalizeText(meta.textContent);
+      if(!raw.includes('Familia'))continue;
+      const cleaned=raw.replace(/^Familia\s*·\s*/i,'').replace(/\s*·\s*Familia$/i,'').replace(/^Familia$/i,'').trim();
+      meta.textContent=cleaned;
+      if(!cleaned)meta.style.display='none';
+    }
+    for(const avatar of row.querySelectorAll('.avatar-stack,.avatar'))avatar.style.display='none';
+  }
+
+  const detail=document.getElementById('detailDialog');
+  if(detail?.open){
+    const title=normalizeText(document.getElementById('detailTitle')?.textContent);
+    if(titles.has(title)){
+      const grid=document.getElementById('detailGrid');
+      if(grid){
+        for(const child of [...grid.children]){
+          const text=normalizeText(child.textContent);
+          if(/^PARA\b/i.test(text)&&/Familia/i.test(text))child.style.display='none';
+        }
+      }
+    }
+  }
 }
 
 function enhanceDetectedDetail(){
@@ -182,12 +228,16 @@ function enhanceDetectedDetail(){
     badge.textContent=birthdayKind(title)==='Aniversario'?'💍 Aniversario detectado':'🎂 Cumpleaños detectado';
     titleEl.insertAdjacentElement('afterend',badge);
   }
+  cleanExternalBirthdayPresentation();
 }
 
 function installDetection(){
   const detail=document.getElementById('detailDialog');
-  if(detail)new MutationObserver(enhanceDetectedDetail).observe(detail,{attributes:true,subtree:true,childList:true,characterData:true});
-  document.addEventListener('click',()=>setTimeout(enhanceDetectedDetail,20),true);
+  if(detail)new MutationObserver(()=>{enhanceDetectedDetail();cleanExternalBirthdayPresentation()}).observe(detail,{attributes:true,subtree:true,childList:true,characterData:true});
+  const app=document.querySelector('.app')||document.body;
+  if(app)new MutationObserver(()=>cleanExternalBirthdayPresentation()).observe(app,{subtree:true,childList:true});
+  document.addEventListener('click',()=>setTimeout(()=>{enhanceDetectedDetail();cleanExternalBirthdayPresentation()},30),true);
+  setTimeout(cleanExternalBirthdayPresentation,250);
 }
 
 function install(){
