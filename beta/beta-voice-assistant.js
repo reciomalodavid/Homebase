@@ -2,7 +2,7 @@
 'use strict';
 if(!window.HOMEBASE_BETA)return;
 
-const VERSION='4';
+const VERSION='5';
 const MONTHS={enero:0,febrero:1,marzo:2,abril:3,mayo:4,junio:5,julio:6,agosto:7,septiembre:8,setiembre:8,octubre:9,noviembre:10,diciembre:11};
 const WEEKDAYS={domingo:0,lunes:1,martes:2,miercoles:3,'miércoles':3,jueves:4,viernes:5,sabado:6,'sábado':6};
 const WEEKDAY_LABELS={0:'domingo',1:'lunes',2:'martes',3:'miércoles',4:'jueves',5:'viernes',6:'sábado'};
@@ -15,10 +15,20 @@ let inputTimer=null;
 
 function clean(v){return String(v||'').replace(/\s+/g,' ').trim()}
 function fold(v){return clean(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase()}
+function escRe(v){return String(v||'').replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}
 function iso(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`}
 function formatDate(v){if(!v)return 'Sin fecha';const [y,m,d]=v.split('-').map(Number);return new Intl.DateTimeFormat('es-ES',{day:'numeric',month:'long',year:'numeric'}).format(new Date(y,m-1,d))}
 function profiles(){try{const p=JSON.parse(localStorage.getItem('homebase_profiles')||'[]');if(Array.isArray(p))return p.filter(x=>x?.name).map(x=>x.name)}catch{}return []}
-function profileFromText(text){const f=fold(text);return profiles().find(name=>f.includes(fold(name)))||''}
+function profileFromText(text){
+  const f=fold(text),names=profiles();
+  const exact=names.find(name=>new RegExp(`\\b${escRe(fold(name))}\\b`,'i').test(f));
+  if(exact)return exact;
+  const elia=names.find(name=>fold(name)==='elia');
+  if(elia&&/\bpara\s+(?:que\s+)?ella\b/.test(f))return elia;
+  const erick=names.find(name=>fold(name)==='erick');
+  if(erick&&/\bpara\s+(?:eric|erik)\b/.test(f))return erick;
+  return '';
+}
 function cap(v){const s=clean(v);return s?s.charAt(0).toUpperCase()+s.slice(1):s}
 
 function parseDate(text){
@@ -77,15 +87,32 @@ function stripDateAndTime(s){
     .replace(/\s+\b(?:hoy|mañana|manana|pasado mañana|pasado manana|lunes|martes|miércoles|miercoles|jueves|viernes|sábado|sabado|domingo)\b.*$/i,'')
     .replace(/\s+\bde\s+(?:las?\s+)?\d{1,2}(?::\d{2})?.*$/i,'');
 }
+function normalizeTaskPhrase(s){
+  let v=clean(s);
+  const rules=[
+    [/^se\s+lave\b/i,'lavarse'],[/^se\s+cepille\b/i,'cepillarse'],[/^se\s+duche\b/i,'ducharse'],
+    [/^limpie\b/i,'limpiar'],[/^recoja\b/i,'recoger'],[/^ordene\b/i,'ordenar'],[/^saque\b/i,'sacar'],[/^haga\b/i,'hacer']
+  ];
+  for(const [re,to] of rules){if(re.test(v)){v=v.replace(re,to);break}}
+  return clean(v);
+}
 function eventTitle(text,type,profile){
   let s=stripDateAndTime(clean(text));
   s=s.replace(/^(?:crea|crear|haz|hazme|añade|anade|pon|apunta|agenda|agrega)\s+(?:un|una|el|la)?\s*/i,'');
-  s=s.replace(/^(?:evento|cita|tarea(?:\s+pendiente)?|pendiente|recordatorio)\s*(?:de\s+)?/i,'');
+  s=s.replace(/^(?:evento\s+)?(?:cita|tarea(?:\s+pendiente)?|pendiente|recordatorio|evento)\s*(?:de\s+)?/i,'');
   s=s.replace(/^(?:para\s+m[ií]\s*)+/i,'');
-  if(profile){const esc=profile.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');s=s.replace(new RegExp(`^(?:para\\s+${esc}\\s*)+`,'i'),'');s=s.replace(new RegExp(`\\s+para\\s+${esc}(?=\\s|$)`,'ig'),' ')}
+  if(profile){
+    const esc=escRe(profile);
+    s=s.replace(new RegExp(`^(?:para\\s+${esc}\\s*)+`,'i'),'');
+    s=s.replace(new RegExp(`\\s+para\\s+${esc}(?=\\s|$)`,'ig'),' ');
+    if(fold(profile)==='elia')s=s.replace(/^(?:para\s+(?:que\s+)?ella\s*)+/i,'');
+    if(fold(profile)==='erick')s=s.replace(/^(?:para\s+(?:eric|erik)\s*)+/i,'');
+  }
+  s=s.replace(/^(?:para\s+que\s+)?(?:él|el|ella)\s+/i,'');
   s=s.replace(/^(?:para\s+m[ií]\s*)+/i,'').replace(/^de\s+/i,'').replace(/^para\s+/i,'');
   s=s.replace(/\s+(?:para\s+m[ií])$/i,'').replace(/\s+de$/i,'').replace(/\s+cada$/i,'');
   s=clean(s);
+  if(type==='task')s=normalizeTaskPhrase(s);
   return cap(s)||(type==='task'?'Pendiente':'Evento');
 }
 
