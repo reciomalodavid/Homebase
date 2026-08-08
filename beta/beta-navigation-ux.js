@@ -2,38 +2,38 @@
 'use strict';
 if(!window.HOMEBASE_BETA)return;
 
-const VERSION='1';
+const VERSION='2';
 
 function text(el){return (el?.textContent||'').replace(/\s+/g,' ').trim()}
 
 function renameMoreToManagement(){
-  document.querySelectorAll('.bottom-nav .nav-btn,.bottom-nav button,.bottom-nav a,.bottom-nav .nav-item').forEach(item=>{
-    const label=[...item.querySelectorAll('span')].find(span=>text(span)==='Más');
-    if(label)label.textContent='Gestión';
-    else if(text(item)==='Más')item.textContent='Gestión';
-  });
+  const nav=document.querySelector('.bottom-nav [data-page="morePage"]');
+  if(nav){
+    const icon=nav.querySelector('span');
+    nav.childNodes.forEach(node=>{
+      if(node.nodeType===Node.TEXT_NODE && node.textContent.trim()==='Más')node.textContent='Gestión';
+    });
+    nav.setAttribute('aria-label','Gestión');
+    if(icon&&text(nav).includes('Más')){
+      nav.innerHTML=icon.outerHTML+'Gestión';
+    }
+  }
 
-  document.querySelectorAll('.page h1,.page .hero-row h1').forEach(title=>{
-    if(text(title)==='Más')title.textContent='Gestión';
-  });
+  const title=document.querySelector('#morePage .hero-row h1,#morePage h1');
+  if(title&&text(title)==='Más')title.textContent='Gestión';
 }
 
-function pendingPage(){
-  const heading=[...document.querySelectorAll('.page h1,.page .hero-row h1')].find(el=>text(el)==='Pendientes');
-  return heading?.closest('.page')||null;
-}
+function pendingPage(){return document.getElementById('tasksPage')}
 
 function hidePendingHeroNewButton(){
   const page=pendingPage();
   if(!page)return;
-  page.querySelectorAll('button,.new-btn,#newBtn').forEach(button=>{
-    const label=text(button).replace(/^\+\s*/,'').trim();
-    if(label==='Nuevo'){
-      button.hidden=true;
-      button.style.setProperty('display','none','important');
-      button.setAttribute('aria-hidden','true');
-    }
-  });
+  const button=page.querySelector('#newTask,.new-btn');
+  if(button){
+    button.hidden=true;
+    button.style.setProperty('display','none','important');
+    button.setAttribute('aria-hidden','true');
+  }
 }
 
 function keepGlobalQuickAddVisible(){
