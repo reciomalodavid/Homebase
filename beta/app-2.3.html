@@ -56,7 +56,7 @@
      return r.call(this,P+a);
    };
  }
- window.HOMEBASE_BETA=true;window.HOMEBASE_BETA_AUTH_REQUIRED=true;window.HOMEBASE_BETA_VERSION='2.3-storage-safe';window.HOMEBASE_BETA_LOADED_BUILD=2319;
+ window.HOMEBASE_BETA=true;window.HOMEBASE_BETA_AUTH_REQUIRED=true;window.HOMEBASE_BETA_VERSION='2.3-storage-safe';window.HOMEBASE_BETA_LOADED_BUILD=2320;
 })();<\/script>`;
  html=html.replace(/<head>/i,'<head>'+isolation);
  html=html.replace('if(state.syncCode){startCloudListener();refreshWhenActive()}','if(state.syncCode&&!window.HOMEBASE_BETA_AUTH_REQUIRED){startCloudListener();refreshWhenActive()}');
@@ -78,7 +78,7 @@
   'beta/beta-navigation-ux.js?v=2',
   'beta/beta-birthdays.js?v=2',
   'beta/beta-external-birthday-display.js?v=2',
-  'beta/beta-voice-assistant.js?v=9',
+  'beta/beta-voice-assistant.js?v=10',
   'beta/beta-bottom-nav-fix.js?v=2',
   'beta/beta-update-checker.js?v=5'
  ].map(src=>`<script src="./${src}"><\/script>`).join('');
