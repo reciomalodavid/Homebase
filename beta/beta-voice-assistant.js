@@ -2,7 +2,7 @@
 'use strict';
 if(!window.HOMEBASE_BETA)return;
 
-const VERSION='9';
+const VERSION='10';
 const MONTHS={enero:0,febrero:1,marzo:2,abril:3,mayo:4,junio:5,julio:6,agosto:7,septiembre:8,setiembre:8,octubre:9,noviembre:10,diciembre:11};
 const WEEKDAYS={domingo:0,lunes:1,martes:2,miercoles:3,'miércoles':3,jueves:4,viernes:5,sabado:6,'sábado':6};
 const WEEKDAY_LABELS={0:'domingo',1:'lunes',2:'martes',3:'miércoles',4:'jueves',5:'viernes',6:'sábado'};
@@ -39,9 +39,7 @@ function profileFromText(text){
 }
 
 function possibleUnknownPerson(text){
-  const f=fold(text);
-  const known=profiles().map(fold);
-  const m=f.match(/\bpara\s+([a-záéíóúñ]+)\b/);
+  const f=fold(text),known=profiles().map(fold),m=f.match(/\bpara\s+([a-záéíóúñ]+)\b/);
   if(!m)return '';
   const word=m[1];
   if(['mi','que','el','la','los','las','hoy','manana','mañana','un','una'].includes(word))return '';
@@ -66,10 +64,7 @@ function parseDate(text){
   return '';
 }
 
-function hourValue(token){
-  if(/^\d{1,2}$/.test(token))return Number(token);
-  return NUMBER_WORDS[fold(token)]??null;
-}
+function hourValue(token){if(/^\d{1,2}$/.test(token))return Number(token);return NUMBER_WORDS[fold(token)]??null}
 function normalizeHour(hour,min=0,period=''){
   hour=Number(hour);min=Number(min||0);if(hour>23||min>59)return '';
   const p=fold(period);
@@ -78,31 +73,35 @@ function normalizeHour(hour,min=0,period=''){
   return `${String(hour).padStart(2,'0')}:${String(min).padStart(2,'0')}`;
 }
 function parseOneSpokenTime(token,extra='',period=''){
-  let h=hourValue(token);if(h===null)return '';
-  let min=0;const e=fold(extra);
-  if(/media/.test(e))min=30;else if(/cuarto/.test(e))min=15;
+  const h=hourValue(token);if(h===null)return '';
+  let min=0;const e=fold(extra);if(/media/.test(e))min=30;else if(/cuarto/.test(e))min=15;
   return normalizeHour(h,min,period);
+}
+function hasExplicitPeriod(period){return /manana|tarde|noche|mediodia|medio dia/.test(fold(period))}
+function timeResult(start,end='',period=''){
+  const h=Number(String(start||'').slice(0,2));
+  return {start,end,ambiguous:!!start&&!hasExplicitPeriod(period)&&h>=1&&h<=12,rawPeriod:period||''};
 }
 function parseTimes(text){
   const f=fold(text);
   let m=f.match(/\bde\s+(?:las?\s+)?(\d{1,2})(?::(\d{2}))?(?:\s+(de\s+la\s+manana|del\s+mediodia|de\s+la\s+tarde|de\s+la\s+noche))?\s+(?:a|hasta)\s+(?:las?\s+)?(\d{1,2})(?::(\d{2}))?(?:\s+(de\s+la\s+manana|del\s+mediodia|de\s+la\s+tarde|de\s+la\s+noche))?\b/);
-  if(m)return {start:normalizeHour(m[1],m[2],m[3]),end:normalizeHour(m[4],m[5],m[6])};
+  if(m){const s=normalizeHour(m[1],m[2],m[3]),e=normalizeHour(m[4],m[5],m[6]);return {start:s,end:e,ambiguous:(!hasExplicitPeriod(m[3])&&Number(m[1])<=12)||(!hasExplicitPeriod(m[6])&&Number(m[4])<=12)}}
+  m=f.match(/\b(?:a\s+las?|a\s+la)\s+(\d{1,2}):(\d{2})(?:\s+(de\s+la\s+manana|del\s+mediodia|de\s+la\s+tarde|de\s+la\s+noche))?\b/);
+  if(m)return timeResult(normalizeHour(m[1],m[2],m[3]),'',m[3]);
   const word='(una|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce|trece|catorce|quince|dieciseis|diecisiete|dieciocho|diecinueve|veinte|veintiuna|veintiuno|veintidos|veintitres|\\d{1,2})';
   m=f.match(new RegExp(`\\b(?:a\\s+las?|a\\s+la)\\s+${word}(\\s+y\\s+(?:media|cuarto))?(?:\\s+(de\\s+la\\s+manana|del\\s+mediodia|de\\s+la\\s+tarde|de\\s+la\\s+noche))?\\b`));
-  if(m)return {start:parseOneSpokenTime(m[1],m[2],m[3]),end:''};
+  if(m)return timeResult(parseOneSpokenTime(m[1],m[2],m[3]),'',m[3]);
   m=f.match(/\b(\d{1,2})(?::(\d{2}))?\s*[-–]\s*(\d{1,2})(?::(\d{2}))?\b/);
-  if(m)return {start:normalizeHour(m[1],m[2]),end:normalizeHour(m[3],m[4])};
-  m=f.match(/\b(?:a\s+las?|a\s+la)\s+(\d{1,2})(?::(\d{2}))?(?:\s+(de\s+la\s+manana|del\s+mediodia|de\s+la\s+tarde|de\s+la\s+noche))?\b/);
-  return m?{start:normalizeHour(m[1],m[2],m[3]),end:''}:{start:'',end:''};
+  if(m)return {start:normalizeHour(m[1],m[2]),end:normalizeHour(m[3],m[4]),ambiguous:Number(m[1])<=12||Number(m[3])<=12};
+  m=f.match(/\b(?:a\s+las?|a\s+la)\s+(\d{1,2})(?:\s+(de\s+la\s+manana|del\s+mediodia|de\s+la\s+tarde|de\s+la\s+noche))?\b/);
+  return m?timeResult(normalizeHour(m[1],0,m[2]),'',m[2]):{start:'',end:'',ambiguous:false};
 }
 
 function parseRepeat(text){
   const f=fold(text);
   if(/\b(?:cada\s+dia|todos\s+los\s+dias|diariamente)\b/.test(f))return {frequency:'daily',days:[]};
   if(/\b(?:cada\s+ano|cada\s+año|anualmente)\b/.test(f))return {frequency:'yearly',days:[]};
-  for(const [name,index] of Object.entries(WEEKDAYS)){
-    const n=fold(name);if(new RegExp(`\\b(?:cada|todos\\s+los|todas\\s+las)\\s+${n}s?\\b`).test(f))return {frequency:'weekly',days:[index]};
-  }
+  for(const [name,index] of Object.entries(WEEKDAYS)){const n=fold(name);if(new RegExp(`\\b(?:cada|todos\\s+los|todas\\s+las)\\s+${n}s?\\b`).test(f))return {frequency:'weekly',days:[index]}}
   return null;
 }
 
@@ -120,12 +119,8 @@ function removeKnownStructure(text,profile){
 
 function normalizeVerbPhrase(s){
   let v=clean(s).replace(/^(?:que\s+)?(?:yo|él|el|ella)\s+/i,'');
-  const rules=[
-    [/^se\s+lave\b/i,'lavarse'],[/^se\s+cepille\b/i,'cepillarse'],[/^se\s+duche\b/i,'ducharse'],[/^se\s+vista\b/i,'vestirse'],
-    [/^vaya\b/i,'ir'],[/^voy\b/i,'ir'],[/^vamos\b/i,'ir'],[/^limpie\b/i,'limpiar'],[/^recoja\b/i,'recoger'],[/^ordene\b/i,'ordenar'],[/^saque\b/i,'sacar'],[/^haga\b/i,'hacer']
-  ];
-  for(const [re,to] of rules){if(re.test(v)){v=v.replace(re,to);break}}
-  return clean(v);
+  const rules=[[/^se\s+lave\b/i,'lavarse'],[/^se\s+cepille\b/i,'cepillarse'],[/^se\s+duche\b/i,'ducharse'],[/^se\s+vista\b/i,'vestirse'],[/^vaya\b/i,'ir'],[/^voy\b/i,'ir'],[/^vamos\b/i,'ir'],[/^limpie\b/i,'limpiar'],[/^recoja\b/i,'recoger'],[/^ordene\b/i,'ordenar'],[/^saque\b/i,'sacar'],[/^haga\b/i,'hacer']];
+  for(const [re,to] of rules){if(re.test(v)){v=v.replace(re,to);break}}return clean(v);
 }
 
 function extractBirthdayName(text){
@@ -139,36 +134,22 @@ function extractCoreAction(text,intent,profile){
   let s=removeKnownStructure(text,profile);
   s=s.replace(/^(?:crea|crear|haz|hazme|añade|anade|pon|apunta|agenda|agrega|quiero|necesito)\s+(?:un|una|el|la)?\s*/i,'');
   s=s.replace(/^(?:evento|cita|tarea\s+pendiente|tarea|pendiente|recordatorio)\s*(?:de|para)?\s*/i,'');
-  s=s.replace(/^(?:para\s+que\s+|que\s+)/i,'');
-  s=s.replace(/^(?:yo|él|el|ella)\s+/i,'');
-  s=s.replace(/^(?:para\s+que\s+)?(?:yo|él|el|ella)\s+/i,'');
-  s=s.replace(/^(?:de|para)\s+/i,'');
+  s=s.replace(/^(?:para\s+que\s+|que\s+)/i,'').replace(/^(?:yo|él|el|ella)\s+/i,'').replace(/^(?:para\s+que\s+)?(?:yo|él|el|ella)\s+/i,'').replace(/^(?:de|para)\s+/i,'');
   s=normalizeVerbPhrase(s);
   s=s.replace(/\b(?:a\s+las?|de\s+las?)\s+\d{1,2}(?::\d{2})?.*$/i,'');
-  s=clean(s).replace(/[.,;]+$/,'');
-  const words=s.split(' ').filter(Boolean);
-  if(words.length>10)s=words.slice(0,10).join(' ');
-  if(intent==='event'&&/^medico\b/i.test(fold(s)))s=s.replace(/^medico/i,'Médico');
-  return cap(s);
+  s=clean(s).replace(/[.,;]+$/,'');const words=s.split(' ').filter(Boolean);if(words.length>10)s=words.slice(0,10).join(' ');
+  if(intent==='event'&&/^medico\b/i.test(fold(s)))s=s.replace(/^medico/i,'Médico');return cap(s);
 }
 
 function titleQuality(title){
-  const f=fold(title),words=clean(title).split(' ').filter(Boolean);
-  if(!title||words.length===0)return 0;
-  if(words.length>10)return .25;
-  if(/^(evento|pendiente|tarea|recordatorio|cita)$/.test(f))return .2;
-  if(/\b(?:crea|crear|para que|soy david|evento para|tarea pendiente)\b/.test(f))return .35;
-  return .9;
+  const f=fold(title),words=clean(title).split(' ').filter(Boolean);if(!title||words.length===0)return 0;if(words.length>10)return .25;if(/^(evento|pendiente|tarea|recordatorio|cita)$/.test(f))return .2;if(/\b(?:crea|crear|para que|soy david|evento para|tarea pendiente)\b/.test(f))return .35;return .9;
 }
 
 function questionFor(parsed){
-  if(parsed.type==='birthday'){
-    if(!parsed.name)return '¿De quién es el cumpleaños?';
-    if(!parsed.date)return '¿Qué día es el cumpleaños?';
-    return '';
-  }
+  if(parsed.type==='birthday'){if(!parsed.name)return '¿De quién es el cumpleaños?';if(!parsed.date)return '¿Qué día es el cumpleaños?';return ''}
   if(!parsed.title||parsed.titleConfidence<.6)return '¿Qué quieres apuntar exactamente?';
   if(parsed.type==='event'&&!parsed.date)return '¿Qué día es el evento?';
+  if(parsed.timeAmbiguous&&parsed.start)return `¿${parsed.start} es de la mañana o de la tarde?`;
   if(parsed.unknownPerson)return `No reconozco “${parsed.unknownPerson}”. ¿Para quién es?`;
   return '';
 }
@@ -177,11 +158,9 @@ function interpret(text){
   const raw=clean(text);if(!raw)return {error:'Dime o escribe qué quieres crear.'};
   const type=detectIntent(raw),profileInfo=profileFromText(raw),date=parseDate(raw),times=parseTimes(raw),repeat=parseRepeat(raw),unknownPerson=possibleUnknownPerson(raw);
   if(type==='birthday'){
-    const name=extractBirthdayName(raw),p={type,title:name?`Cumpleaños de ${name}`:'',name,date,profile:profileInfo.name,repeat:{frequency:'yearly',days:[]},unknownPerson:''};
-    p.question=questionFor(p);return p;
+    const name=extractBirthdayName(raw),p={type,title:name?`Cumpleaños de ${name}`:'',name,date,profile:profileInfo.name,repeat:{frequency:'yearly',days:[]},unknownPerson:''};p.question=questionFor(p);return p;
   }
-  const title=extractCoreAction(raw,type,profileInfo.name),p={type,title,date,start:times.start,end:times.end,profile:profileInfo.name,repeat,category:/\b(medico|medica|doctor|dentista|hospital|pediatra)\b/.test(fold(raw))?'Médico':'',titleConfidence:titleQuality(title),unknownPerson};
-  p.question=questionFor(p);return p;
+  const title=extractCoreAction(raw,type,profileInfo.name),p={type,title,date,start:times.start,end:times.end,timeAmbiguous:times.ambiguous,profile:profileInfo.name,repeat,category:/\b(medico|medica|doctor|dentista|hospital|pediatra)\b/.test(fold(raw))?'Médico':'',titleConfidence:titleQuality(title),unknownPerson};p.question=questionFor(p);return p;
 }
 
 function installStyles(){
@@ -192,12 +171,8 @@ function buildDialog(){let d=document.getElementById('betaVoiceDialog');if(d)ret
 function open(){installStyles();const d=buildDialog();stopListening();parsed=null;finalTranscript='';document.getElementById('betaVoiceInput').value='';document.getElementById('betaVoiceResult').style.display='none';document.getElementById('betaVoiceCreate').style.display='none';document.getElementById('betaVoiceStatus').textContent='';d.showModal()}
 function repeatLabel(r){if(!r)return '';if(r.frequency==='daily')return ' · Cada día';if(r.frequency==='yearly')return ' · Anual';if(r.frequency==='weekly')return ` · Cada ${WEEKDAY_LABELS[r.days[0]]}`;return ''}
 function resultText(p){
-  if(p.type==='birthday'){
-    const q=p.question?`<div class="beta-voice-question">${p.question}</div>`:'';
-    return `<div class="beta-voice-result-title">🎂 ${p.title||'Cumpleaños'}</div><div class="beta-voice-result-meta">${p.date?formatDate(p.date):'Sin fecha'}${p.profile?` · ${p.profile}`:''} · Anual</div>${q}`;
-  }
-  const icon=p.type==='task'?'☑️':'📅',time=p.start?` · ${p.start}${p.end?`–${p.end}`:''}`:'',q=p.question?`<div class="beta-voice-question">${p.question}</div>`:'';
-  return `<div class="beta-voice-result-title">${icon} ${p.title||'Sin título'}</div><div class="beta-voice-result-meta">${p.date?formatDate(p.date):'Sin fecha'}${time}${p.profile?` · ${p.profile}`:' · Familia'}${repeatLabel(p.repeat)}</div>${q}`;
+  if(p.type==='birthday'){const q=p.question?`<div class="beta-voice-question">${p.question}</div>`:'';return `<div class="beta-voice-result-title">🎂 ${p.title||'Cumpleaños'}</div><div class="beta-voice-result-meta">${p.date?formatDate(p.date):'Sin fecha'}${p.profile?` · ${p.profile}`:''} · Anual</div>${q}`}
+  const icon=p.type==='task'?'☑️':'📅',time=p.start?` · ${p.start}${p.end?`–${p.end}`:''}`:'',q=p.question?`<div class="beta-voice-question">${p.question}</div>`:'';return `<div class="beta-voice-result-title">${icon} ${p.title||'Sin título'}</div><div class="beta-voice-result-meta">${p.date?formatDate(p.date):'Sin fecha'}${time}${p.profile?` · ${p.profile}`:' · Familia'}${repeatLabel(p.repeat)}</div>${q}`;
 }
 function analyzeInput(quiet=false){const input=document.getElementById('betaVoiceInput'),r=document.getElementById('betaVoiceResult'),c=document.getElementById('betaVoiceCreate');parsed=interpret(input?.value||'');r.className='';if(parsed.error){if(quiet){r.style.display='none';c.style.display='none';return}r.style.display='block';r.classList.add('beta-voice-error');r.textContent=parsed.error;c.style.display='none';return}r.style.display='block';r.innerHTML=resultText(parsed);c.style.display=parsed.question?'none':'block'}
 function setListeningUi(on){listening=on;const b=document.getElementById('betaVoiceListen'),s=document.getElementById('betaVoiceStatus');if(b){b.textContent=on?'■ Parar':'🎤 Hablar';b.classList.toggle('listening',on)}if(s)s.textContent=on?'Escuchando…':''}
