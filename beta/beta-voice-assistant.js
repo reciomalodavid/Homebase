@@ -2,7 +2,7 @@
 'use strict';
 if(!window.HOMEBASE_BETA)return;
 
-const VERSION='7';
+const VERSION='8';
 const MONTHS={enero:0,febrero:1,marzo:2,abril:3,mayo:4,junio:5,julio:6,agosto:7,septiembre:8,setiembre:8,octubre:9,noviembre:10,diciembre:11};
 const WEEKDAYS={domingo:0,lunes:1,martes:2,miercoles:3,'miércoles':3,jueves:4,viernes:5,sabado:6,'sábado':6};
 const WEEKDAY_LABELS={0:'domingo',1:'lunes',2:'martes',3:'miércoles',4:'jueves',5:'viernes',6:'sábado'};
@@ -95,7 +95,6 @@ function normalizeTaskPhrase(s){
 }
 function extractTaskAction(text,profile){
   let s=stripDateAndTime(clean(text));
-  const f=fold(s);
   const candidates=[
     /\bpara\s+que\s+(?:él|el|ella)\s+(.+)$/i,
     /\bpara\s+(?:elia|ella|erick|eric|erik|david)\s+para\s+que\s+(?:él|el|ella)?\s*(.+)$/i,
@@ -104,25 +103,29 @@ function extractTaskAction(text,profile){
   ];
   for(const re of candidates){const m=s.match(re);if(m?.[1]){s=m[1];break}}
   s=s.replace(/^para\s+que\s+/i,'').replace(/^(?:él|el|ella)\s+/i,'').replace(/^de\s+/i,'');
-  if(profile){
-    const esc=escRe(profile);
-    s=s.replace(new RegExp(`^${esc}\\s+`,'i'),'');
-  }
+  if(profile){const esc=escRe(profile);s=s.replace(new RegExp(`^${esc}\\s+`,'i'),'')}
   s=normalizeTaskPhrase(s);
-  const words=clean(s).split(' ');
-  if(words.length>8)s=words.slice(0,8).join(' ');
+  const words=clean(s).split(' ');if(words.length>8)s=words.slice(0,8).join(' ');
   return cap(s)||'Pendiente';
 }
-function eventTitle(text,type,profile){
-  if(type==='task')return extractTaskAction(text,profile);
-  let s=stripDateAndTime(clean(text));
+function extractEventAction(text,profile){
+  const raw=clean(text);
+  let m=raw.match(/\b(?:vaya|voy|va|vamos|vayamos|ir)\b.*?\b(a(?:l|\s+la|\s+los|\s+las)\s+.+)$/i);
+  if(m?.[1]){
+    let destination=clean(m[1]);
+    destination=destination.replace(/\s+\b(?:hoy|mañana|manana|pasado mañana|pasado manana)\b.*$/i,'');
+    return cap(`Ir ${destination}`);
+  }
+  let s=stripDateAndTime(raw);
   s=s.replace(/^(?:crea|crear|haz|hazme|añade|anade|pon|apunta|agenda|agrega)\s+(?:una|un|el|la)?\s*/i,'');
   s=s.replace(/^(?:evento\s+)?(?:cita|evento)\s*(?:de\s+)?/i,'');
-  s=s.replace(/^(?:para\s+m[ií]\s*)+/i,'');
-  if(profile){const esc=escRe(profile);s=s.replace(new RegExp(`^(?:para\\s+${esc}\\s*)+`,'i'),'');s=s.replace(new RegExp(`\\s+para\\s+${esc}(?=\\s|$)`,'ig'),' ')}
+  s=s.replace(/^(?:para\s+que\s+)?(?:yo|él|el|ella)\s+/i,'');
+  if(profile){const esc=escRe(profile);s=s.replace(new RegExp(`^(?:para\\s+)?${esc}\\s+`,'i'),'').replace(new RegExp(`\\s+para\\s+${esc}(?=\\s|$)`,'ig'),' ')}
   s=s.replace(/^(?:para\s+m[ií]\s*)+/i,'').replace(/^de\s+/i,'').replace(/^para\s+/i,'');
-  return cap(clean(s))||'Evento';
+  const words=clean(s).split(' ');if(words.length>9)s=words.slice(0,9).join(' ');
+  return cap(s)||'Evento';
 }
+function eventTitle(text,type,profile){return type==='task'?extractTaskAction(text,profile):extractEventAction(text,profile)}
 function interpret(text){
   const raw=clean(text),f=fold(raw);if(!raw)return {error:'Dime o escribe qué quieres crear.'};
   const date=parseDate(raw),times=parseTimes(raw),profile=profileFromText(raw),repeat=parseRepeat(raw);
