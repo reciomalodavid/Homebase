@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 
-const VERSION='5';
+const VERSION='6';
 let open=false;
 let bypassFab=false;
 let installed=false;
@@ -72,7 +72,12 @@ function openNativeEditor(type='event'){
 function runAction(type,fab){
   closeMenu();
   if(type==='birthday'){
-    document.dispatchEvent(new CustomEvent('homebase:open-birthday-form'));
+    if(window.HOMEBASE_BETA_BIRTHDAYS&&typeof window.HOMEBASE_BETA_BIRTHDAYS.open==='function'){
+      window.HOMEBASE_BETA_BIRTHDAYS.open();
+      return;
+    }
+    console.warn('Birthday module unavailable; falling back to event editor');
+    openExistingEditor(fab);
     return;
   }
   openExistingEditor(fab);
