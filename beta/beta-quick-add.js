@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 
-const VERSION='3';
+const VERSION='4';
 let open=false;
 let bypassFab=false;
 let installed=false;
@@ -116,7 +116,7 @@ function install(){
   menu.setAttribute('role','menu');
   document.body.appendChild(menu);
 
-  const actions=[['birthday','Cumpleaños'],['task','Pendiente'],['event','Evento']];
+  const actions=[['event','Evento'],['task','Pendiente'],['birthday','Cumpleaños']];
   for(const [type,label] of actions){
     const b=document.createElement('button');
     b.type='button';
