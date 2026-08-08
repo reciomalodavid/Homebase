@@ -2,7 +2,7 @@
 'use strict';
 if(!window.HOMEBASE_BETA)return;
 
-const VERSION='1';
+const VERSION='2';
 
 function clean(v){return String(v||'').replace(/\s+/g,' ').trim()}
 function fold(v){return clean(v).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase()}
@@ -51,7 +51,7 @@ function cleanDetail(){
   if(!grid)return;
   for(const child of [...grid.children]){
     const text=clean(child.textContent);
-    if(/^PARA\b/i.test(text)&&/Familia/i.test(text))child.style.setProperty('display','none','important');
+    if(/^PARA/i.test(text)&&/Familia/i.test(text))child.style.setProperty('display','none','important');
   }
 }
 function apply(){cleanRows();cleanDetail()}
