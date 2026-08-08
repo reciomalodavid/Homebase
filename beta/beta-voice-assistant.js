@@ -2,7 +2,7 @@
 'use strict';
 if(!window.HOMEBASE_BETA)return;
 
-const VERSION='3';
+const VERSION='4';
 const MONTHS={enero:0,febrero:1,marzo:2,abril:3,mayo:4,junio:5,julio:6,agosto:7,septiembre:8,setiembre:8,octubre:9,noviembre:10,diciembre:11};
 const WEEKDAYS={domingo:0,lunes:1,martes:2,miercoles:3,'miércoles':3,jueves:4,viernes:5,sabado:6,'sábado':6};
 const WEEKDAY_LABELS={0:'domingo',1:'lunes',2:'martes',3:'miércoles',4:'jueves',5:'viernes',6:'sábado'};
@@ -80,7 +80,7 @@ function stripDateAndTime(s){
 function eventTitle(text,type,profile){
   let s=stripDateAndTime(clean(text));
   s=s.replace(/^(?:crea|crear|haz|hazme|añade|anade|pon|apunta|agenda|agrega)\s+(?:un|una|el|la)?\s*/i,'');
-  s=s.replace(/^(?:evento|cita|pendiente|recordatorio)\s*/i,'');
+  s=s.replace(/^(?:evento|cita|tarea(?:\s+pendiente)?|pendiente|recordatorio)\s*(?:de\s+)?/i,'');
   s=s.replace(/^(?:para\s+m[ií]\s*)+/i,'');
   if(profile){const esc=profile.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');s=s.replace(new RegExp(`^(?:para\\s+${esc}\\s*)+`,'i'),'');s=s.replace(new RegExp(`\\s+para\\s+${esc}(?=\\s|$)`,'ig'),' ')}
   s=s.replace(/^(?:para\s+m[ií]\s*)+/i,'').replace(/^de\s+/i,'').replace(/^para\s+/i,'');
@@ -96,7 +96,7 @@ function interpret(text){
     const name=birthdayName(raw);if(!name)return {error:'Me falta el nombre del cumpleaños.'};if(!date)return {error:'Me falta la fecha del cumpleaños.'};
     return {type:'birthday',title:`Cumpleaños de ${name}`,name,date,profile};
   }
-  const task=/\b(pendiente|recordatorio|recuerdame|acuerdate|tengo que)\b/.test(f),type=task?'task':'event';
+  const task=/\b(pendiente|recordatorio|recuerdame|acuerdate|tengo que|tarea)\b/.test(f),type=task?'task':'event';
   if(!date&&!task)return {error:'Me falta la fecha.'};
   return {type,title:eventTitle(raw,type,profile),date,start:times.start,end:times.end,profile,repeat,category:/\b(medico|medica|doctor|dentista|hospital|pediatra)\b/.test(f)?'Médico':''};
 }
