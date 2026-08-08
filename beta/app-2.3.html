@@ -56,7 +56,7 @@
      return r.call(this,P+a);
    };
  }
- window.HOMEBASE_BETA=true;window.HOMEBASE_BETA_AUTH_REQUIRED=true;window.HOMEBASE_BETA_VERSION='2.3-storage-safe';window.HOMEBASE_BETA_LOADED_BUILD=2310;
+ window.HOMEBASE_BETA=true;window.HOMEBASE_BETA_AUTH_REQUIRED=true;window.HOMEBASE_BETA_VERSION='2.3-storage-safe';window.HOMEBASE_BETA_LOADED_BUILD=2311;
 })();<\/script>`;
  html=html.replace(/<head>/i,'<head>'+isolation);
  html=html.replace('if(state.syncCode){startCloudListener();refreshWhenActive()}','if(state.syncCode&&!window.HOMEBASE_BETA_AUTH_REQUIRED){startCloudListener();refreshWhenActive()}');
@@ -77,7 +77,7 @@
   'beta/beta-quick-add.js?v=7',
   'beta/beta-navigation-ux.js?v=2',
   'beta/beta-birthdays.js?v=2',
-  'beta/beta-voice-assistant.js?v=2',
+  'beta/beta-voice-assistant.js?v=3',
   'beta/beta-bottom-nav-fix.js?v=2',
   'beta/beta-update-checker.js?v=5'
  ].map(src=>`<script src="./${src}"><\/script>`).join('');
