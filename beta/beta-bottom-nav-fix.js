@@ -2,7 +2,7 @@
 'use strict';
 if(!window.HOMEBASE_BETA)return;
 
-const VERSION='1';
+const VERSION='2';
 let synthetic=false;
 let down=null;
 
@@ -71,9 +71,6 @@ function onPointerUp(event){
   const moved=Math.hypot(event.clientX-record.x,event.clientY-record.y);
   const elapsed=performance.now()-record.t;
   if(moved>18||elapsed>900)return;
-
-  // iOS/Safari can occasionally lose the synthesized click after the shared
-  // pointerdown page-reset handler. Prevent that click and issue one clean click.
   event.preventDefault();
   event.stopImmediatePropagation();
   synthetic=true;
@@ -82,11 +79,22 @@ function onPointerUp(event){
 
 function onPointerCancel(){down=null}
 
+function hideDuplicatePendingBlock(){
+  const list=document.getElementById('morePendingTasks');
+  if(!list)return;
+  const section=list.closest('.section');
+  if(!section)return;
+  section.hidden=true;
+  section.style.display='none';
+}
+
 function install(){
   installStyles();
+  hideDuplicatePendingBlock();
   document.addEventListener('pointerdown',onPointerDown,true);
   document.addEventListener('pointerup',onPointerUp,true);
   document.addEventListener('pointercancel',onPointerCancel,true);
+  new MutationObserver(hideDuplicatePendingBlock).observe(document.documentElement,{childList:true,subtree:true});
 }
 
 document.readyState==='loading'?document.addEventListener('DOMContentLoaded',install,{once:true}):install();
