@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 
-const VERSION='4';
+const VERSION='5';
 let open=false;
 let bypassFab=false;
 let installed=false;
@@ -60,38 +60,26 @@ function selectEditorType(type){
   if(button)button.click();
 }
 
-function prepareBirthday(){
-  selectEditorType('event');
-  const title=document.getElementById('titleInput');
-  const allDay=document.getElementById('allDay');
-  const repeat=document.getElementById('repeat');
-  const category=document.getElementById('category');
-  const more=document.getElementById('moreOptions');
-  if(title){title.value='';title.placeholder='Ej. Cumpleaños de María';}
-  if(allDay&&!allDay.checked)allDay.click();
-  if(more&&document.getElementById('advanced')&&!document.getElementById('advanced').classList.contains('open'))more.click();
-  if(repeat){repeat.value='yearly';repeat.dispatchEvent(new Event('change',{bubbles:true}));}
-  if(category){
-    const option=[...category.options].find(o=>String(o.textContent||'').trim().toLowerCase()==='cumpleaños');
-    if(option){category.value=option.value;category.dispatchEvent(new Event('change',{bubbles:true}));}
-  }
-  const editorTitle=document.getElementById('editorTitle');
-  if(editorTitle)editorTitle.textContent='Nuevo cumpleaños';
-  title?.focus();
+function openNativeEditor(type='event'){
+  const fab=document.querySelector('.event-fab.beta-quick-main')||document.querySelector('.event-fab');
+  if(!fab)return false;
+  closeMenu();
+  openExistingEditor(fab);
+  setTimeout(()=>selectEditorType(type),20);
+  return true;
 }
 
 function runAction(type,fab){
   closeMenu();
+  if(type==='birthday'){
+    document.dispatchEvent(new CustomEvent('homebase:open-birthday-form'));
+    return;
+  }
   openExistingEditor(fab);
   setTimeout(()=>{
     if(type==='task'){
       selectEditorType('task');
       document.getElementById('titleInput')?.focus();
-      return;
-    }
-    if(type==='birthday'){
-      prepareBirthday();
-      return;
     }
   },40);
 }
@@ -137,5 +125,5 @@ function install(){
 }
 
 document.readyState==='loading'?document.addEventListener('DOMContentLoaded',install,{once:true}):install();
-window.HOMEBASE_BETA_QUICK_ADD={version:VERSION,close:closeMenu};
+window.HOMEBASE_BETA_QUICK_ADD={version:VERSION,close:closeMenu,openNativeEditor};
 })();
