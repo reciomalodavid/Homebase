@@ -2,9 +2,10 @@
 'use strict';
 if(!window.HOMEBASE_BETA)return;
 
-const VERSION='2';
+const VERSION='3';
 const MONTHS={enero:0,febrero:1,marzo:2,abril:3,mayo:4,junio:5,julio:6,agosto:7,septiembre:8,setiembre:8,octubre:9,noviembre:10,diciembre:11};
 const WEEKDAYS={domingo:0,lunes:1,martes:2,miercoles:3,'miércoles':3,jueves:4,viernes:5,sabado:6,'sábado':6};
+const WEEKDAY_LABELS={0:'domingo',1:'lunes',2:'martes',3:'miércoles',4:'jueves',5:'viernes',6:'sábado'};
 let parsed=null;
 let recognition=null;
 let listening=false;
@@ -32,14 +33,30 @@ function parseDate(text){
   for(const [name,index] of Object.entries(WEEKDAYS)){if(new RegExp(`\\b${fold(name)}\\b`).test(f)){const d=new Date(now);let delta=(index-d.getDay()+7)%7;if(delta===0)delta=7;d.setDate(d.getDate()+delta);return iso(d)}}
   return '';
 }
-function normalizeHour(h,m='00'){const hour=Number(h),min=Number(m||0);if(hour>23||min>59)return '';return `${String(hour).padStart(2,'0')}:${String(min).padStart(2,'0')}`}
+
+function normalizeHour(h,m='00',period=''){
+  let hour=Number(h),min=Number(m||0);if(hour>23||min>59)return '';
+  const p=fold(period);
+  if(/tarde|noche|mediodia|medio dia/.test(p)&&hour<12)hour+=12;
+  if(/manana/.test(p)&&hour===12)hour=0;
+  return `${String(hour).padStart(2,'0')}:${String(min).padStart(2,'0')}`;
+}
 function parseTimes(text){
   const f=fold(text);
-  let m=f.match(/\bde\s+(?:las\s+)?(\d{1,2})(?::(\d{2}))?(?:\s*(?:h|hrs|horas))?(?:\s+del\s+(?:mediodia|medio dia|dia|tarde|noche))?\s+(?:a|hasta)\s+(?:las\s+)?(\d{1,2})(?::(\d{2}))?(?:\s*(?:h|hrs|horas))?(?:\s+del\s+(?:mediodia|medio dia|dia|tarde|noche))?\b/);
-  if(!m)m=f.match(/\b(\d{1,2})(?::(\d{2}))?\s*[-–]\s*(\d{1,2})(?::(\d{2}))?\b/);
+  let m=f.match(/\bde\s+(?:las?\s+)?(\d{1,2})(?::(\d{2}))?(?:\s*(?:h|hrs|horas))?(?:\s+(de\s+la\s+manana|del\s+mediodia|de\s+la\s+tarde|de\s+la\s+noche))?\s+(?:a|hasta)\s+(?:las?\s+)?(\d{1,2})(?::(\d{2}))?(?:\s*(?:h|hrs|horas))?(?:\s+(de\s+la\s+manana|del\s+mediodia|de\s+la\s+tarde|de\s+la\s+noche))?\b/);
+  if(m)return {start:normalizeHour(m[1],m[2],m[3]),end:normalizeHour(m[4],m[5],m[6])};
+  m=f.match(/\b(\d{1,2})(?::(\d{2}))?\s*[-–]\s*(\d{1,2})(?::(\d{2}))?\b/);
   if(m)return {start:normalizeHour(m[1],m[2]),end:normalizeHour(m[3],m[4])};
-  m=f.match(/\b(?:a\s+las|a\s+la)\s+(\d{1,2})(?::(\d{2}))?\b/);
-  return m?{start:normalizeHour(m[1],m[2]),end:''}:{start:'',end:''};
+  m=f.match(/\b(?:a\s+las?|a\s+la)\s+(\d{1,2})(?::(\d{2}))?(?:\s+(de\s+la\s+manana|del\s+mediodia|de\s+la\s+tarde|de\s+la\s+noche))?\b/);
+  return m?{start:normalizeHour(m[1],m[2],m[3]),end:''}:{start:'',end:''};
+}
+function parseRepeat(text){
+  const f=fold(text);
+  for(const [name,index] of Object.entries(WEEKDAYS)){
+    const n=fold(name);
+    if(new RegExp(`\\b(?:cada|todos\\s+los|todas\\s+las)\\s+${n}s?\\b`).test(f))return {frequency:'weekly',days:[index]};
+  }
+  return null;
 }
 
 function birthdayName(text){
@@ -53,34 +70,35 @@ function birthdayName(text){
 
 function stripDateAndTime(s){
   return clean(s)
+    .replace(/\s+\b(?:cada|todos\s+los|todas\s+las)\s+(?:lunes|martes|miércoles|miercoles|jueves|viernes|sábados?|sabados?|domingos?)\b/ig,' ')
     .replace(/\s+\b(?:para\s+el\s+)?(?:el\s+)?(?:día|dia)\s+\d{1,2}.*$/i,'')
     .replace(/\s+\bel\s+\d{1,2}\s+(?:de\s+)?(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre).*$/i,'')
     .replace(/\s+\b\d{1,2}\s+(?:de\s+)?(?:enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|setiembre|octubre|noviembre|diciembre).*$/i,'')
     .replace(/\s+\b(?:hoy|mañana|manana|pasado mañana|pasado manana|lunes|martes|miércoles|miercoles|jueves|viernes|sábado|sabado|domingo)\b.*$/i,'')
-    .replace(/\s+\bde\s+(?:las\s+)?\d{1,2}(?::\d{2})?.*$/i,'');
+    .replace(/\s+\bde\s+(?:las?\s+)?\d{1,2}(?::\d{2})?.*$/i,'');
 }
 function eventTitle(text,type,profile){
   let s=stripDateAndTime(clean(text));
-  s=s.replace(/^(?:crea|crear|añade|anade|pon|apunta|agenda|agrega)\s+(?:un|una|el|la)?\s*/i,'');
+  s=s.replace(/^(?:crea|crear|haz|hazme|añade|anade|pon|apunta|agenda|agrega)\s+(?:un|una|el|la)?\s*/i,'');
   s=s.replace(/^(?:evento|cita|pendiente|recordatorio)\s*/i,'');
   s=s.replace(/^(?:para\s+m[ií]\s*)+/i,'');
   if(profile){const esc=profile.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');s=s.replace(new RegExp(`^(?:para\\s+${esc}\\s*)+`,'i'),'');s=s.replace(new RegExp(`\\s+para\\s+${esc}(?=\\s|$)`,'ig'),' ')}
   s=s.replace(/^(?:para\s+m[ií]\s*)+/i,'').replace(/^de\s+/i,'').replace(/^para\s+/i,'');
-  s=s.replace(/\s+(?:para\s+m[ií])$/i,'').replace(/\s+de$/i,'');
+  s=s.replace(/\s+(?:para\s+m[ií])$/i,'').replace(/\s+de$/i,'').replace(/\s+cada$/i,'');
   s=clean(s);
   return cap(s)||(type==='task'?'Pendiente':'Evento');
 }
 
 function interpret(text){
   const raw=clean(text),f=fold(raw);if(!raw)return {error:'Dime o escribe qué quieres crear.'};
-  const date=parseDate(raw),times=parseTimes(raw),profile=profileFromText(raw);
+  const date=parseDate(raw),times=parseTimes(raw),profile=profileFromText(raw),repeat=parseRepeat(raw);
   if(/\b(cumpleanos|cumple|aniversario)\b/.test(f)){
     const name=birthdayName(raw);if(!name)return {error:'Me falta el nombre del cumpleaños.'};if(!date)return {error:'Me falta la fecha del cumpleaños.'};
     return {type:'birthday',title:`Cumpleaños de ${name}`,name,date,profile};
   }
   const task=/\b(pendiente|recordatorio|recuerdame|acuerdate|tengo que)\b/.test(f),type=task?'task':'event';
   if(!date&&!task)return {error:'Me falta la fecha.'};
-  return {type,title:eventTitle(raw,type,profile),date,start:times.start,end:times.end,profile,category:/\b(medico|medica|doctor|dentista|hospital|pediatra)\b/.test(f)?'Médico':''};
+  return {type,title:eventTitle(raw,type,profile),date,start:times.start,end:times.end,profile,repeat,category:/\b(medico|medica|doctor|dentista|hospital|pediatra)\b/.test(f)?'Médico':''};
 }
 
 function installStyles(){
@@ -111,7 +129,11 @@ function buildDialog(){
   document.body.appendChild(d);return d;
 }
 function open(){installStyles();const d=buildDialog();stopListening();parsed=null;finalTranscript='';document.getElementById('betaVoiceInput').value='';document.getElementById('betaVoiceResult').style.display='none';document.getElementById('betaVoiceCreate').style.display='none';document.getElementById('betaVoiceStatus').textContent='';d.showModal()}
-function resultText(p){if(p.type==='birthday')return `<div class="beta-voice-result-title">🎂 ${p.title}</div><div class="beta-voice-result-meta">${formatDate(p.date)}${p.profile?` · ${p.profile}`:''}</div>`;const icon=p.type==='task'?'☑️':'📅',time=p.start?` · ${p.start}${p.end?`–${p.end}`:''}`:'';return `<div class="beta-voice-result-title">${icon} ${p.title}</div><div class="beta-voice-result-meta">${p.date?formatDate(p.date):'Sin fecha'}${time}${p.profile?` · ${p.profile}`:''}</div>`}
+function resultText(p){
+  if(p.type==='birthday')return `<div class="beta-voice-result-title">🎂 ${p.title}</div><div class="beta-voice-result-meta">${formatDate(p.date)}${p.profile?` · ${p.profile}`:''}</div>`;
+  const icon=p.type==='task'?'☑️':'📅',time=p.start?` · ${p.start}${p.end?`–${p.end}`:''}`:'',repeat=p.repeat?.frequency==='weekly'?` · Cada ${WEEKDAY_LABELS[p.repeat.days[0]]}`:'';
+  return `<div class="beta-voice-result-title">${icon} ${p.title}</div><div class="beta-voice-result-meta">${p.date?formatDate(p.date):'Sin fecha'}${time}${p.profile?` · ${p.profile}`:''}${repeat}</div>`;
+}
 function analyzeInput(quiet=false){
   const input=document.getElementById('betaVoiceInput'),r=document.getElementById('betaVoiceResult'),c=document.getElementById('betaVoiceCreate');parsed=interpret(input?.value||'');r.className='';
   if(parsed.error){if(quiet){r.style.display='none';c.style.display='none';return}r.style.display='block';r.classList.add('beta-voice-error');r.textContent=parsed.error;c.style.display='none';return}
@@ -135,8 +157,19 @@ function startListening(){
 
 function setPerson(profile){if(!profile)return;const picks=[...document.querySelectorAll('#personPicks input[type="checkbox"]')];if(!picks.length)return;for(const p of picks)p.checked=false;const f=fold(profile),target=picks.find(p=>fold(p.value)===f||fold(p.closest('label')?.textContent)===f||fold(p.parentElement?.textContent)===f);if(target)target.checked=true}
 function setCategory(label){const sel=document.getElementById('category');if(!sel||!label)return;const f=fold(label),o=[...sel.options].find(x=>fold(x.textContent)===f);if(o){sel.value=o.value;sel.dispatchEvent(new Event('change',{bubbles:true}))}}
+function setRepeat(repeat){
+  if(!repeat?.frequency)return;
+  const more=document.getElementById('moreOptions'),advanced=document.getElementById('advanced');
+  if(more&&advanced&&!advanced.classList.contains('open'))more.click();
+  const sel=document.getElementById('repeat');
+  if(sel){sel.value=repeat.frequency;sel.dispatchEvent(new Event('change',{bubbles:true}))}
+  if(repeat.frequency==='weekly'){
+    const days=[...document.querySelectorAll('input[name="repeatDay"]')];
+    for(const input of days)input.checked=repeat.days.includes(Number(input.value));
+  }
+}
 function createBirthday(p){const api=window.HOMEBASE_BETA_BIRTHDAYS;if(!api?.open)return false;api.open();setTimeout(()=>{const name=document.getElementById('betaBirthdayName'),date=document.getElementById('betaBirthdayDate'),profile=document.getElementById('betaBirthdayProfile'),form=document.getElementById('betaBirthdayForm');if(name)name.value=p.name;if(date)date.value=p.date;if(profile&&p.profile&&[...profile.options].some(o=>o.value===p.profile))profile.value=p.profile;form?.requestSubmit()},60);return true}
-function createNative(p){const api=window.HOMEBASE_BETA_QUICK_ADD;if(!api?.openNativeEditor)return false;const native=document.getElementById('editorDialog');if(native)native.style.visibility='hidden';if(!api.openNativeEditor(p.type==='task'?'task':'event')){if(native)native.style.visibility='';return false}setTimeout(()=>{const form=document.getElementById('editorForm'),title=document.getElementById('titleInput'),startDate=document.getElementById('startDate'),endDate=document.getElementById('endDate'),startTime=document.getElementById('startTime'),endTime=document.getElementById('endTime'),allDay=document.getElementById('allDay'),noDeadline=document.getElementById('noDeadline');if(title)title.value=p.title;if(startDate&&p.date)startDate.value=p.date;if(endDate&&p.type==='event'&&p.date)endDate.value=p.date;if(startTime)startTime.value=p.start||'';if(endTime)endTime.value=p.end||'';if(p.type==='event'&&!p.start&&allDay&&!allDay.checked)allDay.click();if(p.type==='task'&&!p.date&&noDeadline&&!noDeadline.checked)noDeadline.click();setPerson(p.profile);setCategory(p.category);form?.requestSubmit();setTimeout(()=>{if(native)native.style.visibility=''},150)},80);return true}
+function createNative(p){const api=window.HOMEBASE_BETA_QUICK_ADD;if(!api?.openNativeEditor)return false;const native=document.getElementById('editorDialog');if(native)native.style.visibility='hidden';if(!api.openNativeEditor(p.type==='task'?'task':'event')){if(native)native.style.visibility='';return false}setTimeout(()=>{const form=document.getElementById('editorForm'),title=document.getElementById('titleInput'),startDate=document.getElementById('startDate'),endDate=document.getElementById('endDate'),startTime=document.getElementById('startTime'),endTime=document.getElementById('endTime'),allDay=document.getElementById('allDay'),noDeadline=document.getElementById('noDeadline');if(title)title.value=p.title;if(startDate&&p.date)startDate.value=p.date;if(endDate&&p.type==='event'&&p.date)endDate.value=p.date;if(startTime)startTime.value=p.start||'';if(endTime)endTime.value=p.end||'';if(p.type==='event'&&!p.start&&allDay&&!allDay.checked)allDay.click();if(p.type==='task'&&!p.date&&noDeadline&&!noDeadline.checked)noDeadline.click();setPerson(p.profile);setCategory(p.category);if(p.type==='event')setRepeat(p.repeat);form?.requestSubmit();setTimeout(()=>{if(native)native.style.visibility=''},150)},80);return true}
 function createParsed(){if(!parsed||parsed.error)return;stopListening();const d=document.getElementById('betaVoiceDialog');d?.close();const ok=parsed.type==='birthday'?createBirthday(parsed):createNative(parsed);if(!ok)setTimeout(()=>alert('No he podido abrir el editor de Homebase.'),0)}
 function install(){installStyles();buildDialog()}
 document.readyState==='loading'?document.addEventListener('DOMContentLoaded',install,{once:true}):install();
