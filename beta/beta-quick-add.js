@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 
-const VERSION='2';
+const VERSION='3';
 let open=false;
 let bypassFab=false;
 let installed=false;
@@ -26,7 +26,7 @@ function installStyles(){
   #betaQuickAddMenu.open .beta-quick-option:nth-child(1){transition-delay:.06s}#betaQuickAddMenu.open .beta-quick-option:nth-child(2){transition-delay:.035s}#betaQuickAddMenu.open .beta-quick-option:nth-child(3){transition-delay:.01s}
   .beta-quick-option svg{width:25px;height:25px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
   .event-fab.beta-quick-main{z-index:121!important;transition:transform .2s ease,box-shadow .16s ease!important}
-  .event-fab.beta-quick-main.beta-quick-open{transform:rotate(45deg)!important}
+  .event-fab.beta-quick-main.beta-quick-open{display:grid!important;transform:rotate(45deg)!important}
   @media(max-width:700px){#betaQuickAddMenu{right:18px;bottom:calc(154px + env(safe-area-inset-bottom))}.beta-quick-option{min-height:58px;font-size:18px;padding:0 21px}}
   @media(prefers-reduced-motion:reduce){#betaQuickAddBackdrop,.beta-quick-option,.event-fab.beta-quick-main{transition:none!important}}
   `;
@@ -116,7 +116,7 @@ function install(){
   menu.setAttribute('role','menu');
   document.body.appendChild(menu);
 
-  const actions=[['birthday','Cumpleaños'],['task','Tarea'],['event','Evento']];
+  const actions=[['birthday','Cumpleaños'],['task','Pendiente'],['event','Evento']];
   for(const [type,label] of actions){
     const b=document.createElement('button');
     b.type='button';
