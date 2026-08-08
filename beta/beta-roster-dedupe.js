@@ -1,0 +1,86 @@
+(()=>{
+'use strict';
+if(!window.HOMEBASE_BETA)return;
+
+const VERSION='1';
+const GENERIC_OFF='OFF';
+const OFFICIAL_OFF_CODES=new Set([
+  'O_+','O_FIX','O_FLEX','O_L','O_M','O_NHCA','O_RES','O_S','O_SUR','O_TX','O_TZ','O_U','O_V'
+]);
+let running=false;
+
+function codeOf(item){
+  return String(item?.rosterData?.code||'').trim().toUpperCase().replace(/\s+/g,'_');
+}
+function dateOf(item){
+  return item?.rosterData?.sourceDate||item?.date||'';
+}
+function activeRosterItems(){
+  if(typeof state==='undefined'||!Array.isArray(state.items))return[];
+  return state.items.filter(item=>item?.source==='roster'&&!item?.deletedAt);
+}
+
+function dedupeGenericOffs({sync=false}={}){
+  if(running||typeof state==='undefined'||!Array.isArray(state.items))return 0;
+  running=true;
+  try{
+    const active=activeRosterItems();
+    const officialDates=new Set(
+      active.filter(item=>OFFICIAL_OFF_CODES.has(codeOf(item))).map(dateOf).filter(Boolean)
+    );
+    if(!officialDates.size)return 0;
+
+    const stamp=Date.now();
+    let changed=0;
+    state.items=state.items.map(item=>{
+      if(item?.source!=='roster'||item?.deletedAt)return item;
+      if(codeOf(item)!==GENERIC_OFF)return item;
+      const date=dateOf(item);
+      if(!date||!officialDates.has(date))return item;
+      changed++;
+      return {
+        ...item,
+        deletedAt:stamp,
+        rosterRemoved:true,
+        betaRosterDedupe:true,
+        betaRosterDedupeReason:'generic-off-shadowed-by-official-code',
+        updatedAt:Math.max(Number(item.updatedAt)||0,stamp)
+      };
+    });
+
+    if(!changed)return 0;
+    localStorage.setItem('homebase_v2_items',JSON.stringify(state.items));
+    if(typeof render==='function')render();
+    if(sync){
+      if(typeof scheduleCloudSave==='function')scheduleCloudSave();
+      else if(typeof writeCloud==='function')writeCloud();
+    }
+    window.dispatchEvent(new CustomEvent('homebase:beta-roster-deduped',{detail:{count:changed}}));
+    console.info(`[Homebase Beta] roster dedupe removed ${changed} generic OFF duplicate(s)`);
+    return changed;
+  }finally{running=false}
+}
+
+function wrap(name){
+  const original=window[name]||globalThis[name];
+  if(typeof original!=='function'||original.__betaRosterDedupeWrapped)return;
+  const wrapped=function(...args){
+    const result=original.apply(this,args);
+    setTimeout(()=>dedupeGenericOffs({sync:true}),0);
+    return result;
+  };
+  wrapped.__betaRosterDedupeWrapped=true;
+  try{window[name]=wrapped}catch{}
+  try{globalThis[name]=wrapped}catch{}
+}
+
+function install(){
+  wrap('applyPendingRoster');
+  wrap('applyRemotePayload');
+  setTimeout(()=>dedupeGenericOffs({sync:true}),250);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)setTimeout(()=>dedupeGenericOffs({sync:true}),100)});
+}
+
+document.readyState==='loading'?document.addEventListener('DOMContentLoaded',install,{once:true}):install();
+window.HOMEBASE_BETA_ROSTER_DEDUPE={version:VERSION,run:()=>dedupeGenericOffs({sync:true})};
+})();
