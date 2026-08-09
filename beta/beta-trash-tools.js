@@ -1,9 +1,11 @@
 (()=>{
 'use strict';
 if(!window.HOMEBASE_BETA)return;
-const VERSION='1';
+const VERSION='2';
 const CORE_TOMBS='homebase_beta_core_tombstones_v1';
 let selectionMode=false;
+let decorating=false;
+let decorateQueued=false;
 const selected=new Set();
 
 const readTombs=()=>{try{const v=JSON.parse(localStorage.getItem(CORE_TOMBS)||'{}');return v&&typeof v==='object'&&!Array.isArray(v)?v:{}}catch{return {}}};
@@ -46,29 +48,42 @@ function updateToolbar(){
 }
 
 function decorateRows(){
+  if(decorating)return;
   const list=document.getElementById('trashList');
   if(!list)return;
-  list.classList.toggle('beta-trash-selecting',selectionMode);
-  list.querySelectorAll('.trash-item').forEach(row=>{
-    const restore=row.querySelector('[data-restore]');
-    const id=String(restore?.dataset.restore||row.dataset.trashOpen||'');
-    if(!id)return;
-    let pick=row.querySelector('.beta-trash-pick');
-    if(!pick){
-      pick=document.createElement('button');
-      pick.type='button';
-      pick.className='beta-trash-pick';
-      pick.setAttribute('aria-label','Seleccionar elemento');
-      pick.onclick=e=>{e.preventDefault();e.stopPropagation();toggleSelected(id)};
-      row.prepend(pick);
-    }
-    pick.dataset.id=id;
-    pick.textContent=selected.has(id)?'✓':'';
-    pick.classList.toggle('selected',selected.has(id));
-    pick.hidden=!selectionMode;
-    row.classList.toggle('beta-trash-selected',selectionMode&&selected.has(id));
-  });
-  updateToolbar();
+  decorating=true;
+  try{
+    list.classList.toggle('beta-trash-selecting',selectionMode);
+    list.querySelectorAll('.trash-item').forEach(row=>{
+      const restore=row.querySelector('[data-restore]');
+      const id=String(restore?.dataset.restore||row.dataset.trashOpen||'');
+      if(!id)return;
+      let pick=row.querySelector('.beta-trash-pick');
+      if(!pick){
+        pick=document.createElement('button');
+        pick.type='button';
+        pick.className='beta-trash-pick';
+        pick.setAttribute('aria-label','Seleccionar elemento');
+        pick.dataset.id=id;
+        pick.onclick=e=>{e.preventDefault();e.stopPropagation();toggleSelected(id)};
+        row.prepend(pick);
+      }
+      const isSelected=selected.has(id);
+      if(pick.dataset.id!==id)pick.dataset.id=id;
+      const wantedText=isSelected?'✓':'';
+      if(pick.textContent!==wantedText)pick.textContent=wantedText;
+      pick.classList.toggle('selected',isSelected);
+      pick.hidden=!selectionMode;
+      row.classList.toggle('beta-trash-selected',selectionMode&&isSelected);
+    });
+    updateToolbar();
+  }finally{decorating=false;}
+}
+
+function queueDecorate(){
+  if(decorateQueued)return;
+  decorateQueued=true;
+  requestAnimationFrame(()=>{decorateQueued=false;decorateRows()});
 }
 
 function toggleSelected(id){
@@ -89,7 +104,7 @@ function deleteSelected(){
   if(!confirm(`¿Eliminar definitivamente ${count} elemento${count===1?'':'s'}? Esta acción no se puede deshacer.`))return;
   permanentlyDelete([...selected]);
   selectionMode=false;selected.clear();
-  setTimeout(decorateRows,0);
+  queueDecorate();
 }
 
 function emptyTrash(){
@@ -99,7 +114,7 @@ function emptyTrash(){
   if(!confirm(`¿Vaciar la papelera? Se eliminarán definitivamente ${count} elemento${count===1?'':'s'} y no se podrán recuperar.`))return;
   permanentlyDelete(items.map(i=>i.id));
   selectionMode=false;selected.clear();
-  setTimeout(decorateRows,0);
+  queueDecorate();
 }
 
 function installUi(){
@@ -123,7 +138,13 @@ function installUi(){
     document.head.appendChild(style);
   }
   if(!list.__betaTrashObserver){
-    const observer=new MutationObserver(()=>decorateRows());observer.observe(list,{childList:true,subtree:true});list.__betaTrashObserver=observer;
+    const observer=new MutationObserver(mutations=>{
+      if(decorating)return;
+      const externalChange=mutations.some(m=>[...m.addedNodes,...m.removedNodes].some(n=>!(n.nodeType===1&&n.classList?.contains('beta-trash-pick'))));
+      if(externalChange)queueDecorate();
+    });
+    observer.observe(list,{childList:true});
+    list.__betaTrashObserver=observer;
   }
   decorateRows();return true;
 }
