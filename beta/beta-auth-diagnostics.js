@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 if(!window.HOMEBASE_BETA)return;
-const VERSION='1';
+const VERSION='2';
 
 function shortUid(uid){
   const value=String(uid||'');
@@ -16,8 +16,13 @@ function ensureBox(){
   const box=document.createElement('div');
   box.id='betaAuthDiagnostics';
   box.style.cssText='margin:10px 0;padding:11px 12px;border-radius:13px;background:rgba(40,120,210,.06);border:1px solid rgba(40,120,210,.16);font-size:12px;line-height:1.45;color:#334155';
-  box.innerHTML='<strong>Diagnóstico Auth Beta</strong><div id="betaAuthDiagUid" style="margin-top:5px">UID: comprobando…</div><div id="betaAuthDiagMembership">Autorización: comprobando…</div>';
+  box.innerHTML='<strong>Diagnóstico Auth Beta</strong><div id="betaAuthDiagUid" style="margin-top:5px">UID: comprobando…</div><div id="betaAuthDiagMembership">Autorización: comprobando…</div><div id="betaAuthDiagActions" style="display:none;margin-top:9px"><button id="betaReauthorizeDevice" type="button" style="border:0;border-radius:10px;padding:8px 10px;background:#6f58c9;color:#fff;font-weight:800">Reautorizar este dispositivo</button></div>';
   details.prepend(box);
+  document.getElementById('betaReauthorizeDevice')?.addEventListener('click',()=>{
+    const join=document.getElementById('betaJoinDevice');
+    if(join){join.click();return;}
+    alert('No se encontró el flujo de autorización Beta.');
+  });
   return box;
 }
 
@@ -26,9 +31,14 @@ function setLine(id,text,color){
   el.textContent=text;
   if(color)el.style.color=color;
 }
+function showReauthorize(show){
+  const actions=document.getElementById('betaAuthDiagActions');
+  if(actions)actions.style.display=show?'block':'none';
+}
 
 async function run(){
   const box=ensureBox();if(!box)return;
+  showReauthorize(false);
   try{
     const authApi=window.HOMEBASE_BETA_SECURITY;
     if(!authApi?.ensureAuth){
@@ -55,11 +65,14 @@ async function run(){
         setLine('betaAuthDiagMembership','Autorización: SÍ · UID incluido en el hogar Beta','#067647');
       }else{
         setLine('betaAuthDiagMembership','Autorización: NO · UID no incluido en el hogar Beta','#b42318');
+        showReauthorize(true);
       }
     }catch(error){
       const code=String(error?.code||'');
-      if(code==='permission-denied')setLine('betaAuthDiagMembership','Autorización: RECHAZADA por Firestore · este UID no puede leer el hogar','#b42318');
-      else setLine('betaAuthDiagMembership',`Autorización: error ${code||String(error?.message||error)}`,'#b42318');
+      if(code==='permission-denied'){
+        setLine('betaAuthDiagMembership','Autorización: RECHAZADA por Firestore · este UID no puede leer el hogar','#b42318');
+        showReauthorize(true);
+      }else setLine('betaAuthDiagMembership',`Autorización: error ${code||String(error?.message||error)}`,'#b42318');
     }
   }catch(error){
     setLine('betaAuthDiagUid',`UID: error ${String(error?.code||error?.message||error)}`,'#b42318');
