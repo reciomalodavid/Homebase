@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 if(!window.HOMEBASE_BETA)return;
-const VERSION='1';
+const VERSION='2';
 const CORE_TOMBS='homebase_beta_core_tombstones_v1';
 const EXP_KEY='homebase_expiries_v2';
 const EXP_TOMBS='homebase_expiries_v2_tombstones';
@@ -37,7 +37,8 @@ function mergeItemsByVersion(a,b,tombs){
  const out=[];
  for(const item of map.values()){
    const id=String(item.id),ts=Number(tombs?.[id]||0),s=stamp(item);
-   if(ts&&ts>=s&&!item.deletedAt)out.push({...item,deletedAt:ts,updatedAt:Math.max(s,ts)});
+   if(ts>s)continue;
+   if(ts===s&&!item.deletedAt)out.push({...item,deletedAt:ts,updatedAt:Math.max(s,ts)});
    else out.push(item);
  }
  return out;
@@ -80,7 +81,7 @@ function patchWriteCloud(){
        const items=mergeItemsByVersion(remote.items||[],localPayload.items||[],tombs);
        tombs=normalizeTombs(items,tombs);
        const expiries=mergeExp(localPayload.betaExpiriesV2||{items:readJson(EXP_KEY,[]),deleted:readJson(EXP_TOMBS,{})},remote.betaExpiriesV2||{});
-       const finalPayload=cleanSecurityFields({...localPayload,items,betaCoreTombstonesV1:tombs,betaExpiriesV2:expiries,betaSyncIntegrityVersion:4,betaTransactionalSyncVersion:1,updatedAt:Date.now()});
+       const finalPayload=cleanSecurityFields({...localPayload,items,betaCoreTombstonesV1:tombs,betaExpiriesV2:expiries,betaSyncIntegrityVersion:5,betaTransactionalSyncVersion:2,updatedAt:Date.now()});
        tx.set(ref,finalPayload,{merge:true});
        writeJson(CORE_TOMBS,tombs);
        writeJson(EXP_TOMBS,expiries.deleted);
