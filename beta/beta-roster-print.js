@@ -2,110 +2,90 @@
 'use strict';
 if(!window.HOMEBASE_BETA)return;
 
-const VERSION='1';
+const VERSION='2';
 const CODE_LABELS={
-  O_TZ:'Día libre por reducción / part-time',O_S:'Día libre no solicitado',O_M:'Día libre solicitado',O_V:'Día libre antes o después de vacaciones',
-  O_FLEX:'Día libre provisional',O_FIX:'Día libre fijo',O_L:'Día libre de planificación a largo plazo',O_RES:'Reserva convertida en día libre',O_SUR:'Día libre cedido voluntariamente',
-  O_TX:'Día libre de bloque de 10',O_U:'Día libre asociado a vacaciones',U:'Vacaciones',MED_COCKP:'Reconocimiento médico de cockpit',MED_OFF:'Día libre por reconocimiento médico',
-  KCC_FLD:'Baja médica sobre duty de vuelo',KCC_GND:'Baja médica sobre duty de tierra',KCC_OFF:'Baja médica sobre día libre',KCC_SBY:'Baja médica sobre standby',KCC_VAC:'Baja médica sobre vacaciones',KCC:'Baja médica',K:'Baja médica',
-  STBY:'Standby',STBY_AP:'Standby en aeropuerto',STBY_RES:'Reserva',SBY_RS72:'Reserva 72 h',RES_24:'Reserva 24 h',
-  CRM:'CRM recurrente',SEP:'Safety & Emergency',FCL:'FCL Check',OPC:'OPC',REF:'Simulador refresher',SIM_APT:'Simulador',SIM_TR:'Instructor de simulador',SIM_TS:'Alumno de simulador',TNG_DAY:'Día de estudio',TRAINER:'Formación en tierra',WETDRILL:'Wet drill',WORKSHOP:'Workshop','1AID':'Primeros auxilios'
+  O_TZ:'Part-time',O_S:'Libre',O_M:'Libre solicitado',O_V:'Libre + vacaciones',O_FLEX:'Libre provisional',O_FIX:'Libre fijo',O_L:'Libre',O_RES:'Reserva → libre',O_SUR:'Libre',O_TX:'Libre bloque 10',O_U:'Libre vacaciones',
+  U:'Vacaciones',MED_COCKP:'Medical',MED_OFF:'Medical',KCC_FLD:'Baja médica',KCC_GND:'Baja médica',KCC_OFF:'Baja médica',KCC_SBY:'Baja médica',KCC_VAC:'Baja médica',KCC:'Baja médica',K:'Baja médica',
+  STBY:'Standby',STBY_AP:'Standby aeropuerto',STBY_RES:'Reserva',SBY_RS72:'Reserva 72 h',RES_24:'Reserva 24 h',CRM:'CRM',SEP:'SEP',FCL:'FCL Check',OPC:'OPC',REF:'SIM refresher',SIM_APT:'Simulador',SIM_TR:'SIM trainer',SIM_TS:'SIM trainee',TNG_DAY:'Study day',TRAINER:'Training',WETDRILL:'Wet drill',WORKSHOP:'Workshop','1AID':'First Aid'
 };
 
 function esc(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}
 function norm(v){return String(v||'').trim().toUpperCase().replace(/[\s-]+/g,'_')}
-function codeLabel(code){return CODE_LABELS[norm(code)]||String(code||'').replaceAll('_',' ')}
-function localDate(iso){
-  if(!iso)return '';
-  const [y,m,d]=String(iso).split('-').map(Number);if(!y||!m||!d)return iso;
-  return new Intl.DateTimeFormat('es-ES',{weekday:'long',day:'numeric',month:'long'}).format(new Date(y,m-1,d));
-}
-function periodTitle(){
-  const start=state?.rosterMeta?.periodStart||'';
-  if(!start)return 'Roster';
-  const [y,m]=start.split('-').map(Number);
-  const txt=new Intl.DateTimeFormat('es-ES',{month:'long',year:'numeric'}).format(new Date(y,m-1,1));
-  return `Roster · ${txt.charAt(0).toUpperCase()+txt.slice(1)}`;
-}
+function labelCode(code){return CODE_LABELS[norm(code)]||String(code||'').replaceAll('_',' ')}
+function dateKey(item){return item?.rosterData?.sourceDate||item?.date||''}
 function activeRoster(){
   if(typeof state==='undefined'||!Array.isArray(state.items))return[];
   const start=state.rosterMeta?.periodStart||'',end=state.rosterMeta?.periodEnd||'';
   return state.items.filter(item=>{
     if(item?.source!=='roster'||item?.deletedAt)return false;
-    const d=item?.rosterData?.sourceDate||item?.date||'';
-    return (!start||d>=start)&&(!end||d<=end);
-  }).sort((a,b)=>String(a?.rosterData?.sourceDate||a?.date||'').localeCompare(String(b?.rosterData?.sourceDate||b?.date||''))||String(a.time||'').localeCompare(String(b.time||'')));
+    const d=dateKey(item);return (!start||d>=start)&&(!end||d<=end);
+  });
 }
-function kindLabel(r){
-  const kind=String(r?.kind||'').toLowerCase();
-  if(kind==='flight'||kind==='dh')return 'Vuelo';
-  if(kind==='standby')return 'Standby / reserva';
-  if(kind==='off')return 'Libre';
-  if(kind==='vacation')return 'Vacaciones';
-  if(kind==='training')return 'Formación';
-  if(kind==='ground')return 'Actividad de tierra';
-  return 'Roster';
+function monthInfo(){
+  const start=state?.rosterMeta?.periodStart||activeRoster()[0]?.date||'';
+  const [year,month]=String(start).split('-').map(Number);
+  if(!year||!month)return null;
+  return {year,month,title:new Intl.DateTimeFormat('es-ES',{month:'long',year:'numeric'}).format(new Date(year,month-1,1)).replace(/^./,c=>c.toUpperCase())};
 }
-function summarize(items){
-  const s={flightDays:0,flights:0,standby:0,off:0,vacation:0,other:0,hotels:0};
-  for(const item of items){const r=item.rosterData||{},k=String(r.kind||'').toLowerCase();if(k==='flight'||k==='dh'){s.flightDays++;s.flights+=(r.flights||[]).filter(f=>!f.dh).length}else if(k==='standby')s.standby++;else if(k==='off')s.off++;else if(k==='vacation')s.vacation++;else s.other++;if(r.hotel)s.hotels++}
-  return s;
+function kindClass(r){const k=String(r?.kind||'').toLowerCase();return ['flight','dh','standby','off','vacation','training','ground'].includes(k)?k:'other'}
+function timeSpan(r,item){
+  const start=r.ciLocal||r.startLocal||r.showUpLocal||r.briefingLocal||item.time||'';
+  const end=r.coLocal||r.endLocal||r.debriefLocal||item.endTime||'';
+  return start?`${start}${end?`–${end}`:''}`:'';
 }
-function flightRows(r){
-  return (r.flights||[]).map(f=>`<div class="sector"><b>${esc(f.number||'Vuelo')}</b><span>${esc(f.dep||'')} → ${esc(f.arr||'')}${f.dh?' · DH':''}</span><em>${esc(f.depLocal||'')}${f.arrLocal?`–${esc(f.arrLocal)}`:''}</em></div>`).join('');
+function route(r){
+  const flights=(r.flights||[]).filter(f=>!f.dh);
+  if(!flights.length)return '';
+  const points=[flights[0].dep,...flights.map(f=>f.arr)].filter(Boolean);
+  return points.join('–');
 }
-function activityRows(r){
-  return (r.activities||[]).map(a=>`<div class="sector"><b>${esc(String(a.code||'Actividad').replaceAll('_',' '))}</b><span>${esc(a.airport||a.destination||a.arr||'')}</span><em>${esc(a.startLocal||'')}${a.endLocal?`–${esc(a.endLocal)}`:''}</em></div>`).join('');
+function compactLines(items){
+  const lines=[];
+  for(const item of items){
+    const r=item.rosterData||{},k=String(r.kind||'').toLowerCase(),code=String(r.code||'').replaceAll('_',' '),span=timeSpan(r,item);
+    if(k==='flight'||k==='dh'){
+      const rt=route(r);
+      lines.push({cls:'flight',main:rt||'Vuelo',sub:span||'',hotel:r.hotel?'🌙 Fuera':''});
+    }else if(k==='off')lines.push({cls:'off',main:labelCode(code)||'Libre',sub:code&&labelCode(code)!==code?code:'',hotel:''});
+    else if(k==='vacation')lines.push({cls:'vacation',main:'Vacaciones',sub:code&&code!=='U'?code:'',hotel:''});
+    else if(k==='standby')lines.push({cls:'standby',main:labelCode(code)||'Standby',sub:span,hotel:''});
+    else lines.push({cls:kindClass(r),main:labelCode(code)||'Duty',sub:[span,r.airport||r.ciAirport||''].filter(Boolean).join(' · '),hotel:r.hotel?'🌙 Fuera':''});
+  }
+  return lines.slice(0,3);
 }
-function dutyCard(item){
-  const r=item.rosterData||{},code=String(r.code||'').replaceAll('_',' '),kind=String(r.kind||'').toLowerCase();
-  const meta=[];
-  if(r.pickupLocal)meta.push(`Recogida ${r.pickupLocal}`);
-  if(r.briefingLocal)meta.push(`Briefing ${r.briefingLocal}`);
-  if(r.ciLocal)meta.push(`C/I ${r.ciLocal}`);
-  if(r.coLocal)meta.push(`C/O ${r.coLocal}`);
-  if(r.debriefLocal)meta.push(`Debrief ${r.debriefLocal}`);
-  const detail=(kind==='flight'||kind==='dh')?flightRows(r):activityRows(r);
-  const codeText=code?`${code}${codeLabel(code)&&codeLabel(code)!==code?` · ${codeLabel(code)}`:''}`:'';
-  const base=r.ciAirport||r.showUpAirport||r.briefingAirport||r.airport||'';
-  return `<article class="duty ${esc(kind||'other')}">
-    <div class="day"><strong>${esc(localDate(r.sourceDate||item.date))}</strong><span>${esc(kindLabel(r))}</span></div>
-    <div class="body">
-      <div class="title">${esc(codeText||kindLabel(r))}</div>
-      ${base&&kind!=='flight'?`<div class="sub">Lugar/base: ${esc(base)}</div>`:''}
-      ${meta.length?`<div class="times">${meta.map(esc).join(' · ')}</div>`:''}
-      ${detail?`<div class="sectors">${detail}</div>`:''}
-      ${r.hotel?`<div class="hotel">Noche fuera · ${esc(r.hotel)}</div>`:''}
-    </div>
-  </article>`;
+function calendarCells(items,info){
+  const byDate=new Map();
+  for(const item of items){const d=dateKey(item);if(!byDate.has(d))byDate.set(d,[]);byDate.get(d).push(item)}
+  const first=new Date(info.year,info.month-1,1);const days=new Date(info.year,info.month,0).getDate();
+  const mondayIndex=(first.getDay()+6)%7;const total=Math.ceil((mondayIndex+days)/7)*7;let html='';
+  for(let i=0;i<total;i++){
+    const day=i-mondayIndex+1;
+    if(day<1||day>days){html+='<div class="cell empty"></div>';continue}
+    const iso=`${info.year}-${String(info.month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const lines=compactLines(byDate.get(iso)||[]);
+    html+=`<div class="cell"><div class="num">${day}</div><div class="entries">${lines.map(x=>`<div class="entry ${esc(x.cls)}"><b>${esc(x.main)}</b>${x.sub?`<span>${esc(x.sub)}</span>`:''}${x.hotel?`<em>${esc(x.hotel)}</em>`:''}</div>`).join('')}</div></div>`;
+  }
+  return html;
 }
-function buildDocument(items){
-  const s=summarize(items),title=periodTitle();
-  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(title)}</title><style>
-    *{box-sizing:border-box}body{margin:0;background:#eef2f6;color:#1d2733;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.page{max-width:850px;margin:auto;background:white;min-height:100vh;padding:34px}.top{display:flex;justify-content:space-between;gap:20px;align-items:flex-end;border-bottom:2px solid #28394d;padding-bottom:16px}.top h1{margin:0;font-size:28px}.top p{margin:5px 0 0;color:#687587;font-size:13px}.mark{text-align:right;font-size:11px;color:#687587}.summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:18px 0}.stat{border:1px solid #dfe5eb;border-radius:12px;padding:10px;text-align:center}.stat b{display:block;font-size:20px}.stat span{font-size:10px;color:#687587}.duties{display:grid;gap:9px}.duty{display:grid;grid-template-columns:155px 1fr;border:1px solid #dfe5eb;border-radius:14px;overflow:hidden;break-inside:avoid}.day{padding:12px;background:#f4f7fa}.day strong{display:block;font-size:13px;text-transform:capitalize}.day span{display:inline-block;margin-top:5px;font-size:10px;font-weight:800;color:#516273;text-transform:uppercase}.body{padding:12px 14px}.title{font-size:14px;font-weight:850}.sub,.times{font-size:11px;color:#617082;margin-top:4px}.sectors{margin-top:8px;border-top:1px solid #edf0f3}.sector{display:grid;grid-template-columns:90px 1fr auto;gap:8px;padding:6px 0;border-bottom:1px solid #edf0f3;font-size:11px}.sector b{font-size:11px}.sector span{font-weight:700}.sector em{font-style:normal;color:#516273;white-space:nowrap}.hotel{margin-top:8px;padding:7px 9px;border-radius:8px;background:#f7f1e7;font-size:11px;font-weight:700}.off .day{background:#eef8f2}.vacation .day{background:#fff5e8}.flight .day,.dh .day{background:#edf4fb}.standby .day{background:#f2effb}.footer{margin-top:18px;padding-top:10px;border-top:1px solid #dfe5eb;font-size:9px;color:#8190a0;text-align:center}@media(max-width:620px){.page{padding:20px}.summary{grid-template-columns:repeat(2,1fr)}.duty{grid-template-columns:118px 1fr}.sector{grid-template-columns:78px 1fr}.sector em{grid-column:2}}@media print{body{background:white}.page{max-width:none;padding:12mm}.duty{page-break-inside:avoid}.no-print{display:none}}
-  </style></head><body><main class="page"><header class="top"><div><h1>${esc(title)}</h1><p>Plan mensual de David · horarios mostrados en hora local</p></div><div class="mark">Generado con Homebase Beta</div></header>
-  <section class="summary"><div class="stat"><b>${s.flights}</b><span>Vuelos</span></div><div class="stat"><b>${s.flightDays}</b><span>Días de vuelo</span></div><div class="stat"><b>${s.off}</b><span>Días libres</span></div><div class="stat"><b>${s.vacation}</b><span>Vacaciones</span></div><div class="stat"><b>${s.standby}</b><span>Standby</span></div><div class="stat"><b>${s.hotels}</b><span>Noches fuera</span></div><div class="stat"><b>${s.other}</b><span>Otros duties</span></div></section>
-  <section class="duties">${items.map(dutyCard).join('')}</section><div class="footer">Documento informativo para uso familiar. El roster operativo oficial sigue siendo el publicado por la compañía.</div></main><script>setTimeout(()=>{window.focus();window.print()},250)<\/script></body></html>`;
+function buildCalendar(){
+  const items=activeRoster(),info=monthInfo();if(!items.length||!info)return '';
+  return `<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Roster ${esc(info.title)}</title><style>
+  @page{size:A4 landscape;margin:8mm}*{box-sizing:border-box}html,body{margin:0;background:#eef2f6;color:#17212b;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.sheet{width:min(1180px,96vw);margin:18px auto;background:#fff;border-radius:18px;box-shadow:0 18px 50px rgba(20,35,50,.16);padding:18px}.toolbar{display:flex;justify-content:flex-end;gap:8px;margin-bottom:12px}.toolbar button{border:0;border-radius:11px;padding:10px 14px;font-weight:800}.close{background:#eef1f4;color:#273746}.print{background:#5b4db0;color:#fff}.head{display:flex;align-items:end;justify-content:space-between;border-bottom:2px solid #273746;padding-bottom:10px;margin-bottom:10px}.head h1{margin:0;font-size:27px}.head p{margin:3px 0 0;color:#697887;font-size:11px}.legend{font-size:10px;color:#697887;text-align:right}.week{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:5px}.week div{text-align:center;font-size:10px;font-weight:850;text-transform:uppercase;color:#667586}.grid{display:grid;grid-template-columns:repeat(7,1fr);grid-auto-rows:minmax(94px,1fr);gap:5px}.cell{position:relative;border:1px solid #dce3e9;border-radius:10px;padding:7px 6px 5px;min-width:0;background:#fff}.cell.empty{background:#f5f7f9}.num{font-size:15px;font-weight:900;margin-bottom:5px}.entries{display:grid;gap:4px}.entry{border-radius:7px;padding:4px 5px;line-height:1.08;min-width:0}.entry b{display:block;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.entry span,.entry em{display:block;font-size:7.5px;margin-top:2px;color:#536271;font-style:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.entry.flight,.entry.dh{background:#eaf3fb}.entry.off{background:#eaf7ef}.entry.vacation{background:#fff0dd}.entry.standby{background:#f0ecfb}.entry.training,.entry.ground,.entry.other{background:#f2f3f5}.foot{margin-top:8px;text-align:center;color:#7a8794;font-size:8px}@media(max-width:760px){.sheet{width:1180px;transform-origin:top left}.toolbar{position:sticky;left:0;width:100vw;justify-content:flex-start}.head h1{font-size:24px}}@media print{html,body{background:white}.sheet{width:100%;margin:0;box-shadow:none;border-radius:0;padding:0}.toolbar{display:none}.grid{grid-auto-rows:31mm}.cell{break-inside:avoid}.head{margin-bottom:4mm}.foot{margin-top:3mm}}
+  </style></head><body><main class="sheet"><div class="toolbar"><button class="close" onclick="window.close()">Cerrar</button><button class="print" onclick="window.print()">Imprimir / Guardar PDF</button></div><header class="head"><div><h1>Roster · ${esc(info.title)}</h1><p>David · Horarios locales · Vista familiar mensual</p></div><div class="legend">Azul: vuelo · Verde: libre · Naranja: vacaciones · Violeta: standby</div></header><div class="week"><div>Lun</div><div>Mar</div><div>Mié</div><div>Jue</div><div>Vie</div><div>Sáb</div><div>Dom</div></div><section class="grid">${calendarCells(items,info)}</section><div class="foot">Homebase · Documento familiar informativo. El roster oficial sigue siendo el publicado por la compañía.</div></main></body></html>`;
 }
-function printRoster(){
-  const items=activeRoster();
-  if(!items.length){alert('No hay un roster importado para imprimir.');return}
-  const win=window.open('','_blank');
-  if(!win){alert('No se pudo abrir la vista de impresión. Permite la ventana emergente e inténtalo de nuevo.');return}
-  win.document.open();win.document.write(buildDocument(items));win.document.close();
+function openCalendar(){
+  const html=buildCalendar();if(!html){alert('No hay un roster importado para imprimir.');return}
+  const win=window.open('','_blank');if(!win){alert('No se pudo abrir el calendario.');return}
+  win.document.open();win.document.write(html);win.document.close();
 }
 function ensureButton(){
   const dialog=document.getElementById('rosterDialog');if(!dialog)return false;
   let btn=document.getElementById('betaPrintRoster');
-  if(btn)return true;
-  btn=document.createElement('button');btn.id='betaPrintRoster';btn.type='button';btn.textContent='Imprimir / Guardar PDF';
-  btn.style.cssText='width:100%;margin:12px 0 4px;padding:12px 14px;border:1px solid rgba(111,88,201,.22);border-radius:14px;background:rgba(111,88,201,.09);color:#57439d;font-weight:850';
-  btn.addEventListener('click',printRoster);
-  const anchor=document.getElementById('rosterOptionsPanel');
-  anchor?.parentNode?.insertBefore(btn,anchor);
-  return true;
+  if(!btn){btn=document.createElement('button');btn.id='betaPrintRoster';btn.type='button';const anchor=document.getElementById('rosterOptionsPanel');anchor?.parentNode?.insertBefore(btn,anchor)}
+  btn.textContent='Calendario imprimible';btn.style.cssText='width:100%;margin:12px 0 4px;padding:12px 14px;border:1px solid rgba(111,88,201,.22);border-radius:14px;background:rgba(111,88,201,.09);color:#57439d;font-weight:850';
+  btn.onclick=openCalendar;return true;
 }
-function install(){if(!ensureButton()){setTimeout(install,250);return}}
+function install(){if(!ensureButton())setTimeout(install,250)}
 document.readyState==='loading'?document.addEventListener('DOMContentLoaded',install,{once:true}):install();
-window.HOMEBASE_BETA_ROSTER_PRINT={version:VERSION,print:printRoster,build:()=>buildDocument(activeRoster())};
+window.HOMEBASE_BETA_ROSTER_PRINT={version:VERSION,open:openCalendar,build:buildCalendar};
 })();
