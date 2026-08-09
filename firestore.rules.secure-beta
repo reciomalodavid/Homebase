@@ -56,14 +56,17 @@ service cloud.firestore {
         && request.auth.uid in request.resource.data.authorizedUids;
     }
 
+    // Atomic Beta pairing: the invite claim and the home membership update are
+    // committed in the same Firestore transaction. getAfter() validates the invite
+    // as it will exist after that transaction, so a failed join does not consume it.
     function validClaimedInvite(homeId) {
       let token = request.resource.data.securityJoinToken;
+      let invite = getAfter(/databases/$(database)/documents/homebaseDeviceInvites/$(token)).data;
       return signedIn()
         && token is string
-        && exists(/databases/$(database)/documents/homebaseDeviceInvites/$(token))
-        && get(/databases/$(database)/documents/homebaseDeviceInvites/$(token)).data.homeId == homeId
-        && get(/databases/$(database)/documents/homebaseDeviceInvites/$(token)).data.claimedUid == request.auth.uid
-        && get(/databases/$(database)/documents/homebaseDeviceInvites/$(token)).data.expiresAt > request.time;
+        && invite.homeId == homeId
+        && invite.claimedUid == request.auth.uid
+        && invite.expiresAt > request.time;
     }
 
     function joinsWithoutRemovingMembers(homeId) {
