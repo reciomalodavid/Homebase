@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 if(!window.HOMEBASE_BETA)return;
-const VERSION='1';
+const VERSION='2';
 function place(){
   const topbar=document.querySelector('.topbar');
   const button=document.getElementById('betaGlobalSearchButton');
@@ -9,7 +9,7 @@ function place(){
   if(button.parentElement!==topbar)topbar.appendChild(button);
   topbar.style.position='relative';
   button.style.setProperty('position','absolute','important');
-  button.style.setProperty('right','108px','important');
+  button.style.setProperty('right',window.innerWidth>=768?'132px':'116px','important');
   button.style.setProperty('top','50%','important');
   button.style.setProperty('transform','translateY(-50%)','important');
   button.style.setProperty('z-index','30','important');
@@ -26,6 +26,8 @@ function install(){
   const observer=new MutationObserver(()=>place());
   observer.observe(document.documentElement,{childList:true,subtree:true});
   document.addEventListener('click',event=>{if(event.target.closest('.bottom-nav,.topbar'))setTimeout(place,0)},true);
+  window.addEventListener('resize',place);
+  window.addEventListener('orientationchange',()=>setTimeout(place,80));
   window.addEventListener('pageshow',place);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)place()});
 }
