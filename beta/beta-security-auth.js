@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 
-const VERSION='7';
+const VERSION='8';
 const FIREBASE_PROJECT='homebase-85f2b';
 const INVITE_COLLECTION='homebaseDeviceInvites';
 const INVITE_TTL_MS=10*60*1000;
@@ -9,6 +9,7 @@ const RESTORE_PAUSE_KEY='homebase_restore_sync_paused';
 let currentUid='';
 let authorizedUids=[];
 let authPromise=null;
+let persistenceReady=false;
 
 function byId(id){return document.getElementById(id)}
 function isRestorePaused(){return localStorage.getItem(RESTORE_PAUSE_KEY)==='1'}
@@ -26,10 +27,33 @@ function ensureStatusUi(){
 function refreshPairingUi(){const linked=!!state?.syncCode;const authorize=byId('betaAuthorizeDevice'),join=byId('betaJoinDevice');if(authorize)authorize.hidden=!linked;if(join)join.hidden=linked}
 function setStatus(text,isError=false){ensureStatusUi();const el=byId('betaSecurityStatusText');if(!el)return;el.textContent=text;el.style.color=isError?'#b42318':'#4b416f';refreshPairingUi()}
 
+async function preparePersistence(auth){
+ if(persistenceReady)return;
+ if(auth?.setPersistence&&firebase.auth?.Auth?.Persistence?.LOCAL){await auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL)}
+ persistenceReady=true;
+}
+function waitForInitialAuthState(auth,timeoutMs=1800){
+ return new Promise(resolve=>{
+  let done=false,unsub=null;
+  const finish=user=>{if(done)return;done=true;clearTimeout(timer);try{unsub?.()}catch{}resolve(user||auth.currentUser||null)};
+  const timer=setTimeout(()=>finish(auth.currentUser),timeoutMs);
+  try{unsub=auth.onAuthStateChanged(user=>finish(user),()=>finish(auth.currentUser))}catch{finish(auth.currentUser)}
+ });
+}
 async function ensureAnonymousAuth(){
+ const auth=firebase?.auth?.();
+ if(!auth)throw new Error('Firebase Auth no está disponible');
+ if(auth.currentUser){currentUid=auth.currentUser.uid;window.HOMEBASE_AUTH_UID=currentUid;return auth.currentUser}
  if(authPromise)return authPromise;
- authPromise=(async()=>{if(!window.firebase||typeof firebase.auth!=='function')throw new Error('Firebase Auth no está disponible');const auth=firebase.auth();let user=auth.currentUser;if(!user){const result=await auth.signInAnonymously();user=result.user}if(!user)throw new Error('No se pudo crear la sesión anónima');currentUid=user.uid;window.HOMEBASE_AUTH_UID=currentUid;return user})();
- try{return await authPromise}catch(error){authPromise=null;throw error}
+ authPromise=(async()=>{
+  await preparePersistence(auth);
+  let user=auth.currentUser;
+  if(!user)user=await waitForInitialAuthState(auth);
+  if(!user){const result=await auth.signInAnonymously();user=result.user}
+  if(!user)throw new Error('No se pudo crear la sesión anónima');
+  currentUid=user.uid;window.HOMEBASE_AUTH_UID=currentUid;return user;
+ })();
+ try{return await authPromise}finally{authPromise=null}
 }
 async function loadMembership(){if(!currentUid||!state?.syncCode||typeof syncDoc!=='function'){authorizedUids=mergeUid([],currentUid);return}const snap=await syncDoc().get();authorizedUids=snap.exists?mergeUid((snap.data()||{}).authorizedUids,currentUid):mergeUid([],currentUid)}
 async function enrollCurrentDevice(){if(!currentUid||!state?.syncCode||typeof syncDoc!=='function')return;const FieldValue=firebase.firestore.FieldValue;await syncDoc().set({authorizedUids:FieldValue.arrayUnion(currentUid),securityVersion:2,securityUpdatedAt:Date.now()},{merge:true});authorizedUids=mergeUid(authorizedUids,currentUid)}
@@ -99,7 +123,7 @@ async function joinWithPairingCode(){
     localStorage.setItem('homebase_profile_photos',JSON.stringify(profilePhotos));
    }finally{state.applyingRemote=false}
   }
-  try{await homeRef.set({securityJoinToken:FieldValue.delete()},{merge:true})}catch{}
+  try{await homeRef.set({securityJoinToken:firebase.firestore.FieldValue.delete()},{merge:true})}catch{}
   try{await cloudDb.collection(INVITE_COLLECTION).doc(token).delete()}catch{}
   if(typeof startCloudListener==='function')startCloudListener();
   if(typeof render==='function')render();
