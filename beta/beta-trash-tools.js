@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 if(!window.HOMEBASE_BETA)return;
-const VERSION='2';
+const VERSION='3';
 const CORE_TOMBS='homebase_beta_core_tombstones_v1';
 let selectionMode=false;
 let decorating=false;
@@ -11,6 +11,7 @@ const selected=new Set();
 const readTombs=()=>{try{const v=JSON.parse(localStorage.getItem(CORE_TOMBS)||'{}');return v&&typeof v==='object'&&!Array.isArray(v)?v:{}}catch{return {}}};
 const writeTombs=v=>localStorage.setItem(CORE_TOMBS,JSON.stringify(v));
 const deletedItems=()=>typeof state!=='undefined'&&Array.isArray(state.items)?state.items.filter(i=>i?.deletedAt):[];
+const stamp=item=>Number(item?.updatedAt||item?.deletedAt||item?.createdAt||0)||0;
 
 function persistAndSync(){
   try{localStorage.setItem('homebase_v2_items',JSON.stringify(state.items))}catch{}
@@ -24,7 +25,10 @@ function permanentlyDelete(ids){
   const unique=[...new Set((ids||[]).map(String).filter(Boolean))];
   if(!unique.length)return false;
   const idSet=new Set(unique),tombs=readTombs(),now=Date.now();
-  for(const id of unique)tombs[id]=Math.max(Number(tombs[id]||0),now);
+  for(const id of unique){
+    const item=state.items.find(x=>String(x?.id||'')===id);
+    tombs[id]=Math.max(Number(tombs[id]||0),now,stamp(item)+1);
+  }
   writeTombs(tombs);
   state.items=state.items.filter(item=>!idSet.has(String(item?.id||'')));
   for(const id of unique)selected.delete(id);
