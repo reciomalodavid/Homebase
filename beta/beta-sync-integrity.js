@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 if(!window.HOMEBASE_BETA)return;
-const VERSION='3';
+const VERSION='4';
 const EXP_KEY='homebase_expiries_v2';
 const EXP_TOMBS='homebase_expiries_v2_tombstones';
 const CORE_TOMBS='homebase_beta_core_tombstones_v1';
@@ -27,8 +27,9 @@ function normalizeCoreTombs(items,tombs){
 }
 function recordPermanentDelete(id){
  if(!id)return;
- const tombs=readCoreTombs();
- tombs[String(id)]=Math.max(Number(tombs[String(id)]||0),Date.now());
+ const item=coreItems().find(x=>String(x?.id||'')===String(id));
+ const itemStamp=stamp(item),tombs=readCoreTombs();
+ tombs[String(id)]=Math.max(Number(tombs[String(id)]||0),Date.now(),itemStamp+1);
  writeJson(CORE_TOMBS,tombs);
 }
 function collectCoreTombs(){
@@ -48,7 +49,10 @@ function mergeCore(localItems,remoteItems,tombs){
  const out=[];
  for(const item of map.values()){
    const id=String(item.id),ts=Number(tombs?.[id]||0),s=stamp(item);
-   if(ts&&ts>=s&&!item.deletedAt)out.push({...item,deletedAt:ts,updatedAt:Math.max(s,ts)});
+   // A tombstone equal to the item stamp represents the normal soft-delete state.
+   // A strictly newer tombstone represents a permanent delete and the item must vanish.
+   if(ts>s)continue;
+   if(ts===s&&!item.deletedAt)out.push({...item,deletedAt:ts,updatedAt:Math.max(s,ts)});
    else out.push(item);
  }
  return out;
@@ -76,7 +80,7 @@ function patchMergeItems(){
  wrapped.__betaConvergent=true;mergeItems=wrapped;return true;
 }
 function patchPayload(){
- if(typeof cloudPayload!=='function'||cloudPayload.__betaIntegrityV3)return false;
+ if(typeof cloudPayload!=='function'||cloudPayload.__betaIntegrityV4)return false;
  const original=cloudPayload;
  const wrapped=function(){
    const payload=original();
@@ -84,13 +88,13 @@ function patchPayload(){
    payload.items=mergeCore([],coreItems(),coreTombs);
    payload.betaCoreTombstonesV1=coreTombs;
    payload.betaExpiriesV2={items:readExp(),deleted:readExpTombs(),updatedAt:Date.now()};
-   payload.betaSyncIntegrityVersion=3;
+   payload.betaSyncIntegrityVersion=4;
    return payload;
  };
- wrapped.__betaIntegrityV3=true;cloudPayload=wrapped;return true;
+ wrapped.__betaIntegrityV4=true;cloudPayload=wrapped;return true;
 }
 function patchRemote(){
- if(typeof applyRemotePayload!=='function'||applyRemotePayload.__betaIntegrityV3)return false;
+ if(typeof applyRemotePayload!=='function'||applyRemotePayload.__betaIntegrityV4)return false;
  const original=applyRemotePayload;
  const wrapped=function(data){
    const remoteTombs=data?.betaCoreTombstonesV1&&typeof data.betaCoreTombstonesV1==='object'?data.betaCoreTombstonesV1:{};
@@ -106,7 +110,7 @@ function patchRemote(){
    const changed=!same(readExp(),mergedExp.items)||!same(readExpTombs(),mergedExp.deleted);
    if(changed){writeJson(EXP_KEY,mergedExp.items);writeJson(EXP_TOMBS,mergedExp.deleted);window.dispatchEvent(new CustomEvent('homebase:expiries-remote-applied',{detail:{count:mergedExp.items.length}}));}
  };
- wrapped.__betaIntegrityV3=true;applyRemotePayload=wrapped;return true;
+ wrapped.__betaIntegrityV4=true;applyRemotePayload=wrapped;return true;
 }
 function detectExpiryDeletes(){
  const previous=window.__hbBetaExpiryIds||new Set(),current=new Set(readExp().map(x=>String(x.id))),tombs=readExpTombs();let changed=false;
@@ -129,7 +133,7 @@ function restoreCoreItem(id){
 function install(){
  window.__hbBetaExpiryIds=new Set(readExp().map(x=>String(x.id)));
  let tries=0;
- const patch=()=>{tries++;patchMergeItems();patchPayload();patchRemote();if(tries<80&&(!mergeItems?.__betaConvergent||!cloudPayload?.__betaIntegrityV3||!applyRemotePayload?.__betaIntegrityV3))setTimeout(patch,100)};
+ const patch=()=>{tries++;patchMergeItems();patchPayload();patchRemote();if(tries<80&&(!mergeItems?.__betaConvergent||!cloudPayload?.__betaIntegrityV4||!applyRemotePayload?.__betaIntegrityV4))setTimeout(patch,100)};
  patch();
  document.addEventListener('click',event=>{
    const restore=event.target.closest?.('[data-restore]');
