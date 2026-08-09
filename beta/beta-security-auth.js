@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 
-const VERSION='6';
+const VERSION='7';
 const FIREBASE_PROJECT='homebase-85f2b';
 const INVITE_COLLECTION='homebaseDeviceInvites';
 const INVITE_TTL_MS=10*60*1000;
@@ -13,7 +13,8 @@ let authPromise=null;
 function byId(id){return document.getElementById(id)}
 function isRestorePaused(){return localStorage.getItem(RESTORE_PAUSE_KEY)==='1'}
 function mergeUid(list,uid){const out=[];for(const value of Array.isArray(list)?list:[]){if(typeof value==='string'&&value&&!out.includes(value))out.push(value)}if(uid&&!out.includes(uid))out.push(uid);return out}
-function errorText(error){const code=String(error?.code||'');if(code==='auth/operation-not-allowed')return `Firebase rechaza el acceso anónimo en el proyecto ${FIREBASE_PROJECT}.`;if(code==='auth/network-request-failed')return 'Firebase Auth no pudo conectar con la red.';if(code==='auth/unauthorized-domain')return 'Este dominio no está autorizado en Firebase Auth.';if(code==='permission-denied')return 'Firestore ha rechazado la operación de seguridad. El código puede haber caducado o este dispositivo no está autorizado.';return code?`Error de seguridad Beta: ${code}`:`Error de seguridad Beta: ${String(error?.message||error||'desconocido')}`}
+function errorText(error){const code=String(error?.code||'');if(code==='auth/operation-not-allowed')return `Firebase rechaza el acceso anónimo en el proyecto ${FIREBASE_PROJECT}.`;if(code==='auth/network-request-failed')return 'Firebase Auth no pudo conectar con la red.';if(code==='auth/unauthorized-domain')return 'Este dominio no está autorizado en Firebase Auth.';if(code==='permission-denied')return 'Firestore ha rechazado la operación de seguridad.';return code?`Error de seguridad Beta: ${code}`:`Error de seguridad Beta: ${String(error?.message||error||'desconocido')}`}
+function stepError(step,error){const base=errorText(error);const wrapped=new Error(`${step}: ${base}`);wrapped.code=error?.code||'';wrapped.original=error;return wrapped}
 
 function ensureStatusUi(){
  if(byId('betaSecurityStatus'))return byId('betaSecurityStatus');
@@ -39,11 +40,76 @@ function cleanToken(value){return String(value||'').toUpperCase().replace(/[^A-Z
 function betaHomeId(){return state?.syncCode?`BETA_${state.syncCode}`:''}
 
 async function createPairingInvite(){
- try{await ensureAnonymousAuth();if(!cloudDb||!state?.syncCode)throw new Error('Este dispositivo todavía no está vinculado a un hogar Beta');const token=randomToken(),now=Date.now();await cloudDb.collection(INVITE_COLLECTION).doc(token).set({homeId:betaHomeId(),createdByUid:currentUid,createdAt:firebase.firestore.Timestamp.fromMillis(now),expiresAt:firebase.firestore.Timestamp.fromMillis(now+INVITE_TTL_MS),claimedUid:null,securityVersion:2});const shown=formatToken(token);setStatus(`Código temporal creado. Caduca en 10 minutos: ${shown}`);try{await navigator.clipboard.writeText(shown);alert(`Código temporal copiado.\n\n${shown}`)}catch{prompt('Copia este código temporal. Caduca en 10 minutos.',shown)}}catch(error){console.error('Beta pairing invite',error);setStatus(errorText(error),true)}}
+ try{
+  await ensureAnonymousAuth();
+  if(!cloudDb||!state?.syncCode)throw new Error('Este dispositivo todavía no está vinculado a un hogar Beta');
+  const token=randomToken(),now=Date.now();
+  await cloudDb.collection(INVITE_COLLECTION).doc(token).set({homeId:betaHomeId(),createdByUid:currentUid,createdAt:firebase.firestore.Timestamp.fromMillis(now),expiresAt:firebase.firestore.Timestamp.fromMillis(now+INVITE_TTL_MS),claimedUid:null,securityVersion:2});
+  const shown=formatToken(token);setStatus(`Código temporal creado. Caduca en 10 minutos: ${shown}`);
+  try{await navigator.clipboard.writeText(shown);alert(`Código temporal copiado.\n\n${shown}`)}catch{prompt('Copia este código temporal. Caduca en 10 minutos.',shown)}
+ }catch(error){console.error('Beta pairing invite',error);setStatus(errorText(error),true)}
+}
+
+async function atomicClaimAndJoin(token){
+ if(!cloudDb)throw new Error('Firestore no está disponible');
+ const inviteRef=cloudDb.collection(INVITE_COLLECTION).doc(token);
+ const FieldValue=firebase.firestore.FieldValue;
+ let homeId='';
+ try{
+  await cloudDb.runTransaction(async tx=>{
+   const inviteSnap=await tx.get(inviteRef);
+   if(!inviteSnap.exists)throw new Error('Código temporal no válido o ya eliminado');
+   const invite=inviteSnap.data()||{};
+   if(!invite.homeId||!String(invite.homeId).startsWith('BETA_'))throw new Error('Invitación Beta inválida');
+   const expiresMs=invite.expiresAt?.toMillis?.()||0;
+   if(expiresMs&&expiresMs<=Date.now())throw new Error('El código temporal ha caducado');
+   if(invite.claimedUid&&invite.claimedUid!==currentUid)throw new Error('Este código temporal ya ha sido utilizado');
+   homeId=String(invite.homeId);
+   const homeRef=cloudDb.collection('homebaseSyncs').doc(homeId);
+   tx.update(inviteRef,{claimedUid:currentUid,claimedAt:firebase.firestore.Timestamp.now()});
+   tx.set(homeRef,{authorizedUids:FieldValue.arrayUnion(currentUid),securityJoinToken:token,securityVersion:3,securityUpdatedAt:Date.now()},{merge:true});
+  });
+ }catch(error){throw stepError('Autorización atómica',error)}
+ return homeId;
+}
 
 async function joinWithPairingCode(){
- const token=cleanToken(prompt('Introduce el código temporal generado desde un dispositivo ya autorizado.'));if(!token)return;if(token.length!==20){setStatus('El código temporal no tiene el formato esperado.',true);return}
- try{await ensureAnonymousAuth();if(!cloudDb)throw new Error('Firestore no está disponible');setStatus('Comprobando código temporal…');const inviteRef=cloudDb.collection(INVITE_COLLECTION).doc(token),inviteSnap=await inviteRef.get();if(!inviteSnap.exists)throw new Error('Código temporal no válido o ya eliminado');const invite=inviteSnap.data()||{};if(!invite.homeId||!String(invite.homeId).startsWith('BETA_'))throw new Error('Invitación Beta inválida');if(invite.claimedUid&&invite.claimedUid!==currentUid)throw new Error('Este código temporal ya ha sido utilizado');await inviteRef.update({claimedUid:currentUid,claimedAt:firebase.firestore.Timestamp.now()});const FieldValue=firebase.firestore.FieldValue,homeRef=cloudDb.collection('homebaseSyncs').doc(invite.homeId);await homeRef.set({authorizedUids:FieldValue.arrayUnion(currentUid),securityJoinToken:token,securityVersion:2,securityUpdatedAt:Date.now()},{merge:true});state.syncCode=String(invite.homeId).slice('BETA_'.length);localStorage.setItem('homebase_sync_code',state.syncCode);localStorage.removeItem(RESTORE_PAUSE_KEY);authorizedUids=mergeUid([],currentUid);const snap=await homeRef.get();if(snap.exists&&typeof applyRemotePayload==='function'){state.applyingRemote=true;applyRemotePayload(snap.data()||{});localStorage.setItem('homebase_v2_items',JSON.stringify(state.items));localStorage.setItem('homebase_roster_meta',JSON.stringify(state.rosterMeta));localStorage.setItem('homebase_profile_photos',JSON.stringify(profilePhotos));state.applyingRemote=false}try{await homeRef.set({securityJoinToken:FieldValue.delete()},{merge:true})}catch{}try{await inviteRef.delete()}catch{}if(typeof startCloudListener==='function')startCloudListener();if(typeof render==='function')render();setStatus('Dispositivo autorizado y vinculado correctamente en Beta.')}catch(error){console.error('Beta pairing join',error);setStatus(errorText(error),true)}}
+ const token=cleanToken(prompt('Introduce el código temporal generado desde un dispositivo ya autorizado.'));
+ if(!token)return;
+ if(token.length!==20){setStatus('El código temporal no tiene el formato esperado.',true);return}
+ try{
+  setStatus('Paso 1/3 · autenticando este dispositivo…');
+  try{await ensureAnonymousAuth()}catch(error){throw stepError('Paso 1 · autenticación',error)}
+  setStatus('Paso 2/3 · autorizando el dispositivo sin consumir el código si falla…');
+  const homeId=await atomicClaimAndJoin(token);
+  setStatus('Paso 3/3 · cargando el hogar y activando sincronización…');
+  const homeRef=cloudDb.collection('homebaseSyncs').doc(homeId);
+  state.syncCode=homeId.slice('BETA_'.length);
+  localStorage.setItem('homebase_sync_code',state.syncCode);
+  localStorage.removeItem(RESTORE_PAUSE_KEY);
+  authorizedUids=mergeUid([],currentUid);
+  let snap;
+  try{snap=await homeRef.get()}catch(error){throw stepError('Paso 3 · lectura del hogar',error)}
+  if(snap.exists&&typeof applyRemotePayload==='function'){
+   state.applyingRemote=true;
+   try{
+    applyRemotePayload(snap.data()||{});
+    localStorage.setItem('homebase_v2_items',JSON.stringify(state.items));
+    localStorage.setItem('homebase_roster_meta',JSON.stringify(state.rosterMeta));
+    localStorage.setItem('homebase_profile_photos',JSON.stringify(profilePhotos));
+   }finally{state.applyingRemote=false}
+  }
+  try{await homeRef.set({securityJoinToken:FieldValue.delete()},{merge:true})}catch{}
+  try{await cloudDb.collection(INVITE_COLLECTION).doc(token).delete()}catch{}
+  if(typeof startCloudListener==='function')startCloudListener();
+  if(typeof render==='function')render();
+  setStatus('Dispositivo autorizado y vinculado correctamente en Beta.');
+ }catch(error){
+  console.error('Beta pairing join',error);
+  const message=String(error?.message||errorText(error));
+  setStatus(message,true);
+ }
+}
 
 function bindProtectedActions(){
  const createBtn=byId('createSyncCode'),linkBtn=byId('linkSyncCode'),syncNowBtn=byId('syncNow');
@@ -54,7 +120,18 @@ function bindProtectedActions(){
 
 async function start(){
  ensureStatusUi();bindProtectedActions();
- try{await ensureAnonymousAuth();if(state?.syncCode&&isRestorePaused()){authorizedUids=mergeUid([],currentUid);if(state.syncUnsubscribe){try{state.syncUnsubscribe()}catch{}state.syncUnsubscribe=null}setStatus('Autenticación activa · sincronización pausada tras restauración. El código familiar sigue guardado.');return}setStatus('Autenticación anónima activa. Preparando autorización del dispositivo…');if(state?.syncCode){await loadMembership();await enrollCurrentDevice();if(typeof startCloudListener==='function')startCloudListener();if(typeof refreshWhenActive==='function')refreshWhenActive();setStatus('Autenticación activa · este dispositivo está autorizado en Beta.')}else{authorizedUids=mergeUid([],currentUid);setStatus('Autenticación activa · crea un hogar Beta o vincula este dispositivo con un código temporal.')}}catch(error){console.error('Beta security auth',error);setStatus(errorText(error),true)}}
+ try{
+  await ensureAnonymousAuth();
+  if(state?.syncCode&&isRestorePaused()){
+   authorizedUids=mergeUid([],currentUid);
+   if(state.syncUnsubscribe){try{state.syncUnsubscribe()}catch{}state.syncUnsubscribe=null}
+   setStatus('Autenticación activa · sincronización pausada tras restauración. El código familiar sigue guardado.');return
+  }
+  setStatus('Autenticación anónima activa. Preparando autorización del dispositivo…');
+  if(state?.syncCode){await loadMembership();await enrollCurrentDevice();if(typeof startCloudListener==='function')startCloudListener();if(typeof refreshWhenActive==='function')refreshWhenActive();setStatus('Autenticación activa · este dispositivo está autorizado en Beta.')}
+  else{authorizedUids=mergeUid([],currentUid);setStatus('Autenticación activa · crea un hogar Beta o vincula este dispositivo con un código temporal.')}
+ }catch(error){console.error('Beta security auth',error);setStatus(errorText(error),true)}
+}
 
 window.HOMEBASE_BETA_SECURITY={version:VERSION,getUid:()=>currentUid,getAuthorizedUids:()=>[...authorizedUids],ensureAuth:ensureAnonymousAuth,enroll:enrollCurrentDevice,isRestorePaused};
 document.readyState==='loading'?document.addEventListener('DOMContentLoaded',start,{once:true}):start();
