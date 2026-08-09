@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 if(!window.HOMEBASE_BETA)return;
-const VERSION='2';
+const VERSION='3';
 const EXP_KEY='homebase_expiries_v2';
 const EXP_TOMBS='homebase_expiries_v2_tombstones';
 const CORE_TOMBS='homebase_beta_core_tombstones_v1';
@@ -66,7 +66,6 @@ function mergeExp(localItems,localDeleted,remoteItems,remoteDeleted){
  }
  return {items:[...map.values()].sort((a,b)=>String(a.id).localeCompare(String(b.id))),deleted};
 }
-
 function patchMergeItems(){
  if(typeof mergeItems!=='function'||mergeItems.__betaConvergent)return false;
  const wrapped=function(localItems,remoteItems){
@@ -74,12 +73,10 @@ function patchMergeItems(){
    writeJson(CORE_TOMBS,tombs);
    return mergeCore(localItems,remoteItems,tombs);
  };
- wrapped.__betaConvergent=true;
- mergeItems=wrapped;
- return true;
+ wrapped.__betaConvergent=true;mergeItems=wrapped;return true;
 }
 function patchPayload(){
- if(typeof cloudPayload!=='function'||cloudPayload.__betaIntegrityV2)return false;
+ if(typeof cloudPayload!=='function'||cloudPayload.__betaIntegrityV3)return false;
  const original=cloudPayload;
  const wrapped=function(){
    const payload=original();
@@ -87,15 +84,13 @@ function patchPayload(){
    payload.items=mergeCore([],coreItems(),coreTombs);
    payload.betaCoreTombstonesV1=coreTombs;
    payload.betaExpiriesV2={items:readExp(),deleted:readExpTombs(),updatedAt:Date.now()};
-   payload.betaSyncIntegrityVersion=2;
+   payload.betaSyncIntegrityVersion=3;
    return payload;
  };
- wrapped.__betaIntegrityV2=true;
- cloudPayload=wrapped;
- return true;
+ wrapped.__betaIntegrityV3=true;cloudPayload=wrapped;return true;
 }
 function patchRemote(){
- if(typeof applyRemotePayload!=='function'||applyRemotePayload.__betaIntegrityV2)return false;
+ if(typeof applyRemotePayload!=='function'||applyRemotePayload.__betaIntegrityV3)return false;
  const original=applyRemotePayload;
  const wrapped=function(data){
    const remoteTombs=data?.betaCoreTombstonesV1&&typeof data.betaCoreTombstonesV1==='object'?data.betaCoreTombstonesV1:{};
@@ -106,15 +101,12 @@ function patchRemote(){
    const patchedData={...data,items:mergeCore(coreItems(),data?.items||[],tombs)};
    original(patchedData);
    if(typeof state!=='undefined'&&Array.isArray(state.items))state.items=mergeCore([],state.items,tombs);
-
    const remoteExp=data?.betaExpiriesV2||{};
    const mergedExp=mergeExp(readExp(),readExpTombs(),Array.isArray(remoteExp.items)?remoteExp.items:[],remoteExp.deleted&&typeof remoteExp.deleted==='object'?remoteExp.deleted:{});
    const changed=!same(readExp(),mergedExp.items)||!same(readExpTombs(),mergedExp.deleted);
    if(changed){writeJson(EXP_KEY,mergedExp.items);writeJson(EXP_TOMBS,mergedExp.deleted);window.dispatchEvent(new CustomEvent('homebase:expiries-remote-applied',{detail:{count:mergedExp.items.length}}));}
  };
- wrapped.__betaIntegrityV2=true;
- applyRemotePayload=wrapped;
- return true;
+ wrapped.__betaIntegrityV3=true;applyRemotePayload=wrapped;return true;
 }
 function detectExpiryDeletes(){
  const previous=window.__hbBetaExpiryIds||new Set(),current=new Set(readExp().map(x=>String(x.id))),tombs=readExpTombs();let changed=false;
@@ -123,22 +115,34 @@ function detectExpiryDeletes(){
  window.__hbBetaExpiryIds=current;if(changed)writeJson(EXP_TOMBS,tombs);
 }
 function schedule(){try{if(typeof scheduleCloudSave==='function')scheduleCloudSave()}catch{}}
+function restoreCoreItem(id){
+ id=String(id||'');if(!id)return false;
+ const item=coreItems().find(x=>String(x?.id)===id);if(!item)return false;
+ const now=Date.now();item.deletedAt=null;item.updatedAt=now;
+ const tombs=readCoreTombs();delete tombs[id];writeJson(CORE_TOMBS,tombs);
+ try{localStorage.setItem('homebase_v2_items',JSON.stringify(state.items))}catch{}
+ try{if(typeof render==='function')render()}catch{}
+ try{if(typeof renderTrash==='function')renderTrash()}catch{}
+ try{if(typeof bindDynamic==='function')bindDynamic()}catch{}
+ schedule();return true;
+}
 function install(){
  window.__hbBetaExpiryIds=new Set(readExp().map(x=>String(x.id)));
  let tries=0;
- const patch=()=>{tries++;patchMergeItems();patchPayload();patchRemote();if(tries<80&&(!mergeItems?.__betaConvergent||!cloudPayload?.__betaIntegrityV2||!applyRemotePayload?.__betaIntegrityV2))setTimeout(patch,100)};
+ const patch=()=>{tries++;patchMergeItems();patchPayload();patchRemote();if(tries<80&&(!mergeItems?.__betaConvergent||!cloudPayload?.__betaIntegrityV3||!applyRemotePayload?.__betaIntegrityV3))setTimeout(patch,100)};
  patch();
  document.addEventListener('click',event=>{
+   const restore=event.target.closest?.('[data-restore]');
+   if(restore){event.preventDefault();event.stopImmediatePropagation();restoreCoreItem(restore.dataset.restore);return;}
+   const detail=event.target.closest?.('#restoreFromTrashDetail');
+   if(detail){event.preventDefault();event.stopImmediatePropagation();const id=String(state?.trashDetailId||'');if(restoreCoreItem(id)){try{document.getElementById('trashDetailDialog')?.close()}catch{}}return;}
    const permanent=event.target.closest?.('[data-permanent]');if(permanent)recordPermanentDelete(permanent.dataset.permanent);
-   const restore=event.target.closest?.('[data-restore]');if(restore){const id=String(restore.dataset.restore||'');setTimeout(()=>{const item=coreItems().find(x=>String(x.id)===id);if(item&&!item.deletedAt){const tombs=readCoreTombs();if(Number(tombs[id]||0)<stamp(item)){delete tombs[id];writeJson(CORE_TOMBS,tombs);schedule();}}},0)}
  },true);
- const restoreDetail=document.getElementById('restoreFromTrashDetail');
- restoreDetail?.addEventListener('click',()=>{const id=String(state?.trashDetailId||'');setTimeout(()=>{const item=coreItems().find(x=>String(x.id)===id);if(item&&!item.deletedAt){const tombs=readCoreTombs();if(Number(tombs[id]||0)<stamp(item)){delete tombs[id];writeJson(CORE_TOMBS,tombs);schedule();}}},0)},true);
  window.addEventListener('homebase:expiries-updated',()=>{detectExpiryDeletes();schedule()});
  window.addEventListener('homebase:expiries-remote-applied',()=>{setTimeout(()=>{try{location.reload()}catch{}},80)},{once:true});
  document.addEventListener('visibilitychange',()=>{if(!document.hidden){collectCoreTombs();detectExpiryDeletes();schedule()}});
  window.addEventListener('pageshow',()=>{collectCoreTombs();detectExpiryDeletes();schedule()});
 }
 document.readyState==='loading'?document.addEventListener('DOMContentLoaded',install,{once:true}):install();
-window.HOMEBASE_BETA_SYNC_INTEGRITY={version:VERSION};
+window.HOMEBASE_BETA_SYNC_INTEGRITY={version:VERSION,restore:restoreCoreItem};
 })();
