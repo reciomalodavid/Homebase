@@ -2,19 +2,77 @@
 'use strict';
 if(!window.HOMEBASE_BETA)return;
 
-const VERSION='1';
+const VERSION='2';
 const GENERIC_OFF='OFF';
 const OFFICIAL_OFF_CODES=new Set([
   'O_+','O_FIX','O_FLEX','O_L','O_M','O_NHCA','O_RES','O_S','O_SUR','O_TX','O_TZ','O_U','O_V'
 ]);
 let running=false;
 
+function normalizeCode(value){
+  return String(value||'').trim().toUpperCase().replace(/\s+/g,'_');
+}
 function codeOf(item){
-  return String(item?.rosterData?.code||'').trim().toUpperCase().replace(/\s+/g,'_');
+  return normalizeCode(item?.rosterData?.code);
 }
 function dateOf(item){
   return item?.rosterData?.sourceDate||item?.date||'';
 }
+function dutyCode(duty){
+  return normalizeCode(duty?.code);
+}
+function dutyDate(duty){
+  return duty?.sourceDate||duty?.date||'';
+}
+
+function normalizeParsedRoster(parsed){
+  if(!parsed||!Array.isArray(parsed.duties)||!parsed.duties.length)return parsed;
+
+  const officialOffDates=new Set(
+    parsed.duties
+      .filter(duty=>OFFICIAL_OFF_CODES.has(dutyCode(duty)))
+      .map(dutyDate)
+      .filter(Boolean)
+  );
+  if(!officialOffDates.size)return parsed;
+
+  let removed=0;
+  const duties=parsed.duties.filter(duty=>{
+    if(dutyCode(duty)!==GENERIC_OFF)return true;
+    const date=dutyDate(duty);
+    if(!date||!officialOffDates.has(date))return true;
+    removed++;
+    return false;
+  });
+
+  if(!removed)return parsed;
+  parsed.duties=duties;
+  parsed.betaSuppressedGenericOffs=(Number(parsed.betaSuppressedGenericOffs)||0)+removed;
+
+  if(parsed.counts&&typeof parsed.counts==='object'){
+    if(Number.isFinite(Number(parsed.counts.off)))parsed.counts.off=Math.max(0,Number(parsed.counts.off)-removed);
+  }
+
+  console.info(`[Homebase Beta] parser suppressed ${removed} generic OFF summary duplicate(s)`);
+  return parsed;
+}
+
+function patchRosterParser(){
+  let parser=null;
+  try{if(typeof RosterParser!=='undefined')parser=RosterParser}catch{}
+  if(!parser||typeof parser.parse!=='function'||parser.parse.__betaRosterParserClean)return false;
+
+  const original=parser.parse;
+  const wrapped=function(...args){
+    const parsed=original.apply(this,args);
+    return normalizeParsedRoster(parsed);
+  };
+  wrapped.__betaRosterParserClean=true;
+  wrapped.__betaRosterParserOriginal=original;
+  parser.parse=wrapped;
+  return true;
+}
+
 function activeRosterItems(){
   if(typeof state==='undefined'||!Array.isArray(state.items))return[];
   return state.items.filter(item=>item?.source==='roster'&&!item?.deletedAt);
@@ -56,7 +114,7 @@ function dedupeGenericOffs({sync=false}={}){
       else if(typeof writeCloud==='function')writeCloud();
     }
     window.dispatchEvent(new CustomEvent('homebase:beta-roster-deduped',{detail:{count:changed}}));
-    console.info(`[Homebase Beta] roster dedupe removed ${changed} generic OFF duplicate(s)`);
+    console.info(`[Homebase Beta] roster dedupe removed ${changed} stored generic OFF duplicate(s)`);
     return changed;
   }finally{running=false}
 }
@@ -75,6 +133,7 @@ function wrap(name){
 }
 
 function install(){
+  patchRosterParser();
   wrap('applyPendingRoster');
   wrap('applyRemotePayload');
   setTimeout(()=>dedupeGenericOffs({sync:true}),250);
@@ -82,5 +141,9 @@ function install(){
 }
 
 document.readyState==='loading'?document.addEventListener('DOMContentLoaded',install,{once:true}):install();
-window.HOMEBASE_BETA_ROSTER_DEDUPE={version:VERSION,run:()=>dedupeGenericOffs({sync:true})};
+window.HOMEBASE_BETA_ROSTER_DEDUPE={
+  version:VERSION,
+  normalizeParsed:normalizeParsedRoster,
+  run:()=>dedupeGenericOffs({sync:true})
+};
 })();
