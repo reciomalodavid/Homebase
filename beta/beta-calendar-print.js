@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 if(!window.HOMEBASE_BETA)return;
-const VERSION='5';
+const VERSION='6';
 let selectedMonth='',selectedMode='combined',showPending=false;
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const parse=s=>/^\d{4}-\d{2}-\d{2}$/.test(String(s||''))?new Date(`${s}T12:00:00`):null;
@@ -11,14 +11,16 @@ const minfo=k=>{const [y,m]=String(k||'').split('-').map(Number);if(!y||!m)retur
 const people=i=>Array.isArray(i?.people)&&i.people.length?i.people:[i?.person||'Familia'];
 function allItems(){if(typeof state!=='undefined'&&Array.isArray(state.items))return state.items;try{const v=JSON.parse(localStorage.getItem('homebase_v2_items')||'[]');if(Array.isArray(v))return v}catch{}return[]}
 function active(){return allItems().filter(x=>!x.deletedAt)}
-function fam(){return active().filter(x=>x.type==='event'&&x.source!=='roster')}
+function isFamilyEvent(x){return !!x&&x.source!=='roster'&&x.type!=='task'&&!!x.date}
+function fam(){return active().filter(isFamilyEvent)}
 function roster(){return active().filter(x=>x.source==='roster')}
 function tasks(){return active().filter(x=>x.type==='task'&&!x.done&&x.source!=='roster')}
 function expiries(){try{const v=JSON.parse(localStorage.getItem('homebase_expiries_v2')||'[]');return Array.isArray(v)?v:[]}catch{return[]}}
 function profiles(){try{const v=JSON.parse(localStorage.getItem('homebase_profiles')||'[]');return Array.isArray(v)?v:[]}catch{return[]}}
 function pcolor(n){return profiles().find(p=>p.name===n)?.color||'#3a7be0'}
 function icolor(i){return i?.eventColor||pcolor(people(i)[0])}
-function occurs(i,d){const k=iso(d),s=parse(i.date);if(!s||d<s)return false;if(i.repeatUntil&&k>i.repeatUntil)return false;if(Array.isArray(i.exceptions)&&i.exceptions.includes(k))return false;if(i.repeat==='weekly'){const ds=Array.isArray(i.repeatDays)&&i.repeatDays.length?i.repeatDays:[s.getDay()];return ds.includes(d.getDay())}if(i.repeat==='monthly')return d.getDate()===s.getDate();if(i.repeat==='yearly')return d.getDate()===s.getDate()&&d.getMonth()===s.getMonth();const e=parse(i.endDate||i.date)||s;return d>=s&&d<=e}
+function fallbackOccurs(i,d){const k=iso(d),s=parse(i.date);if(!s||d<s)return false;if(i.repeatUntil&&k>i.repeatUntil)return false;if(Array.isArray(i.exceptions)&&i.exceptions.includes(k))return false;if(i.repeat==='weekly'){const ds=Array.isArray(i.repeatDays)&&i.repeatDays.length?i.repeatDays:[s.getDay()];return ds.includes(d.getDay())}if(i.repeat==='monthly')return d.getDate()===s.getDate();if(i.repeat==='yearly')return d.getDate()===s.getDate()&&d.getMonth()===s.getMonth();const e=parse(i.endDate||i.date)||s;return d>=s&&d<=e}
+function occurs(i,d){const k=iso(d);try{if(typeof matches==='function')return !!matches(i,k)}catch(error){console.warn('Calendar print core match fallback',error)}return fallbackOccurs(i,d)}
 function isLong(i){const s=parse(i.date),e=parse(i.endDate||i.date);return !!(s&&e&&iso(s)!==iso(e)&&(i.repeat==='none'||!i.repeat))}
 function rosterDate(i){return i?.rosterData?.sourceDate||i?.date||''}
 function rosterEntry(i){const r=i.rosterData||{},k=String(r.kind||'').toLowerCase(),c=String(r.code||'').toUpperCase();if(k==='off'||c==='OFF'||c.startsWith('O_'))return{kind:'off',title:'OFF'};if(k==='vacation'||c==='U')return{kind:'vacation',title:'VACACIONES'};if(k==='standby'||c.startsWith('STBY')||c.startsWith('SBY')){const a=r.ciLocal||r.startLocal||r.showUpLocal||i.time||'',b=r.coLocal||r.endLocal||r.debriefLocal||i.endTime||'';return{kind:'standby',title:[c.includes('RS72')?'RESERVA 72H':c.includes('RES')?'RESERVA':'STBY',[a,b].filter(Boolean).join('–')].filter(Boolean).join(' · '),meta:r.airport||r.ciAirport||''}}if(k==='flight'||k==='dh'){const fs=Array.isArray(r.flights)?r.flights:[],rt=[];for(const f of fs){if(!rt.length&&f.dep)rt.push(f.dep);if(f.arr)rt.push(f.arr)}const a=r.ciLocal||r.startLocal||r.showUpLocal||i.time||'',b=r.coLocal||r.endLocal||r.debriefLocal||i.endTime||'';return{kind:'flight',title:`VUELO${a||b?` · ${[a,b].filter(Boolean).join('–')}`:''}`,meta:rt.join('–')}}const t=[r.startLocal||r.briefingLocal||i.time||'',r.endLocal||r.debriefLocal||i.endTime||''].filter(Boolean).join('–');return{kind:'duty',title:[(c||'DUTY').replaceAll('_',' '),t].filter(Boolean).join(' · '),meta:r.airport||r.ciAirport||''}}
