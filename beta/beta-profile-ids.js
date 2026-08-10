@@ -41,11 +41,9 @@
     });
   }
 
-  function persistProfiles(profiles){
-    localStorage.setItem(PROFILE_KEY,JSON.stringify(profiles));
-  }
+  function persistProfiles(profiles){localStorage.setItem(PROFILE_KEY,JSON.stringify(profiles))}
 
-  function migrateExisting(){
+  function migrateMissingIds(){
     const profiles=currentProfiles();
     if(!profiles.length)return false;
     const map=legacyStableMap(profiles);
@@ -85,7 +83,7 @@
 
     if(profileChanged)persistProfiles(profiles);
     if(expiryChanged)localStorage.setItem(EXPIRY_KEY,JSON.stringify(expiries));
-    localStorage.setItem(MIGRATION_KEY,'1');
+    if(profileChanged||expiryChanged)localStorage.setItem(MIGRATION_KEY,'1');
     return profileChanged||expiryChanged;
   }
 
@@ -113,12 +111,11 @@
   }
 
   function init(){
-    const migrated=localStorage.getItem(MIGRATION_KEY)==='1';
-    if(!migrated)migrateExisting();
-    else ensureIdsBeforeSave();
+    const profiles=currentProfiles();
+    if(profiles.some(profile=>!profile?.id))migrateMissingIds();
     wrapProfileSave();
   }
 
   init();
-  window.HOMEBASE_BETA_PROFILE_IDS={version:'2',ensure:ensureIdsBeforeSave};
+  window.HOMEBASE_BETA_PROFILE_IDS={version:'3',ensure:ensureIdsBeforeSave};
 })();
