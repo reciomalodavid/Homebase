@@ -20,7 +20,9 @@
   }
 
   function currentProfiles(){
-    if(Array.isArray(window.PEOPLE)&&window.PEOPLE.length)return window.PEOPLE;
+    try{
+      if(typeof PEOPLE!=='undefined'&&Array.isArray(PEOPLE)&&PEOPLE.length)return PEOPLE;
+    }catch{}
     try{
       const parsed=JSON.parse(localStorage.getItem(PROFILE_KEY)||'[]');
       return Array.isArray(parsed)?parsed:[];
@@ -37,6 +39,10 @@
       seen.set(base,count+1);
       return {profile,legacyId:count?`${base}:${count+1}`:base,name};
     });
+  }
+
+  function persistProfiles(profiles){
+    localStorage.setItem(PROFILE_KEY,JSON.stringify(profiles));
   }
 
   function migrateExisting(){
@@ -77,10 +83,7 @@
       return {...item,profileId:profile.id,profileName:profile.name,updatedAt:Number(item.updatedAt)||Date.now()};
     });
 
-    if(profileChanged){
-      if(Array.isArray(window.PEOPLE))window.PEOPLE=profiles;
-      localStorage.setItem(PROFILE_KEY,JSON.stringify(profiles));
-    }
+    if(profileChanged)persistProfiles(profiles);
     if(expiryChanged)localStorage.setItem(EXPIRY_KEY,JSON.stringify(expiries));
     localStorage.setItem(MIGRATION_KEY,'1');
     return profileChanged||expiryChanged;
@@ -94,22 +97,19 @@
       profile.id=profile.uuid||randomId();
       changed=true;
     }
-    if(changed){
-      if(Array.isArray(window.PEOPLE))window.PEOPLE=profiles;
-      localStorage.setItem(PROFILE_KEY,JSON.stringify(profiles));
-    }
+    if(changed)persistProfiles(profiles);
     return changed;
   }
 
   function wrapProfileSave(){
-    if(typeof window.saveProfiles!=='function'||window.saveProfiles.__homebaseProfileIds)return;
-    const original=window.saveProfiles;
+    if(typeof saveProfiles!=='function'||saveProfiles.__homebaseProfileIds)return;
+    const original=saveProfiles;
     const wrapped=function(...args){
       ensureIdsBeforeSave();
       return original.apply(this,args);
     };
     wrapped.__homebaseProfileIds=true;
-    window.saveProfiles=wrapped;
+    saveProfiles=wrapped;
   }
 
   function init(){
@@ -120,5 +120,5 @@
   }
 
   init();
-  window.HOMEBASE_BETA_PROFILE_IDS={version:'1',ensure:ensureIdsBeforeSave};
+  window.HOMEBASE_BETA_PROFILE_IDS={version:'2',ensure:ensureIdsBeforeSave};
 })();
