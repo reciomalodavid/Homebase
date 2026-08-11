@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 
-const VERSION='7';
+const VERSION='8';
 let open=false;
 let bypassFab=false;
 let installed=false;
@@ -62,12 +62,26 @@ function selectEditorType(type){
   if(button)button.click();
 }
 
-function openNativeEditor(type='event'){
+function applyPreferredDate(preferredDate){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(preferredDate||'')))return;
+  const start=document.getElementById('startDate');
+  const end=document.getElementById('endDate');
+  if(start)start.value=preferredDate;
+  if(end)end.value=preferredDate;
+}
+
+function openNativeEditor(type='event',preferredDate=null){
   const fab=document.querySelector('.event-fab.beta-quick-main')||document.querySelector('.event-fab');
   if(!fab)return false;
   closeMenu();
   openExistingEditor(fab);
-  setTimeout(()=>selectEditorType(type),20);
+  setTimeout(()=>{
+    selectEditorType(type);
+    if(type==='event'&&preferredDate)applyPreferredDate(preferredDate);
+    if(type==='task')document.getElementById('titleInput')?.focus();
+  },35);
+  // Some UI helpers reset fields shortly after opening. Re-apply the explicit date once more.
+  if(type==='event'&&preferredDate)setTimeout(()=>applyPreferredDate(preferredDate),120);
   return true;
 }
 
