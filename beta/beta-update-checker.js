@@ -2,7 +2,7 @@
 'use strict';
 if(!window.HOMEBASE_BETA)return;
 
-const CURRENT_BUILD=2391;
+const CURRENT_BUILD=2392;
 const CHECK_INTERVAL_MS=60000;
 let timer=null;
 let checking=false;
@@ -26,7 +26,11 @@ function ensureBanner(){
   let banner=document.getElementById('betaUpdateBanner');if(banner)return banner;
   banner=document.createElement('div');banner.id='betaUpdateBanner';
   banner.innerHTML='<div class="copy"><strong>Actualización disponible</strong><small>Recarga Beta para usar la versión nueva. Tus datos no se borran.</small></div><button type="button">Recargar</button>';
-  banner.querySelector('button').addEventListener('click',()=>{const url=new URL('./index.html',location.href);url.searchParams.set('update',String(Date.now()));location.replace(url.href)});
+  banner.querySelector('button').addEventListener('click',()=>{
+    const url=new URL('./beta/app-2.3.html',location.origin+location.pathname.replace(/beta\/.*$/,''));
+    url.searchParams.set('update',String(Date.now()));
+    location.replace(url.href);
+  });
   document.body.appendChild(banner);return banner;
 }
 function showUpdate(){ensureBanner().classList.add('open')}
