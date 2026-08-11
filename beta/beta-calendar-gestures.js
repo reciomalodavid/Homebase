@@ -2,14 +2,16 @@
 'use strict';
 if(!window.HOMEBASE_BETA)return;
 
-const VERSION='5';
+const VERSION='6';
 const LONG_PRESS_MS=560;
 const SWIPE_PX=58;
 const MOVE_TOLERANCE=12;
+const OPEN_DELAY_MS=260;
 
 let active=null;
 let longTimer=null;
 let suppressClickUntil=0;
+let suppressAllClickUntil=0;
 
 function grid(){return document.getElementById('monthGrid')||document.querySelector('.month-grid')}
 function dayFrom(target){return target?.closest?.('.day[data-day]')||null}
@@ -33,7 +35,6 @@ function installStyles(){
 function openEventForDay(day){
  const date=String(day?.dataset?.day||'');
  if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return;
- suppressClickUntil=Date.now()+750;
  day.classList.remove('beta-longpress');
  const quick=window.HOMEBASE_BETA_QUICK_ADD;
  if(quick&&typeof quick.openNativeEditor==='function'){
@@ -62,8 +63,6 @@ function onPointerDown(event){
      suppressClickUntil=Date.now()+900;
      day.classList.add('beta-longpress');
      try{navigator.vibrate?.(12)}catch{}
-     // Important: do NOT open the editor while the finger is still down.
-     // We wait for pointerup so iOS cannot continue the long press inside the modal.
    },LONG_PRESS_MS);
  }
 }
@@ -83,7 +82,12 @@ function finishPointer(event,cancelled=false){
  if(cancelled){a.day?.classList.remove('beta-longpress');return}
  if(a.longFired){
    event.preventDefault?.();
-   setTimeout(()=>openEventForDay(a.day),0);
+   event.stopPropagation?.();
+   suppressClickUntil=Date.now()+900;
+   // iOS can synthesize a delayed click at the release coordinates. Block all
+   // clicks briefly, then open the editor after that release gesture has settled.
+   suppressAllClickUntil=Date.now()+650;
+   setTimeout(()=>openEventForDay(a.day),OPEN_DELAY_MS);
    return;
  }
  const dx=event.clientX-a.x,dy=event.clientY-a.y,elapsed=Date.now()-a.at;
@@ -95,6 +99,11 @@ function finishPointer(event,cancelled=false){
 }
 
 function onClickCapture(event){
+ if(Date.now()<suppressAllClickUntil){
+   event.preventDefault();
+   event.stopImmediatePropagation();
+   return;
+ }
  const day=dayFrom(event.target);if(!day)return;
  if(Date.now()<suppressClickUntil){event.preventDefault();event.stopImmediatePropagation()}
 }
