@@ -2,7 +2,7 @@
   "name": "Homebase Beta",
   "short_name": "Homebase Beta",
   "description": "Versión de pruebas aislada de Homebase.",
-  "start_url": "./index.html?release=2386",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f6f2fb",
