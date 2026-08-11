@@ -6,7 +6,6 @@ const CURRENT_BUILD=2387;
 const CHECK_INTERVAL_MS=60000;
 let timer=null;
 let checking=false;
-let targetBuild=0;
 
 function installStyles(){
   if(document.getElementById('betaUpdateCheckerStyles'))return;
@@ -19,7 +18,6 @@ function installStyles(){
     #betaUpdateBanner strong{display:block;font-size:14px}
     #betaUpdateBanner small{display:block;margin-top:2px;color:#6c7a89;font-size:11px}
     #betaUpdateBanner button{border:0;border-radius:12px;background:#6f58c9;color:white;font-weight:850;padding:10px 13px;white-space:nowrap}
-    #betaUpdateBanner button:disabled{opacity:.6}
     @media(max-width:767px){#betaUpdateBanner{bottom:calc(84px + env(safe-area-inset-bottom))}}
   `;
   document.head.appendChild(style);
@@ -28,38 +26,19 @@ function ensureBanner(){
   let banner=document.getElementById('betaUpdateBanner');if(banner)return banner;
   banner=document.createElement('div');banner.id='betaUpdateBanner';
   banner.innerHTML='<div class="copy"><strong>Actualización disponible</strong><small>Recarga Beta para usar la versión nueva. Tus datos no se borran.</small></div><button type="button">Recargar</button>';
-  banner.querySelector('button').addEventListener('click',async e=>{
-    const button=e.currentTarget;button.disabled=true;button.textContent='Comprobando…';
-    try{
-      const probe=`./beta/app-2.3.html?probe=${Date.now()}`;
-      const r=await fetch(probe,{cache:'no-store'});
-      const text=r.ok?await r.text():'';
-      const m=text.match(/HOMEBASE_BETA_LOADED_BUILD\s*=\s*(\d+)/);
-      const published=Number(m?.[1]||0);
-      const loaded=Number(window.HOMEBASE_BETA_LOADED_BUILD||0);
-      if(!published||published<=loaded){hideUpdate();return;}
-      const url=new URL('./app-2.3.html',location.href);
-      url.searchParams.set('recovery',String(published));
-      url.searchParams.set('update',String(Date.now()));
-      location.replace(url.href);
-    }catch(error){console.debug('Beta update reload skipped',error)}finally{button.disabled=false;button.textContent='Recargar'}
-  });
+  banner.querySelector('button').addEventListener('click',()=>{const url=new URL('./index.html',location.href);url.searchParams.set('update',String(Date.now()));location.replace(url.href)});
   document.body.appendChild(banner);return banner;
 }
-function showUpdate(build){targetBuild=Number(build||0);ensureBanner().classList.add('open')}
-function hideUpdate(){targetBuild=0;ensureBanner().classList.remove('open')}
-async function publishedAppBuild(){
-  try{
-    const r=await fetch(`./beta/app-2.3.html?probe=${Date.now()}`,{cache:'no-store'});if(!r.ok)return 0;
-    const text=await r.text();const m=text.match(/HOMEBASE_BETA_LOADED_BUILD\s*=\s*(\d+)/);return Number(m?.[1]||0);
-  }catch{return 0}
-}
+function showUpdate(){ensureBanner().classList.add('open')}
+function hideUpdate(){ensureBanner().classList.remove('open')}
 async function check(){
   if(checking||!navigator.onLine)return;checking=true;
   try{
-    const loaded=Number(window.HOMEBASE_BETA_LOADED_BUILD||CURRENT_BUILD);
-    const published=await publishedAppBuild();
-    if(published>loaded)showUpdate(published);else hideUpdate();
+    const response=await fetch(`./beta/version.json?t=${Date.now()}`,{cache:'no-store'});if(!response.ok)return;
+    const data=await response.json();
+    const remoteBuild=Number(data?.build||0);
+    const loadedBuild=Number(window.HOMEBASE_BETA_LOADED_BUILD||CURRENT_BUILD);
+    if(remoteBuild>loadedBuild)showUpdate();else hideUpdate();
   }catch(error){console.debug('Beta update check skipped',error)}finally{checking=false}
 }
 function start(){installStyles();ensureBanner();check();timer=setInterval(check,CHECK_INTERVAL_MS);document.addEventListener('visibilitychange',()=>{if(!document.hidden)check()});window.addEventListener('online',check)}
