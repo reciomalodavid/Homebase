@@ -21,7 +21,7 @@ jobs:
         with:
           workload_identity_provider: projects/986505930709/locations/global/workloadIdentityPools/github-actions/providers/github
           service_account: github-firebase-beta@homebase-beta-72767.iam.gserviceaccount.com
-      - name: Verify TEST MIGRACION reached Beta Firestore
+      - name: Verify TEST MIGRATION 2 reached Beta Firestore
         shell: bash
         run: |
           set -euo pipefail
@@ -36,12 +36,12 @@ jobs:
           const doc=JSON.parse(fs.readFileSync('/tmp/homebase-beta-doc.json','utf8'));
           const walk=v=>{
             if(!v||typeof v!=="object") return false;
-            if(v.stringValue==="TEST MIGRACION") return true;
+            if(v.stringValue==="TEST MIGRATION 2") return true;
             return Object.values(v).some(walk);
           };
           if(!walk(doc.fields||{})){
-            console.error("TEST MIGRACION not found in target Beta Firestore document");
+            console.error("TEST MIGRATION 2 not found in target Beta Firestore document");
             process.exit(1);
           }
-          console.log("Beta sync verified: TEST MIGRACION found in homebase-beta-72767");
+          console.log("Beta sync verified: TEST MIGRATION 2 found in homebase-beta-72767");
           NODE
