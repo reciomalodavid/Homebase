@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 
-const VERSION='8';
+const VERSION='9';
 const FIREBASE_PROJECT='homebase-beta-72767';
 const INVITE_COLLECTION='homebaseDeviceInvites';
 const INVITE_TTL_MS=10*60*1000;
@@ -138,8 +138,8 @@ async function joinWithPairingCode(){
 function bindProtectedActions(){
  const createBtn=byId('createSyncCode'),linkBtn=byId('linkSyncCode'),syncNowBtn=byId('syncNow');
  if(createBtn&&typeof createFamilySync==='function'){const original=createFamilySync;createBtn.onclick=async()=>{try{localStorage.removeItem(RESTORE_PAUSE_KEY);await ensureAnonymousAuth();authorizedUids=mergeUid([],currentUid);await original();await enrollCurrentDevice();setStatus('Autenticación activa · este dispositivo está autorizado en Beta.')}catch(error){console.error('Beta secure create',error);setStatus(errorText(error),true)}}}
- if(linkBtn&&typeof linkFamilySync==='function'){const original=linkFamilySync;linkBtn.onclick=async()=>{try{localStorage.removeItem(RESTORE_PAUSE_KEY);await ensureAnonymousAuth();await original();await loadMembership();await enrollCurrentDevice();setStatus('Autenticación activa · dispositivo vinculado y autorizado en Beta.')}catch(error){console.error('Beta secure link',error);setStatus('No se pudo vincular con el código familiar. Usa “Vincular con código temporal”.',true)}}}
- if(syncNowBtn&&typeof refreshFromCloud==='function'&&typeof writeCloud==='function'){syncNowBtn.onclick=async()=>{if(isRestorePaused()){setStatus('Sincronización pausada tras una restauración. Reactívala desde Copia de seguridad.',true);return}try{await ensureAnonymousAuth();await refreshFromCloud(true);await writeCloud()}catch(error){console.error('Beta secure sync',error);setStatus(errorText(error),true)}}}
+ if(linkBtn&&typeof linkFamilySync==='function'){const original=linkFamilySync;linkBtn.onclick=async()=>{try{localStorage.removeItem(RESTORE_PAUSE_KEY);await ensureAnonymousAuth();await original();await enrollCurrentDevice();await loadMembership();setStatus('Autenticación activa · dispositivo vinculado y autorizado en Beta.')}catch(error){console.error('Beta secure link',error);setStatus('No se pudo vincular con el código familiar. Usa “Vincular con código temporal”.',true)}}}
+ if(syncNowBtn&&typeof refreshFromCloud==='function'&&typeof writeCloud==='function'){syncNowBtn.onclick=async()=>{if(isRestorePaused()){setStatus('Sincronización pausada tras una restauración. Reactívala desde Copia de seguridad.',true);return}try{await ensureAnonymousAuth();await refreshFromCloud(true);await writeCloud()}catch(error){console.error('Beta secure sync',error);setStatus(errorText(error),true)}}
 }
 
 async function start(){
@@ -152,7 +152,7 @@ async function start(){
    setStatus('Autenticación activa · sincronización pausada tras restauración. El código familiar sigue guardado.');return
   }
   setStatus('Autenticación anónima activa. Preparando autorización del dispositivo…');
-  if(state?.syncCode){await loadMembership();await enrollCurrentDevice();if(typeof startCloudListener==='function')startCloudListener();if(typeof refreshWhenActive==='function')refreshWhenActive();setStatus('Autenticación activa · este dispositivo está autorizado en Beta.')}
+  if(state?.syncCode){await enrollCurrentDevice();await loadMembership();if(typeof startCloudListener==='function')startCloudListener();if(typeof refreshWhenActive==='function')refreshWhenActive();setStatus('Autenticación activa · este dispositivo está autorizado en Beta.')}
   else{authorizedUids=mergeUid([],currentUid);setStatus('Autenticación activa · crea un hogar Beta o vincula este dispositivo con un código temporal.')}
  }catch(error){console.error('Beta security auth',error);setStatus(errorText(error),true)}
 }
