@@ -1,11 +1,9 @@
 (()=>{
 'use strict';
 if(!window.HOMEBASE_BETA)return;
-window.HOMEBASE_BETA_VERSION='2.3.84';
-window.HOMEBASE_BETA_LOADED_BUILD=2384;
-const VERSION='5';
+const VERSION='6';
 const ROSTER_CLASSES=['flight','off','vacation','standby','duty','night'];
-const STYLE_ID='hcpPrintOrder2384';
+const STYLE_ID='hcpPrintOrder2387';
 const CSS=`
 .hcp-line.all-day{min-height:0!important;padding-top:2px!important;padding-bottom:2px!important;overflow:hidden!important}
 .hcp-line.all-day b{display:-webkit-box!important;-webkit-box-orient:vertical!important;-webkit-line-clamp:2!important;white-space:normal!important;overflow:hidden!important;text-overflow:ellipsis!important;line-height:1.02!important;font-size:7.1px!important;max-height:2.08em!important}
@@ -34,6 +32,7 @@ function ensureStyle(doc){
   if(!doc?.head)return;
   doc.getElementById('hcpPrintOrder2381')?.remove();
   doc.getElementById('hcpPrintOrder2382')?.remove();
+  doc.getElementById('hcpPrintOrder2384')?.remove();
   let s=doc.getElementById(STYLE_ID);
   if(!s){s=doc.createElement('style');s.id=STYLE_ID;doc.head.appendChild(s)}
   s.textContent=CSS;
@@ -88,8 +87,8 @@ function apply(){
 function schedule(){setTimeout(apply,0);setTimeout(apply,80);setTimeout(apply,180)}
 function bindFrame(){
   const frame=document.querySelector('#homebaseCalendarPrintOverlay .hcp-frame');
-  if(!frame||frame.dataset.order2384==='1')return;
-  frame.dataset.order2384='1';
+  if(!frame||frame.dataset.order2387==='1')return;
+  frame.dataset.order2387='1';
   frame.addEventListener('load',schedule,{passive:true});
 }
 function routeClassicRoster(){
@@ -110,14 +109,9 @@ function bindModeRoute(){
   mode.dataset.classicRoster2383='1';
   mode.addEventListener('change',()=>{if(mode.value==='roster')routeClassicRoster()});
 }
-function markBuild(){
-  const tag=document.getElementById('betaLoadedBuildStatic');
-  if(tag)tag.textContent='Homebase Beta 2.3.84 · build 2384';
-}
 function install(){
   ensureStyle(document);
-  setTimeout(()=>{bindFrame();bindModeRoute();schedule();markBuild()},500);
-  setTimeout(markBuild,900);
+  setTimeout(()=>{bindFrame();bindModeRoute();schedule()},500);
   document.addEventListener('click',e=>{if(e.target.closest('#homebaseCalendarPrintEntry,#homebaseCalendarPrintOverlay')){bindFrame();bindModeRoute();schedule()}},true);
   document.addEventListener('change',e=>{if(e.target.closest('#homebaseCalendarPrintOverlay')){bindFrame();schedule()}},true);
 }
