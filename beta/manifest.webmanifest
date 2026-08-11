@@ -1,7 +1,7 @@
 {
   "name": "Homebase Beta",
   "short_name": "Homebase Beta",
-  "description": "Versión de pruebas aislada de Homebase.",
+  "description": "Versión de pruebas aislada de Homebase · 2387",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
