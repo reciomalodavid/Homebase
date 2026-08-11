@@ -2,7 +2,7 @@
 'use strict';
 if(!window.HOMEBASE_BETA)return;
 
-const VERSION='4';
+const VERSION='5';
 const LONG_PRESS_MS=560;
 const SWIPE_PX=58;
 const MOVE_TOLERANCE=12;
@@ -23,36 +23,30 @@ function installStyles(){
  const style=document.createElement('style');style.id='betaCalendarGesturesStyles';
  style.textContent=`
   #monthGrid,.month-grid{touch-action:pan-y}
+  #monthGrid .day,.month-grid .day{-webkit-user-select:none!important;user-select:none!important;-webkit-touch-callout:none!important}
   .day.beta-longpress{transform:scale(.96);transition:transform .10s ease;box-shadow:0 5px 18px rgba(111,88,201,.16)!important}
   @media(prefers-reduced-motion:reduce){.day.beta-longpress{transition:none!important}}
  `;
  document.head.appendChild(style);
 }
 
-function forceEditorDate(date){
- const start=document.getElementById('startDate');
- const end=document.getElementById('endDate');
- if(start)start.value=date;
- if(end)end.value=date;
-}
-
 function openEventForDay(day){
  const date=String(day?.dataset?.day||'');
  if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return;
  suppressClickUntil=Date.now()+750;
- day.classList.add('beta-longpress');
- try{navigator.vibrate?.(12)}catch{}
- setTimeout(()=>day.classList.remove('beta-longpress'),180);
-
+ day.classList.remove('beta-longpress');
  const quick=window.HOMEBASE_BETA_QUICK_ADD;
  if(quick&&typeof quick.openNativeEditor==='function'){
    quick.openNativeEditor('event',date);
    return;
  }
- // Defensive fallback only.
  document.querySelector('.event-fab')?.click();
- setTimeout(()=>forceEditorDate(date),80);
- setTimeout(()=>forceEditorDate(date),180);
+ setTimeout(()=>{
+   const start=document.getElementById('startDate');
+   const end=document.getElementById('endDate');
+   if(start)start.value=date;
+   if(end)end.value=date;
+ },80);
 }
 
 function onPointerDown(event){
@@ -65,21 +59,33 @@ function onPointerDown(event){
    longTimer=setTimeout(()=>{
      if(!active||active.id!==event.pointerId)return;
      active.longFired=true;
-     openEventForDay(day);
+     suppressClickUntil=Date.now()+900;
+     day.classList.add('beta-longpress');
+     try{navigator.vibrate?.(12)}catch{}
+     // Important: do NOT open the editor while the finger is still down.
+     // We wait for pointerup so iOS cannot continue the long press inside the modal.
    },LONG_PRESS_MS);
  }
 }
 
 function onPointerMove(event){
  if(!active||active.id!==event.pointerId)return;
- if(Math.hypot(event.clientX-active.x,event.clientY-active.y)>MOVE_TOLERANCE)cancelLong();
+ if(Math.hypot(event.clientX-active.x,event.clientY-active.y)>MOVE_TOLERANCE){
+   cancelLong();
+   if(!active.longFired)active.day?.classList.remove('beta-longpress');
+ }
 }
 
 function finishPointer(event,cancelled=false){
  if(!active||active.id!==event.pointerId)return;
  cancelLong();
  const a=active;active=null;
- if(cancelled||a.longFired)return;
+ if(cancelled){a.day?.classList.remove('beta-longpress');return}
+ if(a.longFired){
+   event.preventDefault?.();
+   setTimeout(()=>openEventForDay(a.day),0);
+   return;
+ }
  const dx=event.clientX-a.x,dy=event.clientY-a.y,elapsed=Date.now()-a.at;
  if(elapsed<850&&Math.abs(dx)>=SWIPE_PX&&Math.abs(dx)>Math.abs(dy)*1.35){
    suppressClickUntil=Date.now()+450;
@@ -92,6 +98,7 @@ function onClickCapture(event){
  const day=dayFrom(event.target);if(!day)return;
  if(Date.now()<suppressClickUntil){event.preventDefault();event.stopImmediatePropagation()}
 }
+function onContextMenu(event){if(dayFrom(event.target)){event.preventDefault();event.stopPropagation()}}
 
 function install(){
  installStyles();
@@ -100,6 +107,7 @@ function install(){
  document.addEventListener('pointerup',event=>finishPointer(event,false),true);
  document.addEventListener('pointercancel',event=>finishPointer(event,true),true);
  document.addEventListener('click',onClickCapture,true);
+ document.addEventListener('contextmenu',onContextMenu,true);
 }
 
 document.readyState==='loading'?document.addEventListener('DOMContentLoaded',install,{once:true}):install();
