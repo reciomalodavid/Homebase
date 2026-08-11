@@ -1,0 +1,31 @@
+name: Homebase Beta Google auth check
+
+on:
+  push:
+    branches: [firebase-beta-separation]
+    paths:
+      - .github/workflows/firebase-homebase-beta-auth-check.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  auth-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud with GitHub OIDC
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/986505930709/locations/global/workloadIdentityPools/github-actions/providers/github
+          service_account: github-firebase-beta@homebase-beta-72767.iam.gserviceaccount.com
+
+      - name: Verify Beta target only
+        run: |
+          gcloud config set project homebase-beta-72767
+          test "$(gcloud config get-value project)" = "homebase-beta-72767"
+          gcloud auth list --filter=status:ACTIVE --format='value(account)'
+          gcloud projects describe homebase-beta-72767 --format='value(projectId)'
