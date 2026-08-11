@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 
-const VERSION='6';
+const VERSION='7';
 let currentUid='';
 let authorizedUids=[];
 let authPromise=null;
@@ -11,6 +11,8 @@ function byId(id){return document.getElementById(id)}
 function mergeUid(list,uid){const out=[];for(const value of Array.isArray(list)?list:[]){if(typeof value==='string'&&value&&!out.includes(value))out.push(value)}if(uid&&!out.includes(uid))out.push(uid);return out}
 function shortUid(uid){const v=String(uid||'');return v.length>16?`${v.slice(0,7)}…${v.slice(-6)}`:v}
 function errorText(error){const code=String(error?.code||'');if(code==='auth/operation-not-allowed')return 'Firebase rechaza el acceso anónimo.';if(code==='auth/network-request-failed')return 'Firebase Auth no pudo conectar con la red.';if(code==='auth/unauthorized-domain')return 'Este dominio no está autorizado en Firebase Auth.';if(code==='permission-denied')return 'Firestore ha rechazado la operación de seguridad.';return code?`Error de seguridad: ${code}`:`Error de seguridad: ${String(error?.message||error||'desconocido')}`}
+function db(){return window.cloudDb||null}
+function syncRef(){return db()&&state?.syncCode?db().collection('homebaseSyncs').doc(state.syncCode):null}
 
 function ensureStatusUi(){
  if(byId('productionSecurityStatus'))return byId('productionSecurityStatus');
@@ -38,14 +40,16 @@ async function ensureAnonymousAuth(){
  try{return await authPromise}finally{authPromise=null}
 }
 async function loadMembership(){
- if(!currentUid||!state?.syncCode||typeof syncDoc!=='function'){authorizedUids=mergeUid([],currentUid);return}
- const snap=await syncDoc().get();
+ const ref=syncRef();
+ if(!currentUid||!ref){authorizedUids=mergeUid([],currentUid);return}
+ const snap=await ref.get();
  authorizedUids=snap.exists?mergeUid((snap.data()||{}).authorizedUids,currentUid):mergeUid([],currentUid);
 }
 async function enrollCurrentDevice(){
- if(!currentUid||!state?.syncCode||typeof syncDoc!=='function')return;
+ const ref=syncRef();
+ if(!currentUid||!ref)return;
  const FieldValue=firebase.firestore.FieldValue;
- await syncDoc().set({authorizedUids:FieldValue.arrayUnion(currentUid),securityVersion:2,securityUpdatedAt:Date.now()},{merge:true});
+ await ref.set({authorizedUids:FieldValue.arrayUnion(currentUid),securityVersion:2,securityUpdatedAt:Date.now()},{merge:true});
  authorizedUids=mergeUid(authorizedUids,currentUid);
 }
 
