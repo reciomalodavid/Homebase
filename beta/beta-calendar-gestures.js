@@ -2,16 +2,14 @@
 'use strict';
 if(!window.HOMEBASE_BETA)return;
 
-const VERSION='1';
+const VERSION='2';
 const LONG_PRESS_MS=560;
 const SWIPE_PX=58;
 const MOVE_TOLERANCE=12;
-const DOUBLE_TAP_MS=360;
 
 let active=null;
 let longTimer=null;
 let suppressClickUntil=0;
-let lastTap={day:'',at:0};
 
 function grid(){return document.getElementById('monthGrid')||document.querySelector('.month-grid')}
 function dayFrom(target){return target?.closest?.('.day[data-day]')||null}
@@ -26,26 +24,35 @@ function installStyles(){
  style.textContent=`
   #monthGrid,.month-grid{touch-action:pan-y}
   .day.beta-longpress{transform:scale(.96);transition:transform .10s ease;box-shadow:0 5px 18px rgba(111,88,201,.16)!important}
-  #selectedDayPanel.beta-day-focus{animation:betaDayFocus .55s ease}
-  @keyframes betaDayFocus{0%{transform:translateY(6px);opacity:.72}100%{transform:none;opacity:1}}
-  @media(prefers-reduced-motion:reduce){.day.beta-longpress,#selectedDayPanel.beta-day-focus{transition:none!important;animation:none!important}}
+  @media(prefers-reduced-motion:reduce){.day.beta-longpress{transition:none!important}}
  `;
  document.head.appendChild(style);
 }
 
 function openEventForDay(day){
- if(!day)return;
- suppressClickUntil=Date.now()+700;
+ const date=String(day?.dataset?.day||'');
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return;
+ suppressClickUntil=Date.now()+750;
  day.classList.add('beta-longpress');
  try{navigator.vibrate?.(12)}catch{}
- // Select the date first so the native editor inherits it.
- day.click();
+ setTimeout(()=>day.classList.remove('beta-longpress'),180);
+ // Use the core editor directly: it already supports preferredDate and therefore
+ // avoids depending on selectedDate/render timing after a long press.
+ if(typeof openEditor==='function'){
+   openEditor('event',date);
+   return;
+ }
+ // Defensive fallback if the core editor is unavailable for any reason.
+ try{day.click()}catch{}
  setTimeout(()=>{
-   day.classList.remove('beta-longpress');
+   const input=document.getElementById('startDate');
+   const end=document.getElementById('endDate');
+   if(input)input.value=date;
+   if(end)end.value=date;
    const quick=window.HOMEBASE_BETA_QUICK_ADD;
    if(quick&&typeof quick.openNativeEditor==='function')quick.openNativeEditor('event');
    else document.querySelector('.event-fab')?.click();
- },70);
+ },50);
 }
 
 function onPointerDown(event){
@@ -83,21 +90,7 @@ function finishPointer(event,cancelled=false){
 
 function onClickCapture(event){
  const day=dayFrom(event.target);if(!day)return;
- if(Date.now()<suppressClickUntil){event.preventDefault();event.stopImmediatePropagation();return}
-}
-
-function onClickBubble(event){
- const day=dayFrom(event.target);if(!day)return;
- const key=String(day.dataset.day||'');const now=Date.now();
- if(lastTap.day===key&&now-lastTap.at<=DOUBLE_TAP_MS){
-   lastTap={day:'',at:0};
-   setTimeout(()=>{
-     const panel=document.getElementById('selectedDayPanel');if(!panel||!panel.textContent.trim())return;
-     panel.classList.remove('beta-day-focus');void panel.offsetWidth;panel.classList.add('beta-day-focus');
-     panel.scrollIntoView({behavior:'smooth',block:'nearest'});
-     setTimeout(()=>panel.classList.remove('beta-day-focus'),700);
-   },60);
- }else lastTap={day:key,at:now};
+ if(Date.now()<suppressClickUntil){event.preventDefault();event.stopImmediatePropagation()}
 }
 
 function install(){
@@ -107,7 +100,6 @@ function install(){
  document.addEventListener('pointerup',event=>finishPointer(event,false),true);
  document.addEventListener('pointercancel',event=>finishPointer(event,true),true);
  document.addEventListener('click',onClickCapture,true);
- document.addEventListener('click',onClickBubble,false);
 }
 
 document.readyState==='loading'?document.addEventListener('DOMContentLoaded',install,{once:true}):install();
