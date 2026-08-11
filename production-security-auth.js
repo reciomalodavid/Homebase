@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 
-const VERSION='4';
+const VERSION='5';
 const INVITE_COLLECTION='homebaseDeviceInvites';
 const INVITE_TTL_MS=10*60*1000;
 let currentUid='';
@@ -16,6 +16,13 @@ function homeRef(){const code=familyCode();return code&&window.firebase?firebase
 function mergeUid(list,uid){const out=[];for(const value of Array.isArray(list)?list:[]){if(typeof value==='string'&&value&&!out.includes(value))out.push(value)}if(uid&&!out.includes(uid))out.push(uid);return out}
 function shortUid(uid){const v=String(uid||'');return v.length>16?`${v.slice(0,7)}…${v.slice(-6)}`:v}
 function withTimeout(promise,ms,label){return Promise.race([promise,new Promise((_,reject)=>setTimeout(()=>reject(new Error(`${label} agotó el tiempo de espera`)),ms))])}
+
+function pauseLegacySyncForAuth(){
+  try{if(window.state?.syncUnsubscribe){state.syncUnsubscribe();state.syncUnsubscribe=null}}catch(error){console.warn('Homebase pause listener',error)}
+  try{if(typeof autoRefreshTimer!=='undefined'&&autoRefreshTimer){clearInterval(autoRefreshTimer);autoRefreshTimer=null}}catch(error){console.warn('Homebase pause auto refresh',error)}
+  window.HOMEBASE_PRODUCTION_AUTH_MIGRATING=true;
+}
+pauseLegacySyncForAuth();
 
 function ensureStatusUi(){
   if(byId('productionSecurityStatus'))return byId('productionSecurityStatus');
@@ -34,6 +41,7 @@ function activateSync(){
   if(syncActivated)return;
   syncActivated=true;
   window.HOMEBASE_PRODUCTION_AUTH_READY=true;
+  window.HOMEBASE_PRODUCTION_AUTH_MIGRATING=false;
   try{if(typeof startAutoRefresh==='function')startAutoRefresh()}catch(error){console.warn('Homebase start auto refresh',error)}
   try{if(familyCode()&&typeof startCloudListener==='function')startCloudListener()}catch(error){console.warn('Homebase start cloud listener',error)}
   try{if(familyCode()&&typeof refreshWhenActive==='function')refreshWhenActive()}catch(error){console.warn('Homebase initial refresh',error)}
@@ -41,33 +49,24 @@ function activateSync(){
 
 async function preparePersistence(auth){
   if(persistenceReady)return;
-  try{
-    if(auth?.setPersistence&&firebase.auth?.Auth?.Persistence?.LOCAL){
-      await withTimeout(auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL),1800,'Persistencia Auth');
-    }
-  }catch(error){console.warn('Homebase Auth persistence fallback',error)}
+  try{if(auth?.setPersistence&&firebase.auth?.Auth?.Persistence?.LOCAL)await withTimeout(auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL),1800,'Persistencia Auth')}catch(error){console.warn('Homebase Auth persistence fallback',error)}
   persistenceReady=true;
 }
-function waitForInitialAuthState(auth,timeoutMs=1800){
-  return new Promise(resolve=>{let done=false,unsub=null;const finish=user=>{if(done)return;done=true;clearTimeout(timer);try{unsub?.()}catch{}resolve(user||auth.currentUser||null)};const timer=setTimeout(()=>finish(auth.currentUser),timeoutMs);try{unsub=auth.onAuthStateChanged(user=>finish(user),()=>finish(auth.currentUser))}catch{finish(auth.currentUser)}})
-}
+function waitForInitialAuthState(auth,timeoutMs=1800){return new Promise(resolve=>{let done=false,unsub=null;const finish=user=>{if(done)return;done=true;clearTimeout(timer);try{unsub?.()}catch{}resolve(user||auth.currentUser||null)};const timer=setTimeout(()=>finish(auth.currentUser),timeoutMs);try{unsub=auth.onAuthStateChanged(user=>finish(user),()=>finish(auth.currentUser))}catch{finish(auth.currentUser)}})}
 async function ensureAuth(){
   if(!window.firebase||typeof firebase.auth!=='function')throw new Error('Firebase Auth no está disponible');
   const auth=firebase.auth();
   if(auth.currentUser){currentUid=auth.currentUser.uid;window.HOMEBASE_AUTH_UID=currentUid;setUid();return auth.currentUser}
   if(authPromise)return authPromise;
   authPromise=(async()=>{
-    setStatus('Autenticando este dispositivo…');
-    await preparePersistence(auth);
-    let user=auth.currentUser;
-    if(!user)user=await waitForInitialAuthState(auth);
+    setStatus('Autenticando este dispositivo…');await preparePersistence(auth);
+    let user=auth.currentUser;if(!user)user=await waitForInitialAuthState(auth);
     if(!user){setStatus('Creando identidad segura del dispositivo…');const result=await withTimeout(auth.signInAnonymously(),8000,'Inicio de sesión anónimo');user=result.user}
     if(!user)throw new Error('No se pudo iniciar la sesión segura');
     currentUid=user.uid;window.HOMEBASE_AUTH_UID=currentUid;setUid();return user;
   })();
   try{return await authPromise}finally{authPromise=null}
 }
-
 async function loadMembership(){
   const ref=homeRef();if(!ref||!currentUid){authorizedUids=mergeUid([],currentUid);return {exists:false,securityVersion:0,member:false}}
   setStatus('Comprobando autorización del dispositivo…');
@@ -82,43 +81,28 @@ async function enrollForMigration(){
   await withTimeout(ref.set({authorizedUids:firebase.firestore.FieldValue.arrayUnion(currentUid),securityVersion:2,securityMigrationStage:'device-enrollment',securityUpdatedAt:Date.now()},{merge:true}),10000,'Registro del dispositivo');
   authorizedUids=mergeUid(authorizedUids,currentUid);
 }
-
 function randomToken(){const alphabet='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';const bytes=new Uint8Array(20);crypto.getRandomValues(bytes);return Array.from(bytes,b=>alphabet[b%alphabet.length]).join('')}
 function formatToken(token){return String(token||'').replace(/(.{4})/g,'$1-').replace(/-$/,'')}
 async function createPairingInvite(){
   try{
-    await ensureAuth();const code=familyCode();if(!code)throw new Error('Este dispositivo no está vinculado a un hogar');
-    if(!authorizedUids.includes(currentUid))throw new Error('Este dispositivo todavía no consta como autorizado');
+    await ensureAuth();const code=familyCode();if(!code)throw new Error('Este dispositivo no está vinculado a un hogar');if(!authorizedUids.includes(currentUid))throw new Error('Este dispositivo todavía no consta como autorizado');
     const token=randomToken(),now=Date.now();
     await withTimeout(firebase.firestore().collection(INVITE_COLLECTION).doc(token).set({homeId:code,createdByUid:currentUid,createdAt:firebase.firestore.Timestamp.fromMillis(now),expiresAt:firebase.firestore.Timestamp.fromMillis(now+INVITE_TTL_MS),claimedUid:null,securityVersion:3}),8000,'Creación del código temporal');
     const shown=formatToken(token);setStatus(`Código temporal creado. Caduca en 10 minutos: ${shown}`);
     try{await navigator.clipboard.writeText(shown);alert(`Código temporal copiado.\n\n${shown}`)}catch{prompt('Copia este código temporal. Caduca en 10 minutos.',shown)}
   }catch(error){console.warn('Production pairing invite',error);const denied=String(error?.code||'')==='permission-denied';setStatus(denied?'El dispositivo está registrado. El pairing se activará al cerrar la migración de producción.':String(error?.message||error),true)}
 }
-
 async function start(){
   ensureStatusUi();
   try{
     await ensureAuth();
     if(!familyCode()){setStatus('Autenticación activa · todavía no hay hogar vinculado.');activateSync();return}
     const membership=await loadMembership();
-    if(membership.securityVersion>=3){
-      if(membership.member)setStatus('Autenticación activa · este dispositivo está autorizado.');
-      else setStatus('Este dispositivo conserva el hogar, pero necesita reautorización desde otro dispositivo autorizado.',true);
-    }else{
-      await enrollForMigration();
-      setStatus('Autenticación activa · este dispositivo queda registrado para la migración segura.');
-    }
-    activateSync();
-    window.dispatchEvent(new CustomEvent('homebase:auth-ready',{detail:{uid:currentUid,authorized:authorizedUids.includes(currentUid)}}));
-  }catch(error){
-    console.error('Homebase production auth',error);
-    setStatus(`${String(error?.message||error)} · sincronización legacy mantenida`,true);
-    activateSync();
-    window.dispatchEvent(new CustomEvent('homebase:auth-error',{detail:{message:String(error?.message||error)}}));
-  }
+    if(membership.securityVersion>=3){if(membership.member)setStatus('Autenticación activa · este dispositivo está autorizado.');else setStatus('Este dispositivo conserva el hogar, pero necesita reautorización desde otro dispositivo autorizado.',true)}
+    else{await enrollForMigration();setStatus('Autenticación activa · este dispositivo queda registrado para la migración segura.')}
+    activateSync();window.dispatchEvent(new CustomEvent('homebase:auth-ready',{detail:{uid:currentUid,authorized:authorizedUids.includes(currentUid)}}));
+  }catch(error){console.error('Homebase production auth',error);setStatus(`${String(error?.message||error)} · sincronización legacy mantenida`,true);activateSync();window.dispatchEvent(new CustomEvent('homebase:auth-error',{detail:{message:String(error?.message||error)}}))}
 }
-
 window.HOMEBASE_SECURITY={version:VERSION,ensureAuth,enroll:async()=>{await ensureAuth();return enrollForMigration()},getUid:()=>currentUid,getAuthorizedUids:()=>[...authorizedUids],refresh:loadMembership,activateSync};
 document.readyState==='loading'?document.addEventListener('DOMContentLoaded',start,{once:true}):start();
 })();
