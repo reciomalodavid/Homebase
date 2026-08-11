@@ -1,0 +1,45 @@
+name: Firebase Homebase Beta Deploy
+
+on:
+  push:
+    branches:
+      - firebase-beta-separation
+    paths:
+      - 'firestore.beta.rules'
+      - 'firestore.beta.indexes.json'
+      - 'firebase.beta.json'
+      - '.github/workflows/firebase-homebase-beta-deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy-beta-firestore:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud with GitHub OIDC
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/986505930709/locations/global/workloadIdentityPools/github-actions/providers/github
+          service_account: github-firebase-beta@homebase-beta-72767.iam.gserviceaccount.com
+
+      - name: Guard Beta target
+        shell: bash
+        run: |
+          set -euo pipefail
+          TARGET='homebase-beta-72767'
+          PROD='homebase-85f2b'
+          test "$TARGET" != "$PROD"
+          test "$(gcloud config get-value project 2>/dev/null)" = "$TARGET"
+
+      - name: Deploy Beta Firestore rules and indexes only
+        run: |
+          npx --yes firebase-tools@latest deploy \
+            --project homebase-beta-72767 \
+            --config firebase.beta.json \
+            --only firestore:rules,firestore:indexes \
+            --non-interactive
