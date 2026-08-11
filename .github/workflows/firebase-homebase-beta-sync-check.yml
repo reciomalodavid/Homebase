@@ -30,19 +30,18 @@ jobs:
           test "$(gcloud config get-value project 2>/dev/null)" = "$PROJECT"
           TOKEN="$(gcloud auth print-access-token)"
           URL="https://firestore.googleapis.com/v1/projects/${PROJECT}/databases/(default)/documents/homebaseSyncs/${DOC}"
-          BODY="$(curl -fsS -H "Authorization: Bearer ${TOKEN}" "$URL")"
-          node -e '
-            const doc=JSON.parse(process.env.BODY);
-            const walk=v=>{
-              if(!v||typeof v!=="object") return false;
-              if(v.stringValue==="TEST MIGRACION") return true;
-              return Object.values(v).some(walk);
-            };
-            if(!walk(doc.fields||{})){
-              console.error("TEST MIGRACION not found in target Beta Firestore document");
-              process.exit(1);
-            }
-            console.log("Beta sync verified: TEST MIGRACION found in homebase-beta-72767");
-          '
-        env:
-          BODY: ${{ env.BODY }}
+          curl -fsS -H "Authorization: Bearer ${TOKEN}" "$URL" > /tmp/homebase-beta-doc.json
+          node - <<'NODE'
+          const fs=require('fs');
+          const doc=JSON.parse(fs.readFileSync('/tmp/homebase-beta-doc.json','utf8'));
+          const walk=v=>{
+            if(!v||typeof v!=="object") return false;
+            if(v.stringValue==="TEST MIGRACION") return true;
+            return Object.values(v).some(walk);
+          };
+          if(!walk(doc.fields||{})){
+            console.error("TEST MIGRACION not found in target Beta Firestore document");
+            process.exit(1);
+          }
+          console.log("Beta sync verified: TEST MIGRACION found in homebase-beta-72767");
+          NODE
