@@ -1,16 +1,24 @@
 (()=>{
 'use strict';
 if(!window.HOMEBASE_BETA)return;
-const VERSION='4';
+const VERSION='5';
 const ROSTER_CLASSES=['flight','off','vacation','standby','duty','night'];
-const STYLE_ID='hcpPrintOrder2382';
+const STYLE_ID='hcpPrintOrder2384';
 const CSS=`
 .hcp-line.all-day{min-height:0!important;padding-top:2px!important;padding-bottom:2px!important;overflow:hidden!important}
 .hcp-line.all-day b{display:-webkit-box!important;-webkit-box-orient:vertical!important;-webkit-line-clamp:2!important;white-space:normal!important;overflow:hidden!important;text-overflow:ellipsis!important;line-height:1.02!important;font-size:7.1px!important;max-height:2.08em!important}
 .hcp-line.all-day span{display:none!important}
+.hcp-cell.hcp-dense .hcp-num{margin-bottom:1px!important;line-height:1!important}
+.hcp-cell.hcp-dense .hcp-lines{gap:1px!important}
+.hcp-cell.hcp-very-dense .hcp-line{padding-top:2px!important;padding-bottom:2px!important}
+.hcp-cell.hcp-header-share .hcp-num{position:absolute!important;top:5px!important;left:5px!important;margin:0!important;line-height:1!important;z-index:5!important}
+.hcp-cell.hcp-header-share .hcp-lines{margin-top:0!important}
+.hcp-cell.hcp-header-share .hcp-line:first-child{margin-left:30px!important;min-height:15px!important;padding-top:2px!important;padding-bottom:2px!important}
 @media print{
   .hcp-line.all-day{padding-top:.22mm!important;padding-bottom:.22mm!important}
   .hcp-line.all-day b{display:-webkit-box!important;-webkit-box-orient:vertical!important;-webkit-line-clamp:2!important;white-space:normal!important;overflow:hidden!important;text-overflow:ellipsis!important;font-size:4.65pt!important;line-height:1.01!important;max-height:2.04em!important}
+  .hcp-cell.hcp-header-share .hcp-num{top:.9mm!important;left:.9mm!important}
+  .hcp-cell.hcp-header-share .hcp-line:first-child{margin-left:6.2mm!important;min-height:3.2mm!important;padding-top:.22mm!important;padding-bottom:.22mm!important}
 }
 `;
 function rank(line){
@@ -23,6 +31,7 @@ function rank(line){
 function ensureStyle(doc){
   if(!doc?.head)return;
   doc.getElementById('hcpPrintOrder2381')?.remove();
+  doc.getElementById('hcpPrintOrder2382')?.remove();
   let s=doc.getElementById(STYLE_ID);
   if(!s){s=doc.createElement('style');s.id=STYLE_ID;doc.head.appendChild(s)}
   s.textContent=CSS;
@@ -44,6 +53,19 @@ function flattenAllDay(line){
   b.title=full;
   if(span)span.remove();
 }
+function decorateDensity(lines,nodes){
+  const cell=lines.closest('.hcp-cell');if(!cell)return;
+  cell.classList.remove('hcp-dense','hcp-very-dense','hcp-header-share');
+  const count=nodes.length+(lines.querySelector(':scope > .hcp-more')?1:0);
+  if(count>=3)cell.classList.add('hcp-dense');
+  if(count>=4)cell.classList.add('hcp-very-dense');
+  if(count<3||!nodes.length)return;
+  const first=nodes[0];
+  const shareable=ROSTER_CLASSES.some(c=>first.classList.contains(c))||first.classList.contains('all-day');
+  const week=cell.closest('.hcp-weekrow');
+  const lanes=Number.parseInt(week?.style?.getPropertyValue('--band-lanes')||'0',10)||0;
+  if(shareable&&lanes===0)cell.classList.add('hcp-header-share');
+}
 function reorderRoot(root){
   if(!root)return;
   const doc=root.ownerDocument||document;ensureStyle(doc);
@@ -53,6 +75,7 @@ function reorderRoot(root){
     nodes.sort((a,b)=>rank(a)-rank(b));
     const more=lines.querySelector(':scope > .hcp-more');
     for(const n of nodes)lines.insertBefore(n,more||null);
+    decorateDensity(lines,nodes);
   }
 }
 function apply(){
@@ -63,8 +86,8 @@ function apply(){
 function schedule(){setTimeout(apply,0);setTimeout(apply,80);setTimeout(apply,180)}
 function bindFrame(){
   const frame=document.querySelector('#homebaseCalendarPrintOverlay .hcp-frame');
-  if(!frame||frame.dataset.order2382==='1')return;
-  frame.dataset.order2382='1';
+  if(!frame||frame.dataset.order2384==='1')return;
+  frame.dataset.order2384='1';
   frame.addEventListener('load',schedule,{passive:true});
 }
 function routeClassicRoster(){
