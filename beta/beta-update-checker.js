@@ -2,7 +2,7 @@
 'use strict';
 if(!window.HOMEBASE_BETA)return;
 
-const CURRENT_BUILD=2388;
+const CURRENT_BUILD=2389;
 const CHECK_INTERVAL_MS=60000;
 let timer=null;
 let checking=false;
