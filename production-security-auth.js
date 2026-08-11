@@ -1,13 +1,14 @@
 (()=>{
 'use strict';
 
-const VERSION='3';
+const VERSION='4';
 const INVITE_COLLECTION='homebaseDeviceInvites';
 const INVITE_TTL_MS=10*60*1000;
 let currentUid='';
 let authorizedUids=[];
 let authPromise=null;
 let persistenceReady=false;
+let syncActivated=false;
 
 function byId(id){return document.getElementById(id)}
 function familyCode(){return String((window.state&&state.syncCode)||localStorage.getItem('homebase_sync_code')||'').trim()}
@@ -29,15 +30,22 @@ function ensureStatusUi(){
 function setStatus(text,isError=false){ensureStatusUi();const el=byId('productionSecurityStatusText');if(!el)return;el.textContent=text;el.style.color=isError?'#b42318':'#6e4a27'}
 function setUid(){const el=byId('productionSecurityUid');if(el)el.textContent=currentUid?`UID actual: ${shortUid(currentUid)}`:''}
 
+function activateSync(){
+  if(syncActivated)return;
+  syncActivated=true;
+  window.HOMEBASE_PRODUCTION_AUTH_READY=true;
+  try{if(typeof startAutoRefresh==='function')startAutoRefresh()}catch(error){console.warn('Homebase start auto refresh',error)}
+  try{if(familyCode()&&typeof startCloudListener==='function')startCloudListener()}catch(error){console.warn('Homebase start cloud listener',error)}
+  try{if(familyCode()&&typeof refreshWhenActive==='function')refreshWhenActive()}catch(error){console.warn('Homebase initial refresh',error)}
+}
+
 async function preparePersistence(auth){
   if(persistenceReady)return;
   try{
     if(auth?.setPersistence&&firebase.auth?.Auth?.Persistence?.LOCAL){
       await withTimeout(auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL),1800,'Persistencia Auth');
     }
-  }catch(error){
-    console.warn('Homebase Auth persistence fallback',error);
-  }
+  }catch(error){console.warn('Homebase Auth persistence fallback',error)}
   persistenceReady=true;
 }
 function waitForInitialAuthState(auth,timeoutMs=1800){
@@ -63,7 +71,7 @@ async function ensureAuth(){
 async function loadMembership(){
   const ref=homeRef();if(!ref||!currentUid){authorizedUids=mergeUid([],currentUid);return {exists:false,securityVersion:0,member:false}}
   setStatus('Comprobando autorización del dispositivo…');
-  const snap=await withTimeout(ref.get(),8000,'Lectura del hogar');
+  const snap=await withTimeout(ref.get({source:'server'}),10000,'Lectura del hogar');
   if(!snap.exists){authorizedUids=mergeUid([],currentUid);return {exists:false,securityVersion:0,member:false}}
   const data=snap.data()||{};authorizedUids=Array.isArray(data.authorizedUids)?[...new Set(data.authorizedUids.filter(x=>typeof x==='string'&&x))]:[];
   return {exists:true,securityVersion:Number(data.securityVersion||0),member:authorizedUids.includes(currentUid)};
@@ -71,7 +79,7 @@ async function loadMembership(){
 async function enrollForMigration(){
   const ref=homeRef();if(!ref||!currentUid)return;
   setStatus('Registrando este dispositivo para la migración segura…');
-  await withTimeout(ref.set({authorizedUids:firebase.firestore.FieldValue.arrayUnion(currentUid),securityVersion:2,securityMigrationStage:'device-enrollment',securityUpdatedAt:Date.now()},{merge:true}),8000,'Registro del dispositivo');
+  await withTimeout(ref.set({authorizedUids:firebase.firestore.FieldValue.arrayUnion(currentUid),securityVersion:2,securityMigrationStage:'device-enrollment',securityUpdatedAt:Date.now()},{merge:true}),10000,'Registro del dispositivo');
   authorizedUids=mergeUid(authorizedUids,currentUid);
 }
 
@@ -85,18 +93,14 @@ async function createPairingInvite(){
     await withTimeout(firebase.firestore().collection(INVITE_COLLECTION).doc(token).set({homeId:code,createdByUid:currentUid,createdAt:firebase.firestore.Timestamp.fromMillis(now),expiresAt:firebase.firestore.Timestamp.fromMillis(now+INVITE_TTL_MS),claimedUid:null,securityVersion:3}),8000,'Creación del código temporal');
     const shown=formatToken(token);setStatus(`Código temporal creado. Caduca en 10 minutos: ${shown}`);
     try{await navigator.clipboard.writeText(shown);alert(`Código temporal copiado.\n\n${shown}`)}catch{prompt('Copia este código temporal. Caduca en 10 minutos.',shown)}
-  }catch(error){
-    console.warn('Production pairing invite',error);
-    const denied=String(error?.code||'')==='permission-denied';
-    setStatus(denied?'El dispositivo está registrado. El pairing se activará al cerrar la migración de producción.':String(error?.message||error),true)
-  }
+  }catch(error){console.warn('Production pairing invite',error);const denied=String(error?.code||'')==='permission-denied';setStatus(denied?'El dispositivo está registrado. El pairing se activará al cerrar la migración de producción.':String(error?.message||error),true)}
 }
 
 async function start(){
   ensureStatusUi();
   try{
     await ensureAuth();
-    if(!familyCode()){setStatus('Autenticación activa · todavía no hay hogar vinculado.');return}
+    if(!familyCode()){setStatus('Autenticación activa · todavía no hay hogar vinculado.');activateSync();return}
     const membership=await loadMembership();
     if(membership.securityVersion>=3){
       if(membership.member)setStatus('Autenticación activa · este dispositivo está autorizado.');
@@ -105,10 +109,16 @@ async function start(){
       await enrollForMigration();
       setStatus('Autenticación activa · este dispositivo queda registrado para la migración segura.');
     }
+    activateSync();
     window.dispatchEvent(new CustomEvent('homebase:auth-ready',{detail:{uid:currentUid,authorized:authorizedUids.includes(currentUid)}}));
-  }catch(error){console.error('Homebase production auth',error);setStatus(String(error?.message||error),true);window.dispatchEvent(new CustomEvent('homebase:auth-error',{detail:{message:String(error?.message||error)}}))}
+  }catch(error){
+    console.error('Homebase production auth',error);
+    setStatus(`${String(error?.message||error)} · sincronización legacy mantenida`,true);
+    activateSync();
+    window.dispatchEvent(new CustomEvent('homebase:auth-error',{detail:{message:String(error?.message||error)}}));
+  }
 }
 
-window.HOMEBASE_SECURITY={version:VERSION,ensureAuth,enroll:async()=>{await ensureAuth();return enrollForMigration()},getUid:()=>currentUid,getAuthorizedUids:()=>[...authorizedUids],refresh:loadMembership};
+window.HOMEBASE_SECURITY={version:VERSION,ensureAuth,enroll:async()=>{await ensureAuth();return enrollForMigration()},getUid:()=>currentUid,getAuthorizedUids:()=>[...authorizedUids],refresh:loadMembership,activateSync};
 document.readyState==='loading'?document.addEventListener('DOMContentLoaded',start,{once:true}):start();
 })();
