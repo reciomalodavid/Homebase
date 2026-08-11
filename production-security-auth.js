@@ -1,7 +1,8 @@
 (()=>{
 'use strict';
 
-const VERSION='8';
+const VERSION='9';
+const RECOVERY_KEY='homebase_firestore_queue_recovered_v1';
 let currentUid='';
 let authorizedUids=[];
 let authPromise=null;
@@ -26,7 +27,7 @@ function ensureDiagUi(){
  let box=byId('productionFirestoreDiagnostics');if(box)return box;
  const security=ensureStatusUi(),details=document.querySelector('#syncSection .sync-details');if(!details)return null;
  box=document.createElement('div');box.id='productionFirestoreDiagnostics';box.style.cssText='margin:10px 0;padding:11px 12px;border-radius:13px;background:rgba(49,94,139,.06);border:1px solid rgba(49,94,139,.15);font-size:11px;line-height:1.4;color:#334155';
- box.innerHTML='<strong>Diagnóstico Firestore · solo lectura</strong><div id="productionFirestoreDiagnosticsText" style="margin-top:5px;white-space:pre-wrap">Esperando Auth…</div>';
+ box.innerHTML='<strong>Diagnóstico Firestore</strong><div id="productionFirestoreDiagnosticsText" style="margin-top:5px;white-space:pre-wrap">Esperando Auth…</div>';
  security?.insertAdjacentElement('afterend',box);return box;
 }
 function setStatus(text,isError=false){ensureStatusUi();const el=byId('productionSecurityStatusText');if(!el)return;el.textContent=text;el.style.color=isError?'#b42318':'#6e4a27'}
@@ -45,26 +46,39 @@ async function ensureAnonymousAuth(){
 }
 
 async function runDiagnostics(){
- const lines=[];ensureDiagUi();
+ const lines=[];let pendingStuck=false;ensureDiagUi();
  const home=String(state?.syncCode||'').trim(),projectId=firebase?.app?.()?.options?.projectId||'';
  lines.push(`Auth: ${currentUid?'OK':'NO'} · UID ${currentUid?shortUid(currentUid):'?'}`);
  lines.push(`Online: ${navigator.onLine?'sí':'no'} · Proyecto: ${projectId||'?'}`);
  lines.push(`Hogar: ${home||'(sin código)'}`);showDiag(lines);
- const ref=syncRef();if(!ref){lines.push('Firestore ref: no disponible');showDiag(lines);return}
- try{const snap=await timeout(ref.get({source:'cache'}),2000,'cache');lines.push(`SDK caché: OK · ${snap.exists?'existe':'no existe'}`)}catch(error){lines.push(`SDK caché: ${diagError(error)}`)}showDiag(lines);
+ const ref=syncRef();if(!ref){lines.push('Firestore ref: no disponible');showDiag(lines);return {pendingStuck:false}}
  try{const snap=await timeout(ref.get({source:'server'}),6000,'server');lines.push(`SDK servidor: OK · ${snap.exists?'existe':'no existe'}`)}catch(error){lines.push(`SDK servidor: ${diagError(error)}`)}showDiag(lines);
- try{
-  const token=await timeout(firebase.auth().currentUser.getIdToken(false),3000,'token');
-  const url=`https://firestore.googleapis.com/v1/projects/${encodeURIComponent(projectId)}/databases/(default)/documents/homebaseSyncs/${encodeURIComponent(home)}`;
-  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),6000);let response;
-  try{response=await fetch(url,{headers:{Authorization:`Bearer ${token}`},cache:'no-store',signal:controller.signal})}finally{clearTimeout(timer)}
-  const text=await response.text();
-  lines.push(response.ok?`REST directo: OK · HTTP ${response.status}`:`REST directo: HTTP ${response.status} · ${text.slice(0,100)}`);
- }catch(error){lines.push(`REST directo: ${diagError(error)}`)}showDiag(lines);
- try{await timeout(db().waitForPendingWrites(),2500,'pending');lines.push('Pending writes: ninguno')}catch(error){lines.push(`Pending writes: ${diagError(error)}`)}showDiag(lines);
+ try{await timeout(db().waitForPendingWrites(),2500,'pending');lines.push('Pending writes: ninguno')}catch(error){pendingStuck=true;lines.push('Pending writes: cola bloqueada')}
+ showDiag(lines);return {pendingStuck};
 }
 
-async function loadMembership(){const ref=syncRef();if(!currentUid||!ref){authorizedUids=mergeUid([],currentUid);return}const snap=await ref.get();authorizedUids=snap.exists?mergeUid((snap.data()||{}).authorizedUids,currentUid):mergeUid([],currentUid)}
+async function recoverStuckQueue(){
+ if(sessionStorage.getItem(RECOVERY_KEY)==='1')return false;
+ const firestore=db();if(!firestore)return false;
+ setStatus('Limpiando una cola local de sincronización bloqueada…');
+ showDiag(['Cola bloqueada detectada.','Se reiniciará solo la caché local de Firestore.','Los datos de Homebase en este dispositivo no se borran.']);
+ sessionStorage.setItem(RECOVERY_KEY,'1');
+ try{
+  if(state?.syncUnsubscribe){try{state.syncUnsubscribe()}catch{}state.syncUnsubscribe=null}
+  await firestore.terminate();
+  await firestore.clearPersistence();
+  const url=new URL(location.href);url.searchParams.set('firestoreRecovery',Date.now());
+  location.replace(url.href);
+  return true;
+ }catch(error){
+  console.error('Firestore queue recovery',error);
+  sessionStorage.removeItem(RECOVERY_KEY);
+  setStatus(`No se pudo reiniciar la caché Firestore: ${String(error?.message||error)}`,true);
+  return false;
+ }
+}
+
+async function loadMembership(){const ref=syncRef();if(!currentUid||!ref){authorizedUids=mergeUid([],currentUid);return}const snap=await ref.get({source:'server'});authorizedUids=snap.exists?mergeUid((snap.data()||{}).authorizedUids,currentUid):mergeUid([],currentUid)}
 async function enrollCurrentDevice(){const ref=syncRef();if(!currentUid||!ref)return;const FieldValue=firebase.firestore.FieldValue;await ref.set({authorizedUids:FieldValue.arrayUnion(currentUid),securityVersion:2,securityUpdatedAt:Date.now()},{merge:true});authorizedUids=mergeUid(authorizedUids,currentUid)}
 function bindProtectedActions(){const syncNowBtn=byId('syncNow');if(syncNowBtn&&typeof refreshFromCloud==='function'&&typeof writeCloud==='function')syncNowBtn.onclick=async()=>{try{await ensureAnonymousAuth();await refreshFromCloud(true);await writeCloud()}catch(error){console.error('Production secure sync',error);setStatus(errorText(error),true)}}}
 
@@ -72,10 +86,18 @@ async function start(){
  ensureStatusUi();ensureDiagUi();bindProtectedActions();
  try{
   await ensureAnonymousAuth();
-  runDiagnostics().catch(error=>{showDiag([`Diagnóstico: ${diagError(error)}`])});
-  setStatus('Autenticación anónima activa. Preparando autorización del dispositivo…');
-  if(state?.syncCode){await loadMembership();await enrollCurrentDevice();if(typeof startCloudListener==='function')startCloudListener();if(typeof refreshWhenActive==='function')refreshWhenActive();setStatus('Autenticación activa · este dispositivo está autorizado.')}
-  else{authorizedUids=mergeUid([],currentUid);setStatus('Autenticación activa · todavía no hay hogar vinculado.')}
+  setStatus('Autenticación anónima activa. Comprobando Firestore…');
+  const diag=await runDiagnostics();
+  if(diag.pendingStuck&&await recoverStuckQueue())return;
+  sessionStorage.removeItem(RECOVERY_KEY);
+  if(state?.syncCode){
+   setStatus('Preparando autorización del dispositivo…');
+   await loadMembership();
+   await enrollCurrentDevice();
+   if(typeof startCloudListener==='function')startCloudListener();
+   if(typeof refreshWhenActive==='function')refreshWhenActive();
+   setStatus('Autenticación activa · este dispositivo está autorizado.');
+  }else{authorizedUids=mergeUid([],currentUid);setStatus('Autenticación activa · todavía no hay hogar vinculado.')}
   window.dispatchEvent(new CustomEvent('homebase:auth-ready',{detail:{uid:currentUid,authorized:authorizedUids.includes(currentUid)}}));
  }catch(error){console.error('Homebase production auth',error);setStatus(errorText(error),true);window.dispatchEvent(new CustomEvent('homebase:auth-error',{detail:{message:String(error?.message||error)}}))}
 }
