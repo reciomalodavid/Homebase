@@ -1,0 +1,120 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isBetaHome(homeId) {
+      return homeId.matches('BETA_.*');
+    }
+
+    function hasMemberList(data) {
+      return data.authorizedUids is list;
+    }
+
+    function memberOfBetaHome(homeId) {
+      return signedIn()
+        && isBetaHome(homeId)
+        && exists(/databases/$(database)/documents/homebaseSyncs/$(homeId))
+        && get(/databases/$(database)/documents/homebaseSyncs/$(homeId)).data.authorizedUids is list
+        && request.auth.uid in get(/databases/$(database)/documents/homebaseSyncs/$(homeId)).data.authorizedUids;
+    }
+
+    function isCurrentMember() {
+      return signedIn()
+        && hasMemberList(resource.data)
+        && request.auth.uid in resource.data.authorizedUids;
+    }
+
+    function createsOwnHome() {
+      return signedIn()
+        && isBetaHome(request.resource.id)
+        && hasMemberList(request.resource.data)
+        && request.resource.data.authorizedUids.size() == 1
+        && request.resource.data.authorizedUids[0] == request.auth.uid;
+    }
+
+    function keepsCurrentUserAuthorized() {
+      return hasMemberList(request.resource.data)
+        && request.auth.uid in request.resource.data.authorizedUids;
+    }
+
+    function validClaimedInvite(homeId) {
+      let token = request.resource.data.securityJoinToken;
+      let invite = getAfter(/databases/$(database)/documents/homebaseDeviceInvites/$(token)).data;
+      return signedIn()
+        && token is string
+        && invite.homeId == homeId
+        && invite.claimedUid == request.auth.uid
+        && invite.expiresAt > request.time;
+    }
+
+    function joinsWithoutRemovingMembers(homeId) {
+      return validClaimedInvite(homeId)
+        && hasMemberList(resource.data)
+        && hasMemberList(request.resource.data)
+        && request.resource.data.authorizedUids.hasAll(resource.data.authorizedUids)
+        && request.auth.uid in request.resource.data.authorizedUids
+        && request.resource.data.authorizedUids.size() <= resource.data.authorizedUids.size() + 1
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'authorizedUids',
+          'securityJoinToken',
+          'securityVersion',
+          'securityUpdatedAt'
+        ]);
+    }
+
+    match /homebaseSyncs/{homeId} {
+      allow get: if isBetaHome(homeId) && isCurrentMember();
+      allow list: if false;
+      allow create: if createsOwnHome();
+      allow update: if isBetaHome(homeId)
+                    && ((isCurrentMember() && keepsCurrentUserAuthorized())
+                        || joinsWithoutRemovingMembers(homeId));
+      allow delete: if false;
+    }
+
+    match /homebaseDeviceInvites/{token} {
+      allow get: if signedIn() && resource.data.expiresAt > request.time;
+      allow list: if false;
+      allow create: if signedIn()
+                    && request.resource.data.homeId is string
+                    && request.resource.data.homeId.matches('BETA_.*')
+                    && memberOfBetaHome(request.resource.data.homeId)
+                    && request.resource.data.createdByUid == request.auth.uid
+                    && request.resource.data.claimedUid == null
+                    && request.resource.data.expiresAt > request.time;
+      allow update: if signedIn()
+                    && resource.data.expiresAt > request.time
+                    && resource.data.claimedUid == null
+                    && request.resource.data.claimedUid == request.auth.uid
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+                      'claimedUid',
+                      'claimedAt'
+                    ]);
+      allow delete: if signedIn()
+                    && (resource.data.createdByUid == request.auth.uid
+                        || resource.data.claimedUid == request.auth.uid
+                        || memberOfBetaHome(resource.data.homeId));
+    }
+
+    match /homebaseBackups/{homeId} {
+      allow read, write: if false;
+
+      match /snapshots/{snapshotId} {
+        allow read, create, update, delete: if isBetaHome(homeId) && memberOfBetaHome(homeId);
+
+        match /chunks/{chunkId} {
+          allow read, create, update, delete: if isBetaHome(homeId) && memberOfBetaHome(homeId);
+        }
+      }
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
