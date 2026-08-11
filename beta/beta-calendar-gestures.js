@@ -2,7 +2,7 @@
 'use strict';
 if(!window.HOMEBASE_BETA)return;
 
-const VERSION='2';
+const VERSION='3';
 const LONG_PRESS_MS=560;
 const SWIPE_PX=58;
 const MOVE_TOLERANCE=12;
@@ -29,6 +29,13 @@ function installStyles(){
  document.head.appendChild(style);
 }
 
+function forceEditorDate(date){
+ const start=document.getElementById('startDate');
+ const end=document.getElementById('endDate');
+ if(start){start.value=date;start.dispatchEvent(new Event('change',{bubbles:true}))}
+ if(end){end.value=date;end.dispatchEvent(new Event('change',{bubbles:true}))}
+}
+
 function openEventForDay(day){
  const date=String(day?.dataset?.day||'');
  if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return;
@@ -36,23 +43,22 @@ function openEventForDay(day){
  day.classList.add('beta-longpress');
  try{navigator.vibrate?.(12)}catch{}
  setTimeout(()=>day.classList.remove('beta-longpress'),180);
- // Use the core editor directly: it already supports preferredDate and therefore
- // avoids depending on selectedDate/render timing after a long press.
+
+ // Open the core editor, then explicitly set the clicked date in the form.
+ // This avoids relying on selectedDate/preferredDate interpretation.
  if(typeof openEditor==='function'){
-   openEditor('event',date);
+   openEditor('event');
+   forceEditorDate(date);
+   requestAnimationFrame(()=>forceEditorDate(date));
+   setTimeout(()=>forceEditorDate(date),40);
    return;
  }
- // Defensive fallback if the core editor is unavailable for any reason.
- try{day.click()}catch{}
- setTimeout(()=>{
-   const input=document.getElementById('startDate');
-   const end=document.getElementById('endDate');
-   if(input)input.value=date;
-   if(end)end.value=date;
-   const quick=window.HOMEBASE_BETA_QUICK_ADD;
-   if(quick&&typeof quick.openNativeEditor==='function')quick.openNativeEditor('event');
-   else document.querySelector('.event-fab')?.click();
- },50);
+
+ const quick=window.HOMEBASE_BETA_QUICK_ADD;
+ if(quick&&typeof quick.openNativeEditor==='function')quick.openNativeEditor('event');
+ else document.querySelector('.event-fab')?.click();
+ requestAnimationFrame(()=>forceEditorDate(date));
+ setTimeout(()=>forceEditorDate(date),70);
 }
 
 function onPointerDown(event){
