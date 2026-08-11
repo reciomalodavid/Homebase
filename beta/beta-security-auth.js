@@ -2,7 +2,7 @@
 'use strict';
 
 const VERSION='8';
-const FIREBASE_PROJECT='homebase-85f2b';
+const FIREBASE_PROJECT='homebase-beta-72767';
 const INVITE_COLLECTION='homebaseDeviceInvites';
 const INVITE_TTL_MS=10*60*1000;
 const RESTORE_PAUSE_KEY='homebase_restore_sync_paused';
