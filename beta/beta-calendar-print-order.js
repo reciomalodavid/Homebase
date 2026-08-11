@@ -1,6 +1,8 @@
 (()=>{
 'use strict';
 if(!window.HOMEBASE_BETA)return;
+window.HOMEBASE_BETA_VERSION='2.3.84';
+window.HOMEBASE_BETA_LOADED_BUILD=2384;
 const VERSION='5';
 const ROSTER_CLASSES=['flight','off','vacation','standby','duty','night'];
 const STYLE_ID='hcpPrintOrder2384';
@@ -108,9 +110,14 @@ function bindModeRoute(){
   mode.dataset.classicRoster2383='1';
   mode.addEventListener('change',()=>{if(mode.value==='roster')routeClassicRoster()});
 }
+function markBuild(){
+  const tag=document.getElementById('betaLoadedBuildStatic');
+  if(tag)tag.textContent='Homebase Beta 2.3.84 · build 2384';
+}
 function install(){
   ensureStyle(document);
-  setTimeout(()=>{bindFrame();bindModeRoute();schedule()},500);
+  setTimeout(()=>{bindFrame();bindModeRoute();schedule();markBuild()},500);
+  setTimeout(markBuild,900);
   document.addEventListener('click',e=>{if(e.target.closest('#homebaseCalendarPrintEntry,#homebaseCalendarPrintOverlay')){bindFrame();bindModeRoute();schedule()}},true);
   document.addEventListener('change',e=>{if(e.target.closest('#homebaseCalendarPrintOverlay')){bindFrame();schedule()}},true);
 }
