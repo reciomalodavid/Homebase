@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 if(!window.HOMEBASE_BETA)return;
-const VERSION='3';
+const VERSION='4';
 const ROSTER_CLASSES=['flight','off','vacation','standby','duty','night'];
 const STYLE_ID='hcpPrintOrder2382';
 const CSS=`
@@ -67,12 +67,30 @@ function bindFrame(){
   frame.dataset.order2382='1';
   frame.addEventListener('load',schedule,{passive:true});
 }
+function routeClassicRoster(){
+  const mode=document.getElementById('hcpMode');
+  if(!mode||mode.value!=='roster')return;
+  const classic=window.HOMEBASE_BETA_ROSTER_PRINT;
+  if(!classic?.open)return;
+  const month=document.getElementById('hcpMonth')?.value||'';
+  const overlay=document.getElementById('homebaseCalendarPrintOverlay');
+  if(overlay)overlay.hidden=true;
+  document.body.style.overflow=document.body.dataset.hcpOverflow||'';
+  delete document.body.dataset.hcpOverflow;
+  setTimeout(()=>classic.open(month),0);
+}
+function bindModeRoute(){
+  const mode=document.getElementById('hcpMode');
+  if(!mode||mode.dataset.classicRoster2383==='1')return;
+  mode.dataset.classicRoster2383='1';
+  mode.addEventListener('change',()=>{if(mode.value==='roster')routeClassicRoster()});
+}
 function install(){
   ensureStyle(document);
-  setTimeout(()=>{bindFrame();schedule()},500);
-  document.addEventListener('click',e=>{if(e.target.closest('#homebaseCalendarPrintEntry,#homebaseCalendarPrintOverlay')){bindFrame();schedule()}},true);
+  setTimeout(()=>{bindFrame();bindModeRoute();schedule()},500);
+  document.addEventListener('click',e=>{if(e.target.closest('#homebaseCalendarPrintEntry,#homebaseCalendarPrintOverlay')){bindFrame();bindModeRoute();schedule()}},true);
   document.addEventListener('change',e=>{if(e.target.closest('#homebaseCalendarPrintOverlay')){bindFrame();schedule()}},true);
 }
 document.readyState==='loading'?document.addEventListener('DOMContentLoaded',install,{once:true}):install();
-window.HOMEBASE_BETA_CALENDAR_PRINT_ORDER={version:VERSION,apply};
+window.HOMEBASE_BETA_CALENDAR_PRINT_ORDER={version:VERSION,apply,routeClassicRoster};
 })();
