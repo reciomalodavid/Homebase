@@ -1,8 +1,18 @@
 (()=>{
 'use strict';
 if(!window.HOMEBASE_BETA)return;
-const VERSION='1';
+const VERSION='2';
 const ROSTER_CLASSES=['flight','off','vacation','standby','duty','night'];
+const STYLE_ID='hcpPrintOrder2381';
+const CSS=`
+.hcp-line.all-day{min-height:0!important;padding-top:3px!important;padding-bottom:3px!important;overflow:hidden!important}
+.hcp-line.all-day b{display:block!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;line-height:1.05!important}
+.hcp-line.all-day span{display:none!important}
+@media print{
+  .hcp-line.all-day{padding-top:.32mm!important;padding-bottom:.32mm!important}
+  .hcp-line.all-day b{white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+}
+`;
 function rank(line){
   if(ROSTER_CLASSES.some(c=>line.classList.contains(c)))return 10;
   if(line.classList.contains('all-day'))return 20;
@@ -10,17 +20,34 @@ function rank(line){
   if(line.classList.contains('expiry'))return 40;
   return 50;
 }
+function ensureStyle(doc){
+  if(!doc?.head||doc.getElementById(STYLE_ID))return;
+  const s=doc.createElement('style');s.id=STYLE_ID;s.textContent=CSS;doc.head.appendChild(s);
+}
 function labelExpiry(line){
   if(!line.classList.contains('expiry'))return;
   const b=line.querySelector('b');if(!b)return;
   const raw=String(b.textContent||'').replace(/^\s*⌛\s*/,'').replace(/^\s*Vence\s*[·:-]?\s*/i,'').trim();
   b.textContent=`Vence · ${raw||'Vencimiento'}`;
 }
+function flattenAllDay(line){
+  if(!line.classList.contains('all-day'))return;
+  const b=line.querySelector('b');if(!b)return;
+  const span=line.querySelector('span');
+  const title=String(b.textContent||'Evento').trim();
+  const meta=String(span?.textContent||'').replace(/^\s*Todo el día\s*[·:-]?\s*/i,'').trim();
+  const suffix=meta&&meta.toLowerCase()!=='familia'?` · ${meta}`:'';
+  const full=`${title}${suffix}`;
+  b.textContent=full;
+  b.title=full;
+  if(span)span.remove();
+}
 function reorderRoot(root){
   if(!root)return;
+  const doc=root.ownerDocument||document;ensureStyle(doc);
   for(const lines of root.querySelectorAll('.hcp-lines')){
     const nodes=[...lines.querySelectorAll(':scope > .hcp-line')];
-    nodes.forEach(labelExpiry);
+    nodes.forEach(n=>{labelExpiry(n);flattenAllDay(n)});
     nodes.sort((a,b)=>rank(a)-rank(b));
     const more=lines.querySelector(':scope > .hcp-more');
     for(const n of nodes)lines.insertBefore(n,more||null);
@@ -29,16 +56,17 @@ function reorderRoot(root){
 function apply(){
   reorderRoot(document.querySelector('#homebaseCalendarPrintOverlay .hcp-preview'));
   const frame=document.querySelector('#homebaseCalendarPrintOverlay .hcp-frame');
-  try{reorderRoot(frame?.contentDocument)}catch{}
+  try{if(frame?.contentDocument){ensureStyle(frame.contentDocument);reorderRoot(frame.contentDocument)}}catch{}
 }
 function schedule(){setTimeout(apply,0);setTimeout(apply,80);setTimeout(apply,180)}
 function bindFrame(){
   const frame=document.querySelector('#homebaseCalendarPrintOverlay .hcp-frame');
-  if(!frame||frame.dataset.order2380==='1')return;
-  frame.dataset.order2380='1';
+  if(!frame||frame.dataset.order2381==='1')return;
+  frame.dataset.order2381='1';
   frame.addEventListener('load',schedule,{passive:true});
 }
 function install(){
+  ensureStyle(document);
   setTimeout(()=>{bindFrame();schedule()},500);
   document.addEventListener('click',e=>{if(e.target.closest('#homebaseCalendarPrintEntry,#homebaseCalendarPrintOverlay')){bindFrame();schedule()}},true);
   document.addEventListener('change',e=>{if(e.target.closest('#homebaseCalendarPrintOverlay')){bindFrame();schedule()}},true);
