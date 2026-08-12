@@ -29,9 +29,9 @@ service cloud.firestore {
         && request.auth.uid in resource.data.authorizedUids;
     }
 
-    function createsOwnHome() {
+    function createsOwnHome(homeId) {
       return signedIn()
-        && isBetaHome(request.resource.id)
+        && isBetaHome(homeId)
         && hasMemberList(request.resource.data)
         && request.resource.data.authorizedUids.size() == 1
         && request.resource.data.authorizedUids[0] == request.auth.uid;
@@ -70,7 +70,7 @@ service cloud.firestore {
     match /homebaseSyncs/{homeId} {
       allow get: if isBetaHome(homeId) && isCurrentMember();
       allow list: if false;
-      allow create: if createsOwnHome();
+      allow create: if createsOwnHome(homeId);
       allow update: if isBetaHome(homeId)
                     && ((isCurrentMember() && keepsCurrentUserAuthorized())
                         || joinsWithoutRemovingMembers(homeId));
