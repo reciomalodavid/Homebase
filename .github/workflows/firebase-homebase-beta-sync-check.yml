@@ -43,5 +43,5 @@ jobs:
             console.error("TEST MIGRATION 2 not found in target Beta Firestore document");
             process.exit(1);
           }
-          console.log("Beta sync verified after Safari force-sync: TEST MIGRATION 2 found in homebase-beta-72767");
+          console.log("Beta sync verified after rules fix: TEST MIGRATION 2 found in homebase-beta-72767");
           NODE
