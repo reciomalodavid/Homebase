@@ -3,7 +3,7 @@
 if(!window.HOMEBASE_BETA)return;
 const VERSION='2';
 const STYLE_ID='hcpOverflowFix2385';
-const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot',"'":'&#39;'}[c]));
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const norm=v=>String(v||'').replace(/^\s*⌛\s*/,'').replace(/^\s*Vence\s*[·:-]?\s*/i,'').replace(/\s+/g,' ').trim().toLowerCase();
 function expiries(){try{const v=JSON.parse(localStorage.getItem('homebase_expiries_v2')||'[]');return Array.isArray(v)?v:[]}catch{return[]}}
 function month(){return document.getElementById('hcpMonth')?.value||''}
