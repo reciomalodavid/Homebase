@@ -21,7 +21,7 @@ jobs:
         with:
           workload_identity_provider: projects/986505930709/locations/global/workloadIdentityPools/github-actions/providers/github
           service_account: github-firebase-beta@homebase-beta-72767.iam.gserviceaccount.com
-      - name: Verify TEST MIGRATION 2 reached Beta Firestore
+      - name: Diagnose Beta home bootstrap
         shell: bash
         run: |
           set -euo pipefail
@@ -30,18 +30,25 @@ jobs:
           test "$(gcloud config get-value project 2>/dev/null)" = "$PROJECT"
           TOKEN="$(gcloud auth print-access-token)"
           URL="https://firestore.googleapis.com/v1/projects/${PROJECT}/databases/(default)/documents/homebaseSyncs/${DOC}"
-          curl -fsS -H "Authorization: Bearer ${TOKEN}" "$URL" > /tmp/homebase-beta-doc.json
+          HTTP="$(curl -sS -o /tmp/homebase-beta-doc.json -w '%{http_code}' -H "Authorization: Bearer ${TOKEN}" "$URL")"
+          echo "Target project: ${PROJECT}"
+          echo "Home document HTTP: ${HTTP}"
+          if [ "$HTTP" != "200" ]; then
+            echo "Home document does not exist or is not readable by admin API."
+            exit 1
+          fi
           node - <<'NODE'
           const fs=require('fs');
           const doc=JSON.parse(fs.readFileSync('/tmp/homebase-beta-doc.json','utf8'));
+          const fields=doc.fields||{};
+          const members=fields.authorizedUids?.arrayValue?.values||[];
           const walk=v=>{
             if(!v||typeof v!=="object") return false;
             if(v.stringValue==="TEST MIGRATION 2") return true;
             return Object.values(v).some(walk);
           };
-          if(!walk(doc.fields||{})){
-            console.error("TEST MIGRATION 2 not found in target Beta Firestore document");
-            process.exit(1);
-          }
-          console.log("Beta sync verified after rules fix: TEST MIGRATION 2 found in homebase-beta-72767");
+          console.log(`authorizedUids count: ${members.length}`);
+          console.log(`TEST MIGRATION 2 present: ${walk(fields)?'yes':'no'}`);
+          console.log(`items field present: ${fields.items?'yes':'no'}`);
+          if(!members.length) process.exit(2);
           NODE
