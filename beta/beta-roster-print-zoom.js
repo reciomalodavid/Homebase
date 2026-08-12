@@ -1,7 +1,7 @@
 (()=>{
 'use strict';
 if(!window.HOMEBASE_BETA)return;
-const VERSION='1';
+const VERSION='2';
 let pinch=null,raf=0,lastTap=0;
 const overlay=()=>document.getElementById('betaRosterPrintOverlay');
 const viewport=()=>overlay()?.querySelector('.brp-preview');
@@ -14,9 +14,30 @@ function fit(){const v=viewport();if(!v)return;render(fitScale());requestAnimati
 const dist=(a,b)=>Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);
 function centerOf(a,b,v){const r=v.getBoundingClientRect();return{x:(a.clientX+b.clientX)/2-r.left,y:(a.clientY+b.clientY)/2-r.top}}
 function bind(){const v=viewport();if(!v||v.dataset.brpZoomBound==='1')return;v.dataset.brpZoomBound='1';v.addEventListener('touchstart',e=>{if(e.touches.length!==2)return;const c=centerOf(e.touches[0],e.touches[1],v),scale=currentScale();pinch={distance:dist(e.touches[0],e.touches[1]),scale,anchor:{x:(v.scrollLeft+c.x)/scale,y:(v.scrollTop+c.y)/scale}}},{passive:true});v.addEventListener('touchmove',e=>{if(e.touches.length!==2||!pinch)return;e.preventDefault();const c=centerOf(e.touches[0],e.touches[1],v),next=pinch.scale*(dist(e.touches[0],e.touches[1])/pinch.distance);cancelAnimationFrame(raf);raf=requestAnimationFrame(()=>render(next,pinch?.anchor,c))},{passive:false});v.addEventListener('touchend',e=>{if(e.touches.length<2)pinch=null;if(e.touches.length===0){const now=Date.now();if(now-lastTap<300){fit();lastTap=0}else lastTap=now}},{passive:true})}
-function apply(){const o=overlay();if(!o||o.hidden)return;bind();setTimeout(fit,40)}
+function injectPrintSafety(){
+ const frame=overlay()?.querySelector('.brp-print-frame');
+ try{
+  const doc=frame?.contentDocument;if(!doc?.head)return;
+  let s=doc.getElementById('brpPrintSafeArea2395');
+  if(!s){s=doc.createElement('style');s.id='brpPrintSafeArea2395';doc.head.appendChild(s)}
+  s.textContent=`@media print{
+   html,body{height:auto!important;min-height:0!important;overflow:hidden!important}
+   .brp-sheet{height:180mm!important;max-height:180mm!important}
+   .brp-grid{height:154mm!important;max-height:154mm!important}
+   .brp-cell{min-height:0!important}
+  }`;
+ }catch(error){console.warn('Roster print safe area',error)}
+}
+function bindPrintFrame(){
+ const frame=overlay()?.querySelector('.brp-print-frame');
+ if(!frame||frame.dataset.brpSafeBound==='1')return;
+ frame.dataset.brpSafeBound='1';
+ frame.addEventListener('load',()=>setTimeout(injectPrintSafety,0),{passive:true});
+ setTimeout(injectPrintSafety,0);
+}
+function apply(){const o=overlay();if(!o||o.hidden)return;bind();bindPrintFrame();injectPrintSafety();setTimeout(fit,40)}
 function installStyles(){if(document.getElementById('brpZoomStyles'))return;const s=document.createElement('style');s.id='brpZoomStyles';s.textContent=`#betaRosterPrintOverlay{overflow:hidden!important}#betaRosterPrintOverlay .brp-preview{position:relative;height:calc(100dvh - 82px);min-height:320px;overflow:scroll!important;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;overscroll-behavior:contain;padding:6px 6px 52px}#betaRosterPrintOverlay .brp-preview>.brp-sheet{position:absolute;top:6px;left:6px;z-index:1}#betaRosterPrintOverlay .brp-zoom-spacer{position:relative;pointer-events:none}#betaRosterPrintOverlay .brp-zoom{position:fixed;left:18px;bottom:18px;z-index:5002;padding:7px 10px;border-radius:12px;background:rgba(255,255,255,.92);box-shadow:0 6px 18px rgba(20,35,50,.14);font-size:11px;font-weight:800;color:#697887;pointer-events:none}@media(max-width:700px){#betaRosterPrintOverlay .brp-preview{height:calc(100dvh - 78px)}}` ;document.head.appendChild(s)}
-function install(){installStyles();document.addEventListener('click',e=>{if(e.target.closest('#betaPrintRoster,#homebaseCalendarPrintOverlay'))setTimeout(apply,120)},true);const mo=new MutationObserver(()=>{const o=overlay();if(o&&!o.hidden)setTimeout(apply,30)});mo.observe(document.documentElement,{subtree:true,attributes:true,attributeFilter:['hidden']});window.addEventListener('resize',()=>{const o=overlay();if(o&&!o.hidden)fit()})}
+function install(){installStyles();document.addEventListener('click',e=>{if(e.target.closest('#betaPrintRoster,#homebaseCalendarPrintOverlay,#betaRosterPrintOverlay'))setTimeout(apply,120)},true);const mo=new MutationObserver(()=>{const o=overlay();if(o&&!o.hidden)setTimeout(apply,30)});mo.observe(document.documentElement,{subtree:true,attributes:true,attributeFilter:['hidden']});window.addEventListener('resize',()=>{const o=overlay();if(o&&!o.hidden)fit()})}
 document.readyState==='loading'?document.addEventListener('DOMContentLoaded',install,{once:true}):install();
 window.HOMEBASE_BETA_ROSTER_PRINT_ZOOM={version:VERSION,apply,fit};
 })();
