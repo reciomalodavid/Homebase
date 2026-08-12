@@ -1,27 +1,17 @@
 (()=>{
 'use strict';
 if(!window.HOMEBASE_BETA)return;
-const VERSION='2',BUILD=2398,APP_VERSION='2.3.98';
-const STYLE_ID='brpPrintFit2398';
+const VERSION='3',BUILD=2399,APP_VERSION='2.3.99';
+const STYLE_ID='brpPrintFit2399';
+const PRINT_ZOOM=.88;
 const CSS=`
-@page{size:A4 landscape;margin:8mm!important}
+@page{size:A4 landscape;margin:5mm!important}
 @media print{
-  html,body{margin:0!important;padding:0!important;width:auto!important;height:auto!important;overflow:hidden!important;background:#fff!important}
-  body{min-height:0!important}
-  .brp-sheet{width:100%!important;height:166mm!important;max-height:166mm!important;margin:0!important;padding:0!important;box-shadow:none!important;border-radius:0!important;overflow:hidden!important;display:grid!important;grid-template-rows:auto auto minmax(0,1fr)!important;break-inside:avoid!important;page-break-inside:avoid!important}
-  .brp-head{padding:0 0 .8mm!important;margin:0 0 .8mm!important;min-height:8mm!important}
-  .brp-head h1{font-size:13.5pt!important}
-  .brp-head p,.brp-legend{font-size:5.8pt!important}
-  .brp-week{gap:.9mm!important;margin:0 0 .7mm!important}
-  .brp-week div{font-size:5.8pt!important}
-  .brp-grid{height:auto!important;min-height:0!important;gap:.9mm!important;grid-template-rows:repeat(var(--brp-weeks),minmax(0,1fr))!important;overflow:hidden!important}
-  .brp-cell{min-height:0!important;padding:.9mm!important;border-radius:1.1mm!important;break-inside:avoid!important;overflow:hidden!important}
-  .brp-num{font-size:8pt!important;margin-bottom:.45mm!important}
-  .brp-entries{gap:.4mm!important}
-  .brp-entry{padding:.55mm .75mm!important}
-  .brp-entry b{font-size:5.8pt!important}
-  .brp-entry .times,.brp-entry .route{font-size:4.8pt!important}
-  .brp-entry .flights,.brp-entry em{font-size:4.2pt!important}
+  html{margin:0!important;padding:0!important;width:113.64%!important;height:auto!important;overflow:hidden!important;background:#fff!important;zoom:${PRINT_ZOOM}!important}
+  body{margin:0!important;padding:0!important;width:100%!important;height:auto!important;min-height:0!important;overflow:hidden!important;background:#fff!important}
+  .brp-sheet{width:100%!important;height:190mm!important;max-height:190mm!important;margin:0!important;padding:0!important;box-shadow:none!important;border-radius:0!important;overflow:hidden!important;display:grid!important;grid-template-rows:auto auto minmax(0,1fr)!important;break-inside:avoid!important;page-break-inside:avoid!important}
+  .brp-grid{min-height:0!important;overflow:hidden!important;grid-template-rows:repeat(var(--brp-weeks),minmax(0,1fr))!important}
+  .brp-cell{min-height:0!important;overflow:hidden!important;break-inside:avoid!important;page-break-inside:avoid!important}
 }
 `;
 function markBuild(){
@@ -36,15 +26,35 @@ function markBuild(){
   const staticTag=document.getElementById('betaLoadedBuildStatic');
   if(staticTag)staticTag.textContent=`Homebase Beta ${APP_VERSION} · build ${BUILD} · Firebase Beta aislado`;
 }
-function inject(doc){if(!doc?.head)return;let s=doc.getElementById(STYLE_ID);if(!s){s=doc.createElement('style');s.id=STYLE_ID;doc.head.appendChild(s)}s.textContent=CSS}
+function inject(doc){
+  if(!doc?.head)return;
+  let s=doc.getElementById(STYLE_ID);
+  if(!s){s=doc.createElement('style');s.id=STYLE_ID;doc.head.appendChild(s)}
+  s.textContent=CSS;
+  try{void doc.documentElement.offsetHeight}catch{}
+}
+function frame(){return document.querySelector('#betaRosterPrintOverlay .brp-print-frame')}
 function bindFrame(){
- const frame=document.querySelector('#betaRosterPrintOverlay .brp-print-frame');if(!frame)return;
- try{inject(frame.contentDocument)}catch{}
- if(frame.dataset.fit2398==='1')return;
- frame.dataset.fit2398='1';frame.addEventListener('load',()=>{try{inject(frame.contentDocument)}catch{}},{passive:true});
+  const f=frame();if(!f)return;
+  try{inject(f.contentDocument)}catch{}
+  if(f.dataset.fit2399==='1')return;
+  f.dataset.fit2399='1';
+  f.addEventListener('load',()=>{try{inject(f.contentDocument)}catch{}},{passive:true});
 }
 function apply(){markBuild();bindFrame()}
-function install(){markBuild();const mo=new MutationObserver(()=>setTimeout(apply,0));mo.observe(document.documentElement,{subtree:true,childList:true});document.addEventListener('click',e=>{if(e.target.closest('#betaPrintRoster,#betaRosterPrintOverlay'))setTimeout(apply,0)},true);setTimeout(apply,500)}
+function install(){
+  markBuild();
+  const mo=new MutationObserver(()=>setTimeout(apply,0));
+  mo.observe(document.documentElement,{subtree:true,childList:true});
+  document.addEventListener('click',e=>{
+    if(e.target.closest('#betaRosterPrintOverlay .brp-print')){
+      const f=frame();try{inject(f?.contentDocument)}catch{}
+      return;
+    }
+    if(e.target.closest('#betaPrintRoster,#betaRosterPrintOverlay'))setTimeout(apply,0);
+  },true);
+  setTimeout(apply,300);
+}
 document.readyState==='loading'?document.addEventListener('DOMContentLoaded',install,{once:true}):install();
 window.HOMEBASE_BETA_ROSTER_PRINT_FIT_FIX={version:VERSION,build:BUILD,apply};
 })();
