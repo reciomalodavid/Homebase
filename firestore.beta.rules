@@ -42,25 +42,6 @@ service cloud.firestore {
         && request.auth.uid in request.resource.data.authorizedUids;
     }
 
-    // One-time migration recovery for David's installed Beta PWA only.
-    // This is intentionally restricted to the exact migrated home and the
-    // observed UID prefix; it will be removed immediately after enrollment.
-    function temporaryInstalledDeviceRecovery(homeId) {
-      return signedIn()
-        && homeId == 'BETA_BT83TFR4U9'
-        && request.auth.uid.matches('Z6FAYMRkGC.*')
-        && hasMemberList(resource.data)
-        && hasMemberList(request.resource.data)
-        && request.resource.data.authorizedUids.hasAll(resource.data.authorizedUids)
-        && request.auth.uid in request.resource.data.authorizedUids
-        && request.resource.data.authorizedUids.size() <= resource.data.authorizedUids.size() + 1
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-          'authorizedUids',
-          'securityVersion',
-          'securityUpdatedAt'
-        ]);
-    }
-
     function validClaimedInvite(homeId) {
       let token = request.resource.data.securityJoinToken;
       let invite = getAfter(/databases/$(database)/documents/homebaseDeviceInvites/$(token)).data;
@@ -92,8 +73,7 @@ service cloud.firestore {
       allow create: if createsOwnHome(homeId);
       allow update: if isBetaHome(homeId)
                     && ((isCurrentMember() && keepsCurrentUserAuthorized())
-                        || joinsWithoutRemovingMembers(homeId)
-                        || temporaryInstalledDeviceRecovery(homeId));
+                        || joinsWithoutRemovingMembers(homeId));
       allow delete: if false;
     }
 
