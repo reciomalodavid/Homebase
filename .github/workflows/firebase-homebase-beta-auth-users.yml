@@ -1,0 +1,44 @@
+name: Homebase Beta auth users diagnostic
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [firebase-beta-separation]
+    paths:
+      - .github/workflows/firebase-homebase-beta-auth-users.yml
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  inspect-beta-auth-users:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/986505930709/locations/global/workloadIdentityPools/github-actions/providers/github
+          service_account: github-firebase-beta@homebase-beta-72767.iam.gserviceaccount.com
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: List recent anonymous Beta Auth UIDs
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save firebase-admin@13 >/dev/null 2>&1
+          node - <<'NODE'
+          const admin=require('firebase-admin');
+          admin.initializeApp({projectId:'homebase-beta-72767'});
+          (async()=>{
+            const out=await admin.auth().listUsers(1000);
+            const users=out.users
+              .filter(u=>!u.email && !u.phoneNumber)
+              .map(u=>({uid:u.uid,created:u.metadata.creationTime,lastSignIn:u.metadata.lastSignInTime}))
+              .sort((a,b)=>new Date(b.created)-new Date(a.created));
+            console.log('Anonymous users:',users.length);
+            for(const u of users.slice(0,20)) console.log(`${u.uid} | created=${u.created} | lastSignIn=${u.lastSignIn}`);
+          })().catch(e=>{console.error(e);process.exit(1)});
+          NODE
