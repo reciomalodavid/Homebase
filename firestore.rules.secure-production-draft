@@ -42,12 +42,12 @@ service cloud.firestore {
 
     function validClaimedInvite(homeId) {
       let token = request.resource.data.securityJoinToken;
+      let invite = getAfter(/databases/$(database)/documents/homebaseDeviceInvites/$(token)).data;
       return signedIn()
         && token is string
-        && exists(/databases/$(database)/documents/homebaseDeviceInvites/$(token))
-        && get(/databases/$(database)/documents/homebaseDeviceInvites/$(token)).data.homeId == homeId
-        && get(/databases/$(database)/documents/homebaseDeviceInvites/$(token)).data.claimedUid == request.auth.uid
-        && get(/databases/$(database)/documents/homebaseDeviceInvites/$(token)).data.expiresAt > request.time;
+        && invite.homeId == homeId
+        && invite.claimedUid == request.auth.uid
+        && invite.expiresAt > request.time;
     }
 
     function joinsWithoutRemovingMembers(homeId) {
@@ -65,8 +65,6 @@ service cloud.firestore {
         ]);
     }
 
-    // Current family state. Production IDs are normal family codes;
-    // Beta IDs are BETA_<family-code>. Both use the same membership model.
     match /homebaseSyncs/{homeId} {
       allow get: if isCurrentMember();
       allow list: if false;
@@ -76,13 +74,9 @@ service cloud.firestore {
       allow update: if (isCurrentMember() && keepsCurrentUserAuthorized())
                     || joinsWithoutRemovingMembers(homeId);
 
-      // Home documents must never be removed by the browser client.
       allow delete: if false;
     }
 
-    // Temporary one-use device-pairing invitations.
-    // A current member creates a 10-minute token. The new anonymous UID claims it,
-    // then that UID may add only itself to the matching home document.
     match /homebaseDeviceInvites/{token} {
       allow get: if signedIn()
                  && resource.data.expiresAt > request.time;
@@ -93,7 +87,16 @@ service cloud.firestore {
                     && memberOfHome(request.resource.data.homeId)
                     && request.resource.data.createdByUid == request.auth.uid
                     && request.resource.data.claimedUid == null
-                    && request.resource.data.expiresAt > request.time;
+                    && request.resource.data.expiresAt > request.time
+                    && request.resource.data.expiresAt < request.time + duration.value(11, 'm')
+                    && request.resource.data.diff({}).affectedKeys().hasOnly([
+                      'homeId',
+                      'createdByUid',
+                      'createdAt',
+                      'expiresAt',
+                      'claimedUid',
+                      'securityVersion'
+                    ]);
 
       allow update: if signedIn()
                     && resource.data.expiresAt > request.time
@@ -110,10 +113,7 @@ service cloud.firestore {
                         || memberOfHome(resource.data.homeId));
     }
 
-    // Versioned historical backups. Access is inherited from the matching
-    // homebaseSyncs document; there is no independent backup password/code.
     match /homebaseBackups/{homeId} {
-      // The root container document is not required by the current client.
       allow read, write: if false;
 
       match /snapshots/{snapshotId} {
@@ -125,7 +125,6 @@ service cloud.firestore {
       }
     }
 
-    // Everything not explicitly required by Homebase is closed.
     match /{document=**} {
       allow read, write: if false;
     }
