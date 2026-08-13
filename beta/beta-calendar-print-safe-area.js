@@ -1,9 +1,9 @@
 (()=>{
 'use strict';
 if(!window.HOMEBASE_BETA)return;
-const VERSION='3';
+const VERSION='4';
 const CSS=`
-@page{size:auto!important;margin:10mm!important}
+@page{size:A4 landscape!important;margin:4mm!important}
 @media print{
   html,body{
     margin:0!important;
@@ -124,15 +124,16 @@ function patch(doc){
   if(!doc?.head)return;
   doc.getElementById('hcpSafePrint2377')?.remove();
   doc.getElementById('hcpSafePrint2378')?.remove();
-  let s=doc.getElementById('hcpSafePrint2379');
-  if(!s){s=doc.createElement('style');s.id='hcpSafePrint2379';doc.head.appendChild(s)}
+  doc.getElementById('hcpSafePrint2379')?.remove();
+  let s=doc.getElementById('hcpSafePrintLandscape');
+  if(!s){s=doc.createElement('style');s.id='hcpSafePrintLandscape';doc.head.appendChild(s)}
   s.textContent=CSS;
 }
 function bind(){
   const f=document.querySelector('#homebaseCalendarPrintOverlay .hcp-frame');
   if(!f)return;
-  if(f.dataset.safe2379!=='1'){
-    f.dataset.safe2379='1';
+  if(f.dataset.safeLandscape!=='1'){
+    f.dataset.safeLandscape='1';
     f.addEventListener('load',()=>{try{patch(f.contentDocument)}catch{}},{passive:true});
   }
   try{patch(f.contentDocument)}catch{}
