@@ -1,12 +1,12 @@
 (()=>{
 'use strict';
 if(!window.HOMEBASE_BETA)return;
-const VERSION='3';
+const VERSION='4';
 const WINDOW_DAYS=10;
 let showArchive=false;
 
 function completedStamp(item){
- const direct=Number(item?.completedAt||item?.updatedAt||0);
+ const direct=Number(item?.completedAt||0);
  if(direct)return direct;
  const date=String(item?.date||'');
  if(date){const ms=new Date(`${date}T12:00:00`).getTime();if(Number.isFinite(ms))return ms}
