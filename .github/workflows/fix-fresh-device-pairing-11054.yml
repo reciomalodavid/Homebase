@@ -1,0 +1,55 @@
+name: Fix fresh-device pairing 1.10.54
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-fresh-device-pairing-11054.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch secure pairing and force fresh runtime
+        shell: python
+        run: |
+          from pathlib import Path
+          import json
+
+          p = Path('production-security-auth.js')
+          s = p.read_text(encoding='utf-8')
+          s = s.replace("const APP_VERSION='1.10.44';", "const APP_VERSION='1.10.54';")
+          s = s.replace("const APP_BUILD=11044;", "const APP_BUILD=11054;")
+          old = """function refreshPairingUi(){\n const linked=!!state?.syncCode,authorize=byId('productionAuthorizeDevice'),join=byId('productionJoinDevice');\n if(authorize)authorize.hidden=!(linked&&membershipState==='authorized');\n if(join)join.hidden=membershipState!=='unauthorized';\n}"""
+          new = """function refreshPairingUi(){\n const linked=!!state?.syncCode,authorize=byId('productionAuthorizeDevice'),join=byId('productionJoinDevice');\n if(authorize)authorize.hidden=!(linked&&membershipState==='authorized');\n if(join){join.hidden=linked&&membershipState!=='unauthorized';join.textContent=linked?'Reautorizar este dispositivo':'Vincular con código temporal'}\n const legacyCreate=byId('syncCreateActions'),legacyLink=byId('syncLinkRow'),legacyStatus=document.querySelector('#syncSection .sync-status');\n if(legacyCreate)legacyCreate.hidden=true;\n if(legacyLink)legacyLink.hidden=true;\n if(legacyStatus)legacyStatus.hidden=!linked;\n}"""
+          if old not in s:
+              raise SystemExit('Expected refreshPairingUi block not found; refusing unsafe patch')
+          s = s.replace(old, new, 1)
+          p.write_text(s, encoding='utf-8')
+
+          Path('homebase-version.json').write_text(json.dumps({'build':11054,'version':'1.10.54'}, indent=2) + '\n', encoding='utf-8')
+
+          u = Path('homebase-update-checker-1.10.44.js')
+          us = u.read_text(encoding='utf-8').replace('const CURRENT_BUILD=11053;', 'const CURRENT_BUILD=11054;')
+          u.write_text(us, encoding='utf-8')
+
+          sw = Path('service-worker.js')
+          ss = sw.read_text(encoding='utf-8')
+          ss = ss.replace('/* Homebase stable 1.10.53 · First-paint parity + v2 icon */', '/* Homebase stable 1.10.54 · Fresh-device pairing recovery */')
+          ss = ss.replace('homebase-1.10.53-firstpaint', 'homebase-1.10.54-recovery')
+          ss = ss.replace('v=11053', 'v=11054')
+          ss = ss.replace("'1.10.53'", "'1.10.54'")
+          sw.write_text(ss, encoding='utf-8')
+
+      - name: Commit recovery
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add production-security-auth.js homebase-version.json homebase-update-checker-1.10.44.js service-worker.js
+          git commit -m "Recover fresh-device pairing and runtime persistence"
+          git push
