@@ -1,15 +1,15 @@
 {
   "name": "Homebase Beta Clean",
   "short_name": "HB Beta Clean",
-  "description": "Homebase Beta limpia · 2503",
-  "start_url": "./index.html?install=2503",
+  "description": "Homebase Beta limpia · 2504",
+  "start_url": "./index.html?install=2504",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f6f2fb",
   "theme_color": "#6f58c9",
   "icons": [
     {
-      "src": "../beta/beta-icon.svg?v=2503",
+      "src": "../beta/beta-icon.svg?v=2504",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
