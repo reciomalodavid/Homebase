@@ -5,12 +5,12 @@
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#f5f5f7",
+  "background_color": "#ffffff",
   "theme_color": "#f5f5f7",
   "lang": "es",
   "icons": [
     {
-      "src": "./homebase-icon-simple.svg",
+      "src": "./homebase-icon-v2.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
