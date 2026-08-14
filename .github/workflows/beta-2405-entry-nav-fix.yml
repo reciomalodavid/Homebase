@@ -1,0 +1,72 @@
+name: Beta 2405 entry and nav fix
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/beta-2405-entry-nav-fix.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch Beta entry points and current shell
+        shell: python
+        run: |
+          from pathlib import Path
+          import re, json
+
+          BUILD=2405
+          VERSION='2.4.1'
+
+          p=Path('beta/app-current.html')
+          html=p.read_text(encoding='utf-8')
+          html=html.replace('window.HOMEBASE_BETA_VERSION="2.4.0";window.HOMEBASE_BETA_LOADED_BUILD=2404;',f'window.HOMEBASE_BETA_VERSION="{VERSION}";window.HOMEBASE_BETA_LOADED_BUILD={BUILD};')
+          html=html.replace('<title>Homebase Beta 2.4.0</title>',f'<title>Homebase Beta {VERSION}</title>')
+          html=html.replace('Beta 2.4.0 · b2404',f'Beta {VERSION} · b{BUILD}')
+          html=html.replace("const CURRENT=2404;",f"const CURRENT={BUILD};")
+          html=html.replace('beta/beta-bottom-nav-fix.js?v=2','homebase-mobile-nav-1.10.29.js?v=2405')
+          html=html.replace('beta/beta-navigation-ux.js?v=7','beta/beta-navigation-ux.js?v=8')
+
+          final_css='''<style id="beta2405NavFinal">
+          @media(max-width:767px){
+            .hero-row .new-btn,#newBtn{display:none!important}
+            .bottom-nav{left:12px!important;right:12px!important;bottom:0!important;transform:none!important;width:calc(100vw - 24px)!important;max-width:calc(100vw - 24px)!important;height:calc(70px + env(safe-area-inset-bottom))!important;min-height:calc(70px + env(safe-area-inset-bottom))!important;padding:7px 7px max(7px,env(safe-area-inset-bottom))!important;display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 44px minmax(0,1fr) minmax(0,1fr)!important;align-items:start!important;border-radius:30px 30px 0 0!important;overflow:visible!important;background:rgba(255,252,248,.97)!important;border:1px solid rgba(255,255,255,.98)!important;border-bottom:0!important;box-shadow:0 -8px 28px rgba(67,48,31,.09),inset 0 1px 0 rgba(255,255,255,.98)!important;z-index:900!important}
+            .bottom-nav>:nth-child(1){grid-column:1!important}.bottom-nav>:nth-child(2){grid-column:2!important}.bottom-nav>:nth-child(3){grid-column:4!important}.bottom-nav>:nth-child(4){grid-column:5!important}
+            .bottom-nav .nav-btn{width:100%!important;height:56px!important;min-height:56px!important;padding:5px 1px!important;border-radius:22px!important;background:transparent!important;box-shadow:none!important}
+            .bottom-nav .nav-btn.active{background:linear-gradient(145deg,rgba(255,236,218,.96),rgba(255,244,233,.94))!important;color:#d66f16!important;box-shadow:0 5px 15px rgba(215,116,30,.13),inset 0 0 0 1px rgba(234,139,61,.16)!important}
+            #eventFab,.event-fab{position:fixed!important;left:50%!important;right:auto!important;bottom:calc(48px + env(safe-area-inset-bottom))!important;width:56px!important;height:56px!important;min-width:56px!important;min-height:56px!important;transform:translateX(-50%)!important;border-radius:50%!important;z-index:940!important;display:grid!important;place-items:center!important;margin:0!important}
+            body{padding-bottom:calc(90px + env(safe-area-inset-bottom))!important}
+          }
+          </style>'''
+          if 'beta2405NavFinal' not in html:
+              html=html.replace('</head>',final_css+'</head>',1)
+
+          final_js=f'''<script id="beta2405Identity">(()=>{{const apply=()=>{{document.querySelectorAll('#betaVersionBadgeInline,#betaLoadedBuildStatic,#betaVersionBadge,.beta-version-slot').forEach(n=>n.remove());const img=document.querySelector('.brand img');if(img){{img.src='./beta/beta-icon.svg?v={BUILD}';img.alt='Homebase Beta'}}const title=document.querySelector('.brand-title');if(title)title.textContent='Homebase';const sub=document.querySelector('.brand-sub');if(sub)sub.textContent='Beta {VERSION} · b{BUILD}';let badge=document.getElementById('betaBuild2405');if(!badge&&title){{badge=document.createElement('span');badge.id='betaBuild2405';badge.textContent='b{BUILD}';badge.style.cssText='margin-left:8px;padding:3px 8px;border-radius:999px;background:#eee8ff;color:#6f58c9;font-size:11px;font-weight:850;vertical-align:middle';title.appendChild(badge)}}}};document.readyState==='loading'?document.addEventListener('DOMContentLoaded',()=>setTimeout(apply,80),{{once:true}}):setTimeout(apply,80);new MutationObserver(()=>apply()).observe(document.documentElement,{{childList:true,subtree:true}})}})();</script>'''
+          if 'beta2405Identity' not in html:
+              html=html.replace('</body>',final_js+'</body>',1)
+          p.write_text(html,encoding='utf-8')
+
+          launcher=f'''<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta name="theme-color" content="#eef6fd"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Homebase Beta"><link rel="manifest" href="./manifest.webmanifest?v={BUILD}"><title>Homebase Beta</title></head><body><script>location.replace('./app-current.html?v={BUILD}&t='+Date.now())</script></body></html>'''
+          Path('beta/index.html').write_text(launcher,encoding='utf-8')
+
+          legacy=f'''<!doctype html><meta charset="utf-8"><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><title>Homebase Beta</title><script>location.replace('./app-current.html?v={BUILD}&legacy='+Date.now())</script>'''
+          Path('beta/app-2.3.html').write_text(legacy,encoding='utf-8')
+          Path('beta/app-2.3.86.html').write_text(legacy,encoding='utf-8')
+
+          Path('beta/version.json').write_text(json.dumps({{'build':BUILD,'version':VERSION}},indent=2)+'\n',encoding='utf-8')
+          manifest={{"name":"Homebase Beta","short_name":"Homebase Beta","description":f"Versión de pruebas aislada de Homebase · {{BUILD}}","start_url":"./?v=2405","scope":"./","display":"standalone","background_color":"#f6f2fb","theme_color":"#6f58c9","icons":[{{"src":"./beta-icon.svg?v=2405","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}}]}}
+          Path('beta/manifest.webmanifest').write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+
+      - name: Commit Beta 2405
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add beta/app-current.html beta/index.html beta/app-2.3.html beta/app-2.3.86.html beta/version.json beta/manifest.webmanifest
+          git commit -m "Beta 2405: route legacy installs to current shell and unify nav" || exit 0
+          git push
