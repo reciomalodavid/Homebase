@@ -2,8 +2,8 @@
 'use strict';
 
 const VERSION='13';
-const APP_VERSION='1.10.44';
-const APP_BUILD=11044;
+const APP_VERSION='1.10.54';
+const APP_BUILD=11054;
 const INVITE_COLLECTION='homebaseDeviceInvites';
 const INVITE_TTL_MS=10*60*1000;
 const SERVER_TIMEOUT_MS=12000;
@@ -44,7 +44,11 @@ function ensureStatusUi(){
 function refreshPairingUi(){
  const linked=!!state?.syncCode,authorize=byId('productionAuthorizeDevice'),join=byId('productionJoinDevice');
  if(authorize)authorize.hidden=!(linked&&membershipState==='authorized');
- if(join)join.hidden=membershipState!=='unauthorized';
+ if(join){join.hidden=linked&&membershipState!=='unauthorized';join.textContent=linked?'Reautorizar este dispositivo':'Vincular con código temporal'}
+ const legacyCreate=byId('syncCreateActions'),legacyLink=byId('syncLinkRow'),legacyStatus=document.querySelector('#syncSection .sync-status');
+ if(legacyCreate)legacyCreate.hidden=true;
+ if(legacyLink)legacyLink.hidden=true;
+ if(legacyStatus)legacyStatus.hidden=!linked;
 }
 function setStatus(text,kind='normal'){
  ensureStatusUi();const el=byId('productionSecurityStatusText');if(!el)return;el.textContent=text;
