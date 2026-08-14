@@ -20,53 +20,59 @@ jobs:
           from pathlib import Path
           import re, json
 
-          BUILD=2500
-          VERSION='2.5.0'
+          BUILD=2501
+          VERSION='2.5.1'
           src=Path('beta/app-current.html').read_text(encoding='utf-8')
 
-          # New independent PWA scope, but keep root assets available through base.
           src=src.replace('window.HOMEBASE_BETA_VERSION="2.4.0";window.HOMEBASE_BETA_LOADED_BUILD=2404;', f'window.HOMEBASE_BETA_VERSION="{VERSION}";window.HOMEBASE_BETA_LOADED_BUILD={BUILD};')
           src=re.sub(r'<title>Homebase Beta [^<]*</title>', f'<title>Homebase Beta {VERSION}</title>', src, count=1)
-          src=re.sub(r'<link\s+rel=["\']manifest["\'][^>]*>', '<link rel="manifest" href="./beta-v2/manifest.webmanifest?v=2500">', src, count=1, flags=re.I)
+          src=re.sub(r'<link\s+rel=["\']manifest["\'][^>]*>', '<link rel="manifest" href="./beta-v2/manifest.webmanifest?v=2501">', src, count=1, flags=re.I)
 
-          # Remove the old Beta nav patch; use the same canonical mobile nav module as Production.
+          # Remove legacy Beta navigation/branding layers. These were fighting the canonical nav,
+          # duplicating build badges and resetting the page to Hoy.
           src=re.sub(r'<script\s+src=["\']\.\/beta\/beta-bottom-nav-fix\.js[^"\']*["\']></script>', '', src)
-          if 'homebase-mobile-nav-1.10.29.js?betaV2=2500' not in src:
-              src=src.replace('</body>', '<script src="./homebase-mobile-nav-1.10.29.js?betaV2=2500"></script></body>', 1)
+          src=re.sub(r'<script\s+src=["\']\.\/beta\/beta-navigation-ux\.js[^"\']*["\']></script>', '', src)
+          src=re.sub(r'<script>\(\(\)=>\{const apply=\(\)=>\{const img=document\.querySelector\(\'\.brand img\'\)[\s\S]*?HOMEBASE_BETA_NAVIGATION_UX[\s\S]*?</script>', '', src)
 
-          # Replace any old Beta updater endpoint with this new scope.
+          # Remove any stale inline visible build labels from inherited Beta shell.
+          src=re.sub(r'<span[^>]+id=["\'](?:betaVersionBadgeInline|betaLoadedBuildStatic|betaVersionBadge)["\'][^>]*>[\s\S]*?</span>', '', src, flags=re.I)
+
+          # Canonical mobile navigation only.
+          src=re.sub(r'<script\s+src=["\']\.\/homebase-mobile-nav-1\.10\.29\.js[^"\']*["\']></script>', '', src)
+          src=src.replace('</body>', '<script src="./homebase-mobile-nav-1.10.29.js?betaV2=2501"></script></body>', 1)
+
+          # Keep version checks inside this new independent scope.
           src=src.replace("fetch('./beta/version.json?t='+Date.now()", "fetch('./beta-v2/version.json?t='+Date.now()")
           src=src.replace("location.replace('./beta/?update='+Date.now())", "location.replace('./beta-v2/index.html?v='+v.build+'&t='+Date.now())")
 
-          # Force visible current build and Beta branding after all UI modules run.
+          # One authoritative branding/build label, no timers that re-run navigation.
           final=f'''<script>(()=>{{
             const B={BUILD},V='{VERSION}';
             const apply=()=>{{
               window.HOMEBASE_BETA_LOADED_BUILD=B;window.HOMEBASE_BETA_VERSION=V;
               const img=document.querySelector('.brand img');if(img){{img.src='./beta/beta-icon.svg?bv2='+B;img.alt='Homebase Beta'}}
               const sub=document.querySelector('.topbar .brand-sub');if(sub)sub.textContent='Beta '+V+' · b'+B;
-              let badge=document.getElementById('betaV2BuildBadge');
-              if(!badge){{badge=document.createElement('span');badge.id='betaV2BuildBadge';badge.style.cssText='margin-left:8px;padding:3px 8px;border-radius:999px;background:#eee8ff;color:#6f58c9;font-size:11px;font-weight:850';const title=document.querySelector('.brand-title');title?.insertAdjacentElement('afterend',badge)}}
-              if(badge)badge.textContent='b'+B;
+              document.querySelectorAll('#betaV2BuildBadge,#betaVersionBadgeInline,#betaLoadedBuildStatic,#betaVersionBadge,.beta-version-slot').forEach(n=>n.remove());
+              const title=document.querySelector('.brand-title');
+              if(title){{const badge=document.createElement('span');badge.id='betaV2BuildBadge';badge.textContent='b'+B;badge.style.cssText='margin-left:8px;padding:3px 8px;border-radius:999px;background:#eee8ff;color:#6f58c9;font-size:11px;font-weight:850';title.insertAdjacentElement('afterend',badge)}}
               window.HOMEBASE_MOBILE_NAV?.apply?.();
             }};
-            document.readyState==='loading'?document.addEventListener('DOMContentLoaded',()=>setTimeout(apply,0),{{once:true}}):setTimeout(apply,0);
-            setTimeout(apply,120);setTimeout(apply,500);
+            document.readyState==='loading'?document.addEventListener('DOMContentLoaded',apply,{{once:true}}):apply();
           }})();</script>'''
           src=src.replace('</body>', final+'</body>', 1)
 
-          # Early network version probe. With no service worker, a new build can escape a stale start document.
-          early=f'''<script>(()=>{{const CURRENT={BUILD};setTimeout(async()=>{{try{{const r=await fetch('./beta-v2/version.json?t='+Date.now(),{{cache:'no-store'}});if(!r.ok)return;const v=await r.json();if(Number(v.build)>CURRENT)location.replace('./beta-v2/index.html?v='+v.build+'&t='+Date.now())}}catch{{}}}},1200)}})();</script>'''
-          src=src.replace('</head>', early+'</head>', 1)
+          # Explicitly prevent legacy Beta modules from forcing navigation after first render.
+          guard='''<script>(()=>{window.HOMEBASE_BETA_CLEAN_V2=true;const keepPage=()=>{const active=document.querySelector('.page.active');if(active)sessionStorage.setItem('hb_beta_v2_page',active.id||'todayPage')};document.addEventListener('click',e=>{if(e.target.closest('.bottom-nav'))setTimeout(keepPage,0)},true);})();</script>'''
+          src=src.replace('</head>',guard+'</head>',1)
 
           out=Path('beta-v2');out.mkdir(exist_ok=True)
           Path('beta-v2/index.html').write_text(src,encoding='utf-8')
           Path('beta-v2/version.json').write_text(json.dumps({'build':BUILD,'version':VERSION},indent=2)+'\n',encoding='utf-8')
           manifest={
             'name':'Homebase Beta Clean','short_name':'HB Beta Clean','description':f'Homebase Beta limpia · {BUILD}',
-            'start_url':'./index.html?install=2500','scope':'./','display':'standalone',
+            'start_url':'./index.html?install=2501','scope':'./','display':'standalone',
             'background_color':'#f6f2fb','theme_color':'#6f58c9',
-            'icons':[{'src':'../beta/beta-icon.svg?v=2500','sizes':'any','type':'image/svg+xml','purpose':'any maskable'}]
+            'icons':[{'src':'../beta/beta-icon.svg?v=2501','sizes':'any','type':'image/svg+xml','purpose':'any maskable'}]
           }
           Path('beta-v2/manifest.webmanifest').write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
 
@@ -76,5 +82,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add beta-v2/index.html beta-v2/version.json beta-v2/manifest.webmanifest
-          git commit -m "Beta Clean 2500: independent PWA and canonical nav" || exit 0
+          git commit -m "Beta Clean 2501: remove legacy navigation conflicts" || exit 0
           git push
