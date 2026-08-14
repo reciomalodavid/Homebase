@@ -1,6 +1,6 @@
 (()=>{
 'use strict';
-const VERSION='1.10.51';
+const VERSION='1.10.53';
 let synthetic=false,down=null;
 function installStyles(){
  if(document.getElementById('homebaseMobileNavStyles'))return;
@@ -32,7 +32,7 @@ function refineBranding(){
  const brand=document.querySelector('.brand');if(!brand)return;
  const mark=document.getElementById('homebaseBrandMark');if(mark)mark.remove();
  const img=brand.querySelector('img');if(img){
-  const desired=new URL('./homebase-icon-simple.svg',location.href).href;
+  const desired=new URL('./homebase-icon-v2.svg?v=11053',location.href).href;
   if(img.src!==desired)img.src=desired;
   img.style.setProperty('display','block','important');
   img.alt='Homebase';
