@@ -2,7 +2,7 @@
   "name": "Homebase Beta",
   "short_name": "Homebase Beta",
   "description": "Versión de pruebas aislada de Homebase · 2404",
-  "start_url": "./",
+  "start_url": "./app-current.html?v=2404",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f6f2fb",
