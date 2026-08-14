@@ -1,0 +1,74 @@
+name: Build clean static Beta
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/beta-clean-static-build.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate static Beta app
+        shell: python
+        run: |
+          from pathlib import Path
+          import re, json
+
+          BUILD=2404
+          VERSION='2.4.0'
+          html=Path('index.html').read_text(encoding='utf-8')
+
+          html=re.sub(r'<meta\s+name=["\']viewport["\'][^>]*>', '<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">', html, count=1, flags=re.I)
+          html=re.sub(r'<title>[^<]*</title>', f'<title>Homebase Beta {VERSION}</title>', html, count=1, flags=re.I)
+          html=re.sub(r'<link\s+rel=["\']manifest["\'][^>]*>', '<link rel="manifest" href="./manifest.webmanifest?v=2404">', html, count=1, flags=re.I)
+          html=re.sub(r'<link\s+rel=["\']apple-touch-icon["\'][^>]*>', '', html, count=1, flags=re.I)
+          html=html.replace('<head>', '<head>\n<base href="../">\n<meta name="color-scheme" content="light">\n<script>window.HOMEBASE_BETA=true;window.HOMEBASE_BETA_AUTH_REQUIRED=true;window.HOMEBASE_BETA_VERSION="2.4.0";window.HOMEBASE_BETA_LOADED_BUILD=2404;</script>', 1)
+
+          beta_config={"apiKey":"AIzaSyCxcrS5c5ErM8k4E-s4UPLXNe5WBTv_VOM","authDomain":"homebase-beta-72767.firebaseapp.com","projectId":"homebase-beta-72767","storageBucket":"homebase-beta-72767.firebasestorage.app","messagingSenderId":"986505930709","appId":"1:986505930709:web:06e08b083ac36a6f7abf5c"}
+          html=re.sub(r'const firebaseConfig=\{[\s\S]*?\n\};(?=\nlet cloudDb=)', 'const firebaseConfig='+json.dumps(beta_config,separators=(',',':'))+';', html, count=1)
+          html=html.replace("let code='HB'", "let code='BT'").replace('let code="HB"','let code="BT"')
+          html=re.sub(r'collection\(["\']homebaseSyncs["\']\)\.doc\(code\)', 'collection("homebaseSyncs").doc("BETA_"+code)', html)
+          html=re.sub(r'collection\(["\']homebaseSyncs["\']\)\.doc\(state\.syncCode\)', 'collection("homebaseSyncs").doc("BETA_"+state.syncCode)', html)
+          html=html.replace('./service-worker.js','./beta/service-worker-disabled.js')
+          html=html.replace('if(state.syncCode){startCloudListener();refreshWhenActive()}','if(state.syncCode&&!window.HOMEBASE_BETA_AUTH_REQUIRED){startCloudListener();refreshWhenActive()}')
+
+          firestore='<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>'
+          if 'firebase-auth-compat.js' not in html and firestore in html:
+              html=html.replace(firestore,firestore+'\n<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>',1)
+
+          isolation='''<script>(()=>{const P='homebase_beta2__',SYNC='homebase_sync_code',ANCHOR='homebase_beta2_sync_code_anchor';const proto=Storage.prototype;if(!proto.__homebaseBetaIsolationV2){const g=proto.getItem,s=proto.setItem,r=proto.removeItem,L=x=>x===localStorage;Object.defineProperty(proto,'__homebaseBetaIsolationV2',{value:true,configurable:false});window.HOMEBASE_BETA_RAW_STORAGE={get:key=>g.call(localStorage,key),set:(key,value)=>s.call(localStorage,key,value),remove:key=>r.call(localStorage,key)};const recovered=g.call(localStorage,P+SYNC)||g.call(localStorage,P+P+SYNC)||g.call(localStorage,ANCHOR)||'';if(recovered){s.call(localStorage,P+SYNC,recovered);s.call(localStorage,ANCHOR,recovered)}proto.getItem=function(a){if(!L(this))return g.call(this,a);if(a===SYNC){const anchored=g.call(this,ANCHOR);if(anchored)return anchored}return g.call(this,P+a)};proto.setItem=function(a,b){if(!L(this))return s.call(this,a,b);if(a===SYNC&&b)s.call(this,ANCHOR,String(b));return s.call(this,P+a,b)};proto.removeItem=function(a){if(!L(this))return r.call(this,a);return r.call(this,P+a)}}})();</script>'''
+          html=html.replace('<head>', '<head>'+isolation, 1)
+
+          css=['homebase-ui-1.8.3.css','homebase-fixes-1.9.2.css','homebase-quality-1.9.7.css','homebase-apple-glass-1.10.2.css','homebase-shell-1.10.3.css']
+          css_tags=''.join(f'<link rel="stylesheet" href="./{f}?b={BUILD}">' for f in css)+'<link rel="stylesheet" href="./beta/beta-theme-2.3.css?b=2404">'
+          html=html.replace('</head>',css_tags+'</head>',1)
+
+          core=['homebase-ui-1.8.3.js','roster-sync-fix.js','homebase-quality-1.9.7.js','homebase-shell-1.10.3.js']
+          extras=['beta/beta-security-auth.js?v=10','beta/beta-auth-diagnostics.js?v=2','beta/beta-sync-code-persistence.js?v=1','beta/beta-security-payload-guard.js?v=1','beta/beta-security-pairing-ui.js?v=1','beta/beta-cloud-db-bridge.js?v=1','beta/beta-member-photos.js?v=5','beta/beta-backup-tools.js?v=3','beta/beta-expiry-profile-recovery-2366.js?v=1','beta/beta-expiries-v3.js?v=2','beta/beta-sync-integrity.js?v=4','beta/beta-transactional-sync.js?v=2','beta/beta-sync-refresh.js?v=1','beta/beta-trash-tools.js?v=3','beta/beta-profile-enhancements.js?v=5','beta/beta-profile-birthdays.js?v=1','beta/beta-calendar-jump.js?v=8','beta/beta-calendar-gestures.js?v=7','beta/beta-stability-fixes.js?v=3','beta/beta-quick-add.js?v=8','beta/beta-light-mode-guard.js?v=2','beta/beta-navigation-ux.js?v=7','beta/beta-search-enhancements.js?v=2','beta/beta-completed-window.js?v=6','beta/beta-birthdays.js?v=2','beta/beta-external-birthday-display.js?v=2','beta/beta-roster-detail-cleanup.js?v=2','beta/beta-roster-dedupe.js?v=2','beta/beta-roster-import-summary.js?v=1','beta/beta-roster-monthly-summary.js?v=1','beta/beta-roster-print.js?v=10','beta/beta-roster-print-zoom.js?v=1','beta/beta-roster-print-fit-fix.js?v=2','beta/beta-calendar-print.js?v=7','beta/beta-calendar-print-preview-fixes.js?v=4','beta/beta-calendar-print-content-fixes.js?v=1','beta/beta-calendar-print-order.js?v=6','beta/beta-calendar-print-overflow-fix.js?v=2','beta/beta-calendar-print-page-clean.js?v=2','beta/beta-calendar-print-safe-area.js?v=3','beta/beta-voice-assistant.js?v=13','beta/beta-bottom-nav-fix.js?v=2']
+          tags=''.join(f'<script src="./{f}?b={BUILD}"></script>' for f in core)+''.join(f'<script src="./{s}"></script>' for s in extras)
+          updater=f'''<script>(()=>{{const CURRENT={BUILD};async function check(){{try{{const r=await fetch('./beta/version.json?t='+Date.now(),{{cache:'no-store'}});if(!r.ok)return;const v=await r.json();if(Number(v.build)>CURRENT)location.replace('./beta/?update='+Date.now())}}catch{{}}}}setTimeout(check,2500);setInterval(check,60000);}})();</script>'''
+          brand=f'''<script>(()=>{{const apply=()=>{{const img=document.querySelector('.brand img');if(img){{img.src='./beta/beta-icon.svg?b={BUILD}';img.alt='Homebase Beta'}}const sub=document.querySelector('.topbar .brand-sub');if(sub)sub.textContent='Beta {VERSION} · b{BUILD}'}};document.readyState==='loading'?document.addEventListener('DOMContentLoaded',apply,{{once:true}}):apply()}})();</script>'''
+          html=html.replace('</body>',tags+updater+brand+'</body>',1)
+          Path('beta/app-current.html').write_text(html,encoding='utf-8')
+          Path('beta/version.json').write_text(json.dumps({'build':BUILD,'version':VERSION},indent=2)+'\n',encoding='utf-8')
+
+          index='''<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"><meta name="theme-color" content="#eef6fd"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Homebase Beta"><link rel="manifest" href="./manifest.webmanifest?v=2404"><title>Homebase Beta</title></head><body><script>(async()=>{try{if('serviceWorker'in navigator){for(const r of await navigator.serviceWorker.getRegistrations()){if((r.scope||'').includes('/Homebase/beta/'))await r.unregister()}}if('caches'in window){for(const n of await caches.keys()){if(n.startsWith('homebase-beta-'))await caches.delete(n)}}let b=2404;try{const r=await fetch('./version.json?t='+Date.now(),{cache:'no-store'});if(r.ok)b=Number((await r.json()).build)||b}catch{}location.replace('./app-current.html?v='+b+'&t='+Date.now())}catch(e){location.replace('./app-current.html?v=2404&t='+Date.now())}})();</script></body></html>'''
+          Path('beta/index.html').write_text(index,encoding='utf-8')
+
+          manifest={"name":"Homebase Beta","short_name":"Homebase Beta","description":f"Versión de pruebas aislada de Homebase · {BUILD}","start_url":"./","scope":"./","display":"standalone","background_color":"#f6f2fb","theme_color":"#6f58c9","icons":[{"src":"./beta-icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]}
+          Path('beta/manifest.webmanifest').write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+
+      - name: Commit generated Beta
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add beta/app-current.html beta/index.html beta/version.json beta/manifest.webmanifest
+          git commit -m "Beta 2404: static shell and reliable update loading" || exit 0
+          git push
