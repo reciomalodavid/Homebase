@@ -1,0 +1,103 @@
+name: Create Beta Clean from Production
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/create-beta-clean-from-production.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build clean Beta from Production
+        shell: python
+        run: |
+          from pathlib import Path
+          import re, json
+
+          BUILD=3000
+          VERSION='3.0.0'
+          src=Path('index.html').read_text(encoding='utf-8')
+
+          # 1) Isolate Beta local storage before app code runs.
+          isolation='''<script>(()=>{const P='homebase_beta_clean__';const proto=Storage.prototype;if(proto.__homebaseBetaClean)return;const g=proto.getItem,s=proto.setItem,r=proto.removeItem,L=x=>x===localStorage;Object.defineProperty(proto,'__homebaseBetaClean',{value:true});proto.getItem=function(k){return L(this)?g.call(this,P+k):g.call(this,k)};proto.setItem=function(k,v){return L(this)?s.call(this,P+k,v):s.call(this,k,v)};proto.removeItem=function(k){return L(this)?r.call(this,P+k):r.call(this,k)}})();</script>'''
+          src=src.replace('<head>', '<head>'+isolation+'<script>window.HOMEBASE_BETA=true;window.HOMEBASE_BETA_VERSION="'+VERSION+'";window.HOMEBASE_BETA_LOADED_BUILD='+str(BUILD)+';</script>',1)
+
+          # 2) Same app, Beta Firebase project only.
+          prod='''const firebaseConfig={\n apiKey:"AIzaSyBkupxh_fJIqX7ThvSnjIL9cxEZXYzU1WQ",\n authDomain:"homebase-85f2b.firebaseapp.com",\n projectId:"homebase-85f2b",\n storageBucket:"homebase-85f2b.firebasestorage.app",\n messagingSenderId:"1048601280766",\n appId:"1:1048601280766:web:e4ae47e07b0ef0ad0065af"\n};'''
+          beta='''const firebaseConfig={\n apiKey:"AIzaSyCxcrS5c5ErM8k4E-s4UPLXNe5WBTv_VOM",\n authDomain:"homebase-beta-72767.firebaseapp.com",\n projectId:"homebase-beta-72767",\n storageBucket:"homebase-beta-72767.firebasestorage.app",\n messagingSenderId:"986505930709",\n appId:"1:986505930709:web:06e08b083ac36a6f7abf5c"\n};'''
+          if prod not in src:
+              raise SystemExit('Production Firebase config not found; refusing to build an ambiguous Beta')
+          src=src.replace(prod,beta,1)
+
+          # 3) No service worker in Beta Clean. Updates are explicit and measurable.
+          src=re.sub(r'if\("serviceWorker" in navigator&&location\.protocol==="https:"\)\{window\.addEventListener\("load",\(\)=>navigator\.serviceWorker\.register\([^\n]+\n?', '', src)
+
+          # 4) PWA identity and no-zoom.
+          src=re.sub(r'<meta\s+name=["\']viewport["\'][^>]*>', '<meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">', src, count=1, flags=re.I)
+          src=re.sub(r'<title>[^<]*</title>', f'<title>Homebase Beta Clean {VERSION}</title>', src, count=1)
+          src=re.sub(r'<link\s+rel=["\']manifest["\'][^>]*>', f'<link rel="manifest" href="./manifest.webmanifest?v={BUILD}">', src, count=1, flags=re.I)
+
+          # 5) Load the same canonical presentation/runtime modules as current Production.
+          css_files=['homebase-ui-1.8.3.css','homebase-fixes-1.9.2.css','homebase-quality-1.9.7.css','homebase-apple-glass-1.10.2.css','homebase-shell-1.10.3.css']
+          for f in css_files:
+              src=src.replace('</head>', f'<link rel="stylesheet" href="../{f}?betaClean={BUILD}">\n</head>',1)
+
+          # Responsive contract: phone + tablet share one nav/fab system; desktop keeps centered shell.
+          responsive='''<style id="betaCleanResponsive">
+          #newBtn,.hero-row .new-btn{display:none!important}
+          @media (max-width:1100px){
+            .bottom-nav{left:12px!important;right:12px!important;bottom:0!important;transform:none!important;width:calc(100vw - 24px)!important;max-width:calc(100vw - 24px)!important;height:calc(70px + env(safe-area-inset-bottom))!important;min-height:calc(70px + env(safe-area-inset-bottom))!important;padding:7px 7px max(7px,env(safe-area-inset-bottom))!important;display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 52px minmax(0,1fr) minmax(0,1fr)!important;align-items:start!important;border-radius:30px 30px 0 0!important;overflow:visible!important;background:rgba(255,252,248,.97)!important;border:1px solid rgba(255,255,255,.98)!important;border-bottom:0!important;box-shadow:0 -8px 28px rgba(67,48,31,.09)!important;z-index:930!important}
+            .bottom-nav>:nth-child(1){grid-column:1!important}.bottom-nav>:nth-child(2){grid-column:2!important}.bottom-nav>:nth-child(3){grid-column:4!important}.bottom-nav>:nth-child(4){grid-column:5!important}
+            .bottom-nav .nav-btn{width:100%!important;height:56px!important;min-height:56px!important;border-radius:22px!important;background:transparent!important}
+            .bottom-nav .nav-btn.active{background:linear-gradient(145deg,rgba(255,236,218,.96),rgba(255,244,233,.94))!important;color:#d66f16!important}
+            #eventFab,.event-fab,.fab,button.fab,[aria-label="Nuevo"].floating,.floating-add{position:fixed!important;left:50%!important;right:auto!important;bottom:calc(48px + env(safe-area-inset-bottom))!important;width:58px!important;height:58px!important;min-width:58px!important;min-height:58px!important;transform:translateX(-50%)!important;border-radius:50%!important;display:grid!important;place-items:center!important;z-index:940!important;background:linear-gradient(145deg,#f79a43,#e57a1b)!important;color:#fff!important}
+            body{padding-bottom:calc(92px + env(safe-area-inset-bottom))!important}
+          }
+          @media (min-width:1101px){
+            .bottom-nav{width:min(860px,calc(100vw - 48px))!important;border-radius:28px 28px 0 0!important}
+            #eventFab,.event-fab,.fab,button.fab,[aria-label="Nuevo"].floating,.floating-add{position:fixed!important;left:50%!important;right:auto!important;bottom:50px!important;transform:translateX(-50%)!important}
+          }
+          </style>'''
+          src=src.replace('</head>',responsive+'</head>',1)
+
+          js_files=['homebase-ui-1.8.3.js','roster-sync-fix.js','homebase-quality-1.9.7.js','homebase-shell-1.10.3.js','homebase-nozoom-1.10.10.js','homebase-calendar-jump-1.10.13.js','beta/beta-cloud-db-bridge.js','beta/beta-security-auth.js','beta/beta-sync-code-persistence.js','beta/beta-security-pairing-ui.js','homebase-mobile-nav-1.10.29.js']
+          scripts='\n'.join(f'<script src="../{f}?betaClean={BUILD}"></script>' for f in js_files)
+
+          # Stable Beta branding/build. No observers, no repeated DOM rewriting.
+          final=f'''<script>(()=>{{const B={BUILD},V='{VERSION}';const apply=()=>{{
+            const img=document.querySelector('.brand img');if(img){{img.src='../beta/beta-icon.svg?v='+B;img.alt='Homebase Beta'}}
+            const sub=document.querySelector('.brand-sub');if(sub)sub.textContent='Beta Clean '+V;
+            document.querySelectorAll('[id*="VersionBadge"],.beta-version-slot,#betaLoadedBuildStatic').forEach(n=>n.remove());
+            let badge=document.getElementById('betaCleanBuild');if(!badge){{badge=document.createElement('span');badge.id='betaCleanBuild';badge.style.cssText='margin-left:8px;padding:3px 8px;border-radius:999px;background:#eee8ff;color:#6f58c9;font-size:11px;font-weight:850';document.querySelector('.brand-title')?.insertAdjacentElement('afterend',badge)}}badge.textContent='b'+B;
+          }};document.readyState==='loading'?document.addEventListener('DOMContentLoaded',apply,{{once:true}}):apply()}})();</script>'''
+
+          # One simple updater: current build -> newer version.json, then one navigation.
+          updater=f'''<script>(()=>{{const CURRENT={BUILD};async function check(){{try{{const r=await fetch('./version.json?t='+Date.now(),{{cache:'no-store'}});if(!r.ok)return;const v=await r.json();if(Number(v.build)>CURRENT)location.replace('./index.html?v='+v.build+'&t='+Date.now())}}catch{{}}}}setTimeout(check,2500);window.addEventListener('pageshow',check)}})();</script>'''
+
+          src=src.replace('</body>',scripts+'\n'+final+'\n'+updater+'\n</body>',1)
+
+          out=Path('beta-clean');out.mkdir(exist_ok=True)
+          Path('beta-clean/index.html').write_text(src,encoding='utf-8')
+          Path('beta-clean/version.json').write_text(json.dumps({'build':BUILD,'version':VERSION},indent=2)+'\n',encoding='utf-8')
+          manifest={
+            'name':'Homebase Beta Clean','short_name':'HB Beta Clean','description':f'Homebase Beta Clean · {BUILD}',
+            'start_url':f'./index.html?install={BUILD}','scope':'./','display':'standalone',
+            'background_color':'#f7f2eb','theme_color':'#6f58c9',
+            'icons':[{'src':'../beta/beta-icon.svg','sizes':'any','type':'image/svg+xml','purpose':'any'}]
+          }
+          Path('beta-clean/manifest.webmanifest').write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
+
+      - name: Commit Beta Clean
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add beta-clean/index.html beta-clean/version.json beta-clean/manifest.webmanifest
+          git commit -m "Beta Clean 3000: rebuild from stable Production base" || exit 0
+          git push
