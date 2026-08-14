@@ -20,8 +20,8 @@ jobs:
           from pathlib import Path
           import re, json
 
-          BUILD=2502
-          VERSION='2.5.2'
+          BUILD=2503
+          VERSION='2.5.3'
           src=Path('beta/app-current.html').read_text(encoding='utf-8')
 
           src=src.replace('window.HOMEBASE_BETA_VERSION="2.4.0";window.HOMEBASE_BETA_LOADED_BUILD=2404;', f'window.HOMEBASE_BETA_VERSION="{VERSION}";window.HOMEBASE_BETA_LOADED_BUILD={BUILD};')
@@ -42,18 +42,38 @@ jobs:
 
           final=f'''<script>(()=>{{
             const B={BUILD},V='{VERSION}';
+            let cleaning=false;
             const apply=()=>{{
-              window.HOMEBASE_BETA_LOADED_BUILD=B;window.HOMEBASE_BETA_VERSION=V;
-              document.querySelectorAll('#betaV2BuildBadge,.beta-version-slot,#betaVersionBadgeInline,#betaLoadedBuildStatic,#betaVersionBadge').forEach((n,i)=>{{if(i||n.id!=='betaV2BuildBadge')n.remove()}});
-              const img=document.querySelector('.brand img');if(img){{img.src='./beta/beta-icon.svg?bv2='+B;img.alt='Homebase Beta'}}
-              const sub=document.querySelector('.topbar .brand-sub');if(sub)sub.textContent='Beta '+V+' · b'+B;
-              let badge=document.getElementById('betaV2BuildBadge');
-              if(!badge){{badge=document.createElement('span');badge.id='betaV2BuildBadge';badge.style.cssText='margin-left:8px;padding:3px 8px;border-radius:999px;background:#eee8ff;color:#6f58c9;font-size:11px;font-weight:850';const title=document.querySelector('.brand-title');title?.insertAdjacentElement('afterend',badge)}}
-              if(badge)badge.textContent='b'+B;
-              window.HOMEBASE_MOBILE_NAV?.apply?.();
+              if(cleaning)return; cleaning=true;
+              try{{
+                window.HOMEBASE_BETA_LOADED_BUILD=B;window.HOMEBASE_BETA_VERSION=V;
+                const brand=document.querySelector('.brand');
+                if(brand){{
+                  brand.querySelectorAll('*').forEach(n=>{{
+                    const t=(n.textContent||'').trim();
+                    if(/^b\\d{{3,6}}$/i.test(t) && n.id!=='betaV2BuildBadge') n.remove();
+                  }});
+                  const img=brand.querySelector('img');
+                  if(img){{img.src='/Homebase/beta/beta-icon.svg?bv2='+B;img.alt='Homebase Beta';img.onerror=null;}}
+                  let badge=document.getElementById('betaV2BuildBadge');
+                  if(!badge){{
+                    badge=document.createElement('span');badge.id='betaV2BuildBadge';
+                    badge.style.cssText='margin-left:8px;padding:3px 8px;border-radius:999px;background:#eee8ff;color:#6f58c9;font-size:11px;font-weight:850';
+                    const title=brand.querySelector('.brand-title');title?.insertAdjacentElement('afterend',badge);
+                  }}
+                  if(badge)badge.textContent='b'+B;
+                }}
+                const sub=document.querySelector('.topbar .brand-sub');if(sub)sub.textContent='Beta '+V+' · b'+B;
+                document.querySelectorAll('.beta-version-slot,#betaVersionBadgeInline,#betaLoadedBuildStatic,#betaVersionBadge').forEach(n=>n.remove());
+                window.HOMEBASE_MOBILE_NAV?.apply?.();
+              }} finally {{cleaning=false}}
             }};
-            document.readyState==='loading'?document.addEventListener('DOMContentLoaded',()=>setTimeout(apply,0),{{once:true}}):setTimeout(apply,0);
-            setTimeout(apply,150);
+            const start=()=>{{
+              apply();setTimeout(apply,150);setTimeout(apply,500);
+              const top=document.querySelector('.topbar');
+              if(top)new MutationObserver(()=>requestAnimationFrame(apply)).observe(top,{{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['src']}});
+            }};
+            document.readyState==='loading'?document.addEventListener('DOMContentLoaded',start,{{once:true}}):start();
           }})();</script>'''
           src=src.replace('</body>', final+'</body>', 1)
 
@@ -68,7 +88,7 @@ jobs:
             'name':'Homebase Beta Clean','short_name':'HB Beta Clean','description':f'Homebase Beta limpia · {BUILD}',
             'start_url':f'./index.html?install={BUILD}','scope':'./','display':'standalone',
             'background_color':'#f6f2fb','theme_color':'#6f58c9',
-            'icons':[{'src':f'../beta/beta-icon.svg?v={BUILD}','sizes':'any','type':'image/svg+xml','purpose':'any maskable'}]
+            'icons':[{'src':'../beta/beta-icon.svg?v='+str(BUILD),'sizes':'any','type':'image/svg+xml','purpose':'any maskable'}]
           }
           Path('beta-v2/manifest.webmanifest').write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n',encoding='utf-8')
 
@@ -78,5 +98,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add beta-v2/index.html beta-v2/version.json beta-v2/manifest.webmanifest
-          git commit -m "Beta Clean 2502: stop reload loop and stale branding" || exit 0
+          git commit -m "Beta Clean 2503: clean header branding" || exit 0
           git push
