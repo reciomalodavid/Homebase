@@ -1,0 +1,18 @@
+{
+  "name": "Homebase Beta Clean",
+  "short_name": "HB Beta Clean",
+  "description": "Homebase Beta Clean · 3000",
+  "start_url": "./index.html?install=3000",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f7f2eb",
+  "theme_color": "#6f58c9",
+  "icons": [
+    {
+      "src": "../beta/beta-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
