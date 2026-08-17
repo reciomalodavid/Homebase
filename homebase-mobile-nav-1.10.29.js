@@ -1,18 +1,18 @@
 (()=>{
 'use strict';
-const VERSION='1.10.53';
-let synthetic=false,down=null;
+const VERSION='1.10.54-hotfix';
+let synthetic=false,down=null,reauthBusy=false;
 function installStyles(){
  if(document.getElementById('homebaseMobileNavStyles'))return;
  const style=document.createElement('style');style.id='homebaseMobileNavStyles';style.textContent=`
- @media(max-width:767px){
+ @media(max-width:1100px){
  #newBtn,.hero-row .new-btn{display:none!important}
  .brand{gap:10px!important}
  .brand img{display:block!important;width:42px!important;height:42px!important;border-radius:11px!important;box-shadow:0 4px 14px rgba(75,53,33,.08)!important}
  #homebaseBrandMark{display:none!important}
  .brand-title{font-size:24px!important;font-weight:720!important;letter-spacing:-.5px!important;color:#182230!important}
  .brand-sub{display:none!important}
- .bottom-nav{left:12px!important;right:12px!important;bottom:0!important;width:calc(100vw - 24px)!important;max-width:calc(100vw - 24px)!important;height:calc(70px + env(safe-area-inset-bottom))!important;min-height:calc(70px + env(safe-area-inset-bottom))!important;padding:7px 7px max(7px,env(safe-area-inset-bottom))!important;display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 44px minmax(0,1fr) minmax(0,1fr)!important;align-items:start!important;column-gap:0!important;border-radius:30px 30px 0 0!important;overflow:visible!important;background:rgba(255,252,248,.97)!important;border:1px solid rgba(255,255,255,.98)!important;border-bottom:0!important;box-shadow:0 -8px 28px rgba(67,48,31,.09),inset 0 1px 0 rgba(255,255,255,.98)!important;-webkit-backdrop-filter:blur(28px) saturate(170%)!important;backdrop-filter:blur(28px) saturate(170%)!important}
+ .bottom-nav{left:12px!important;right:12px!important;bottom:0!important;transform:none!important;width:calc(100vw - 24px)!important;max-width:calc(100vw - 24px)!important;height:calc(70px + env(safe-area-inset-bottom))!important;min-height:calc(70px + env(safe-area-inset-bottom))!important;padding:7px 7px max(7px,env(safe-area-inset-bottom))!important;display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 44px minmax(0,1fr) minmax(0,1fr)!important;align-items:start!important;column-gap:0!important;border-radius:30px 30px 0 0!important;overflow:visible!important;background:rgba(255,252,248,.97)!important;border:1px solid rgba(255,255,255,.98)!important;border-bottom:0!important;box-shadow:0 -8px 28px rgba(67,48,31,.09),inset 0 1px 0 rgba(255,255,255,.98)!important;-webkit-backdrop-filter:blur(28px) saturate(170%)!important;backdrop-filter:blur(28px) saturate(170%)!important}
  .bottom-nav::before,.bottom-nav::after{content:none!important;display:none!important}
  .bottom-nav>:nth-child(1){grid-column:1!important}.bottom-nav>:nth-child(2){grid-column:2!important}.bottom-nav>:nth-child(3){grid-column:4!important}.bottom-nav>:nth-child(4){grid-column:5!important}
  .bottom-nav .nav-btn,.bottom-nav button,.bottom-nav a,.bottom-nav .nav-item{position:relative!important;z-index:3!important;min-width:0!important;width:100%!important;height:56px!important;min-height:56px!important;padding:5px 1px!important;border-radius:22px!important;color:#172033!important;background:transparent!important;box-shadow:none!important;touch-action:manipulation!important;-webkit-tap-highlight-color:transparent!important;user-select:none!important;-webkit-user-select:none!important}
@@ -62,7 +62,42 @@ function hidePendingNewButton(){const b=document.getElementById('newTask');if(b)
 function keepQuickAddVisible(){const f=document.getElementById('eventFab')||document.querySelector('.event-fab');if(!f)return;f.hidden=false;f.removeAttribute('aria-hidden');f.style.setProperty('display','grid','important');f.style.setProperty('visibility','visible','important');f.style.setProperty('opacity','1','important');f.style.setProperty('pointer-events','auto','important')}
 function applyUx(){hideDuplicatePendingBlock();renameMoreToManagement();hidePendingNewButton();keepQuickAddVisible();refineBranding();enforceActiveTab()}
 function after(){requestAnimationFrame(()=>requestAnimationFrame(applyUx));setTimeout(applyUx,80);setTimeout(applyUx,220)}
-function install(){installStyles();applyUx();document.addEventListener('pointerdown',onPointerDown,true);document.addEventListener('pointerup',onPointerUp,true);document.addEventListener('pointercancel',()=>down=null,true);document.addEventListener('click',e=>{if(e.target.closest('.bottom-nav'))after()},true);window.addEventListener('pageshow',after);document.addEventListener('visibilitychange',()=>{if(!document.hidden)after()});new MutationObserver(enforceActiveTab).observe(document.querySelector('.bottom-nav')||document.body,{attributes:true,subtree:true,attributeFilter:['class','aria-current']})}
+function cleanToken(value){return String(value||'').toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,20)}
+function authStatus(text,kind='normal'){
+ const el=document.getElementById('productionSecurityStatusText');if(el){el.textContent=text;el.style.color=kind==='ok'?'#2c7a56':kind==='error'?'#b42318':'#9a641f'}
+}
+async function robustReauthorize(){
+ if(reauthBusy)return;reauthBusy=true;
+ const btn=document.getElementById('productionJoinDevice');const old=btn?.textContent||'Reautorizar este dispositivo';
+ try{
+  const token=cleanToken(prompt('Introduce el código temporal generado desde el otro Homebase autorizado.'));
+  if(!token)return;if(token.length!==20)throw new Error('El código temporal no tiene el formato esperado.');
+  if(btn){btn.disabled=true;btn.textContent='Autorizando…'}authStatus('Autorizando este dispositivo…');
+  const security=window.HOMEBASE_SECURITY;if(!security?.ensureAuth)throw new Error('Firebase Auth no está disponible.');
+  await security.ensureAuth();const uid=security.getUid?.();if(!uid)throw new Error('No se pudo identificar este dispositivo.');
+  const db=window.cloudDb;if(!db)throw new Error('Firestore no está disponible.');
+  const inviteRef=db.collection('homebaseDeviceInvites').doc(token);let homeId='';
+  await db.runTransaction(async tx=>{
+   const inviteSnap=await tx.get(inviteRef);if(!inviteSnap.exists)throw new Error('Código temporal no válido o ya utilizado.');
+   const invite=inviteSnap.data()||{};homeId=String(invite.homeId||'');if(!homeId)throw new Error('Invitación inválida.');
+   const expiresMs=invite.expiresAt?.toMillis?.()||0;if(expiresMs&&expiresMs<=Date.now())throw new Error('El código temporal ha caducado.');
+   if(invite.claimedUid&&invite.claimedUid!==uid)throw new Error('Este código temporal ya ha sido utilizado.');
+   const homeRef=db.collection('homebaseSyncs').doc(homeId);
+   tx.update(inviteRef,{claimedUid:uid,claimedAt:firebase.firestore.Timestamp.now()});
+   tx.set(homeRef,{authorizedUids:firebase.firestore.FieldValue.arrayUnion(uid),securityJoinToken:token,securityVersion:3,securityUpdatedAt:Date.now()},{merge:true});
+  });
+  if(!homeId)throw new Error('No se pudo determinar el hogar.');
+  if(typeof state!=='undefined')state.syncCode=homeId;localStorage.setItem('homebase_sync_code',homeId);localStorage.setItem(`homebase_authorized_uid_v1_${homeId}`,uid);
+  authStatus('Dispositivo autorizado. Sincronización activa.','ok');if(btn)btn.hidden=true;
+  try{if(typeof startCloudListener==='function'&&typeof state!=='undefined'&&!state.syncUnsubscribe)startCloudListener()}catch{}
+  try{if(typeof refreshFromCloud==='function')refreshFromCloud(true).catch(()=>{})}catch{}
+  try{db.collection('homebaseSyncs').doc(homeId).set({securityJoinToken:firebase.firestore.FieldValue.delete()},{merge:true}).catch(()=>{});inviteRef.delete().catch(()=>{})}catch{}
+  setTimeout(()=>security.verifyMembership?.({quiet:true}).catch?.(()=>{}),1200);
+ }catch(error){console.error('Homebase robust reauthorization',error);authStatus(String(error?.message||error||'No se pudo autorizar el dispositivo.'),'error')}
+ finally{reauthBusy=false;if(btn){btn.disabled=false;if(!btn.hidden)btn.textContent=old}}
+}
+function onReauthClick(e){const b=e.target?.closest?.('#productionJoinDevice');if(!b)return;e.preventDefault();e.stopImmediatePropagation();robustReauthorize()}
+function install(){installStyles();applyUx();document.addEventListener('pointerdown',onPointerDown,true);document.addEventListener('pointerup',onPointerUp,true);document.addEventListener('pointercancel',()=>down=null,true);document.addEventListener('click',onReauthClick,true);document.addEventListener('click',e=>{if(e.target.closest('.bottom-nav'))after()},true);window.addEventListener('pageshow',after);window.addEventListener('orientationchange',after);window.addEventListener('resize',after);document.addEventListener('visibilitychange',()=>{if(!document.hidden)after()});new MutationObserver(enforceActiveTab).observe(document.querySelector('.bottom-nav')||document.body,{attributes:true,subtree:true,attributeFilter:['class','aria-current']})}
 document.readyState==='loading'?document.addEventListener('DOMContentLoaded',install,{once:true}):install();
-window.HOMEBASE_MOBILE_NAV={version:VERSION,apply:applyUx};
+window.HOMEBASE_MOBILE_NAV={version:VERSION,apply:applyUx,reauthorize:robustReauthorize};
 })();
