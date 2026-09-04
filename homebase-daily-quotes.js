@@ -1,8 +1,7 @@
 (()=>{
 'use strict';
-const VERSION='1.0.1';
+const VERSION='1.0.2';
 const PREF_KEY='homebase_daily_quote_enabled_v1';
-const SCRIPT_SELECTOR='script[data-homebase-daily-quotes]';
 let midnightTimer=null;
 const QUOTES=[
  "Algún día darías mucho por volver a un día normal como hoy.",
@@ -120,15 +119,17 @@ function quoteFor(date=new Date()){return QUOTES[quoteIndex(date)]}
 function installStyles(){
  if(byId('homebaseDailyQuoteStyles'))return;
  const s=document.createElement('style');s.id='homebaseDailyQuoteStyles';s.textContent=`
- .hb-daily-quote{margin:-11px 2px 10px;padding:2px 4px 3px 12px;border-left:2px solid rgba(217,120,31,.34);background:transparent}
- .hb-daily-quote-text{margin:0;font-family:ui-serif,"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;font-size:14px;font-weight:500;line-height:1.34;letter-spacing:-.06px;color:#6f665e}
+ .hb-daily-quote{margin:-11px 2px 10px;padding:1px 2px 2px 0;background:transparent}
+ .hb-daily-quote-text{position:relative;margin:0;padding:0 8px 0 15px;font-family:ui-serif,"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;font-size:13.5px;font-style:italic;font-weight:500;line-height:1.38;letter-spacing:-.02px;color:#756b62}
+ .hb-daily-quote-text::before{content:'“';position:absolute;left:0;top:-4px;font-size:23px;font-style:normal;font-weight:600;line-height:1;color:rgba(217,120,31,.52)}
+ .hb-daily-quote-text::after{content:'”';margin-left:2px;font-size:16px;font-style:normal;font-weight:600;line-height:1;color:rgba(217,120,31,.52)}
  .hb-quote-pref-section{margin-top:18px}
  .hb-quote-pref-card{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:15px 16px;background:var(--surface,#fffdf9);border:1px solid rgba(235,228,218,.75);border-radius:18px;box-shadow:0 8px 24px rgba(38,31,24,.06)}
  .hb-quote-pref-copy{min-width:0}.hb-quote-pref-title{font-weight:850;font-size:15px;color:var(--text,#182230)}.hb-quote-pref-sub{margin-top:3px;font-size:12px;line-height:1.35;color:var(--muted,#7e8793)}
  .hb-quote-switch{position:relative;flex:0 0 auto;width:48px;height:29px;border:0;border-radius:999px;padding:0;background:#d6d9dd;transition:background .18s ease;-webkit-tap-highlight-color:transparent}
  .hb-quote-switch::after{content:'';position:absolute;left:3px;top:3px;width:23px;height:23px;border-radius:50%;background:white;box-shadow:0 2px 6px rgba(0,0,0,.18);transition:transform .18s ease}
  .hb-quote-switch[aria-checked="true"]{background:#d9781f}.hb-quote-switch[aria-checked="true"]::after{transform:translateX(19px)}
- @media(max-width:520px){.hb-daily-quote{margin-top:-12px;margin-bottom:9px;padding-left:10px}.hb-daily-quote-text{font-size:13.5px;line-height:1.34}}
+ @media(max-width:520px){.hb-daily-quote{margin-top:-12px;margin-bottom:9px}.hb-daily-quote-text{font-size:13px;line-height:1.38;padding-left:14px}.hb-daily-quote-text::before{font-size:22px}}
  `;
  document.head.appendChild(s)
 }
