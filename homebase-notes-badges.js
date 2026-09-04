@@ -7,6 +7,8 @@ function installStyles(){
  if(byId(STYLE_ID))return;
  const s=document.createElement('style');s.id=STYLE_ID;s.textContent=`
  .hb-notes-badge{cursor:pointer!important;position:relative!important;z-index:20!important;-webkit-tap-highlight-color:transparent!important}
+ .event-row.hb-new-item{background:linear-gradient(90deg,transparent 0,transparent 80px,rgba(247,154,67,.11) 80px,transparent 72%)!important}
+ .task-row.hb-new-item{background:linear-gradient(90deg,transparent 0,transparent 44px,rgba(247,154,67,.11) 44px,transparent 72%)!important}
  .hb-notes-quick{border:0;padding:0;width:min(calc(100vw - 32px),440px);border-radius:22px;background:#fffdf9;color:#182230;box-shadow:0 22px 70px rgba(31,38,51,.24)}
  .hb-notes-quick::backdrop{background:rgba(20,24,30,.34);-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
  .hb-notes-quick-inner{padding:20px}.hb-notes-quick-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}.hb-notes-quick-head h3{margin:0;font-size:20px;letter-spacing:-.3px}.hb-notes-quick-close{width:36px;height:36px;border:0;border-radius:50%;background:#f3efe9;color:#182230;font-size:22px;line-height:1}.hb-notes-quick-title{font-size:13px;font-weight:800;color:#7e8793;margin-bottom:8px}.hb-notes-quick-text{white-space:pre-wrap;overflow-wrap:anywhere;font-size:16px;line-height:1.45;background:#f7f4ef;border-radius:16px;padding:14px;max-height:52vh;overflow:auto}
