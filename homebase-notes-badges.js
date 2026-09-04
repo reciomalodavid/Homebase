@@ -3,6 +3,10 @@
 const STYLE_ID='homebaseNotesQuickStyles';
 const MODAL_ID='homebaseNotesQuickModal';
 function byId(id){return document.getElementById(id)}
+function loadDailyQuotes(){
+ if(window.HOMEBASE_DAILY_QUOTES||document.querySelector('script[data-homebase-daily-quotes]'))return;
+ const s=document.createElement('script');s.src=`./homebase-daily-quotes.js?v=${Date.now()}`;s.dataset.homebaseDailyQuotes='1';document.head.appendChild(s)
+}
 function installStyles(){
  if(byId(STYLE_ID))return;
  const s=document.createElement('style');s.id=STYLE_ID;s.textContent=`
@@ -59,6 +63,7 @@ function handleKey(e){
 }
 function apply(){installStyles();cleanup()}
 function install(){
+ loadDailyQuotes();
  apply();
  document.addEventListener('click',handleClick,true);
  document.addEventListener('keydown',handleKey,true);
@@ -67,5 +72,5 @@ function install(){
  setTimeout(apply,250)
 }
 document.readyState==='loading'?document.addEventListener('DOMContentLoaded',install,{once:true}):install();
-window.HOMEBASE_NOTES_BADGES={apply,openNotes};
+window.HOMEBASE_NOTES_BADGES={apply,openNotes,loadDailyQuotes};
 })();
