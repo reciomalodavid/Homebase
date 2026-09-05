@@ -1,8 +1,9 @@
 (()=>{
 'use strict';
-const VERSION='1.10.54-unread-notes';
+const VERSION='1.10.55-unread-persist';
 let synthetic=false,down=null,reauthBusy=false,localMutationUntil=0,lastIds=new Set(),unreadIds=new Set(),seenIds=new Set(),unreadReady=false,scanTimer=null;
 const UNREAD_KEY_PREFIX='homebase_unread_seen_v1_';
+const UNREAD_BASELINE_KEY_PREFIX='homebase_unread_baseline_v2_';
 function byId(id){return document.getElementById(id)}
 function installStyles(){
  if(document.getElementById('homebaseMobileNavStyles'))return;
@@ -43,11 +44,12 @@ function eligible(i){if(!i||i.deletedAt||i.source==='roster'||isBirthday(i))retu
 function items(){return typeof state!=='undefined'&&Array.isArray(state.items)?state.items:[]}
 function homeKey(){return String((typeof state!=='undefined'&&state.syncCode)||localStorage.getItem('homebase_sync_code')||'local')}
 function seenKey(){return UNREAD_KEY_PREFIX+homeKey()}
+function baselineKey(){return UNREAD_BASELINE_KEY_PREFIX+homeKey()}
 function loadSeen(){try{return new Set(JSON.parse(localStorage.getItem(seenKey())||'[]'))}catch{return new Set()}}
 function saveSeen(){try{localStorage.setItem(seenKey(),JSON.stringify([...seenIds].slice(-2500)))}catch{}}
 function markSeen(id){id=String(id||'');if(!id)return;seenIds.add(id);unreadIds.delete(id);saveSeen();renderUnread()}
 function markSeenMany(ids){let changed=false;for(const id of ids){const k=String(id||'');if(k){seenIds.add(k);unreadIds.delete(k);changed=true}}if(changed){saveSeen();renderUnread()}}
-function initializeUnread(){if(unreadReady)return;seenIds=loadSeen();const current=items().filter(eligible);for(const i of current){const id=itemId(i);if(id)seenIds.add(id)}saveSeen();lastIds=new Set(current.map(itemId).filter(Boolean));unreadReady=true;renderUnread()}
+function initializeUnread(){if(unreadReady)return;const legacyKey=seenKey(),hadLegacyState=localStorage.getItem(legacyKey)!==null;seenIds=loadSeen();const current=items().filter(eligible),currentIds=current.map(itemId).filter(Boolean),baselineDone=localStorage.getItem(baselineKey())==='1';if(!baselineDone){if(hadLegacyState){for(const id of currentIds)if(!seenIds.has(id))unreadIds.add(id)}else{for(const id of currentIds)seenIds.add(id);saveSeen()}try{localStorage.setItem(baselineKey(),'1')}catch{}}else{for(const id of currentIds)if(!seenIds.has(id))unreadIds.add(id)}lastIds=new Set(currentIds);unreadReady=true;renderUnread()}
 function detectNewItems(){if(!unreadReady){initializeUnread();return}const current=items().filter(eligible),ids=new Set(current.map(itemId).filter(Boolean));const added=current.filter(i=>{const id=itemId(i);return id&&!lastIds.has(id)});if(added.length){if(Date.now()<localMutationUntil){for(const i of added)seenIds.add(itemId(i));saveSeen()}else{for(const i of added){const id=itemId(i);if(id&&!seenIds.has(id))unreadIds.add(id)}}}lastIds=ids;renderUnread()}
 function titleOf(i){return String(i?.title||i?.name||'').trim()}
 function unreadItems(){const map=new Map(items().filter(eligible).map(i=>[itemId(i),i]));return [...unreadIds].map(id=>map.get(id)).filter(Boolean)}
@@ -56,7 +58,7 @@ function smallestRowForTitle(title,type){if(!title)return null;const selector=ty
 function addNavDot(page){const tab=document.querySelector(`.bottom-nav [data-page="${page}"]`);if(!tab||tab.querySelector('.hb-nav-dot'))return;const d=document.createElement('span');d.className='hb-nav-dot';tab.appendChild(d)}
 function markDay(i){const date=String(i?.date||'');if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return;const [y,m,d]=date.split('-').map(Number);let current=null;try{current=typeof state!=='undefined'&&state.month instanceof Date?state.month:null}catch{}if(current&&(current.getFullYear()!==y||current.getMonth()+1!==m))return;for(const cell of document.querySelectorAll('.month-grid .day:not(.other)')){const n=Number(cell.querySelector('.day-number')?.textContent||cell.textContent);if(n===d){cell.classList.add('hb-new-day');cell.dataset.hbUnreadDate=date;break}}}
 function renderUnread(){if(!unreadReady)return;clearDecorations();const list=unreadItems();let hasCalendar=false,hasTasks=false,hasToday=false;const today=new Date(),tk=`${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}-${String(today.getDate()).padStart(2,'0')}`;for(const i of list){const id=itemId(i),type=i.type==='task'?'task':'event',row=smallestRowForTitle(titleOf(i),type);if(row){row.classList.add('hb-new-item');row.dataset.hbUnreadId=id}if(type==='task')hasTasks=true;else{hasCalendar=true;markDay(i)}if(String(i.date||'')===tk)hasToday=true}if(hasCalendar)addNavDot('calendarPage');if(hasTasks)addNavDot('tasksPage');if(hasToday)addNavDot('todayPage')}
-function handleUnreadClick(e){const row=e.target?.closest?.('[data-hb-unread-id]');if(row){markSeen(row.dataset.hbUnreadId);return}const day=e.target?.closest?.('.day[data-hb-unread-date]');if(day){const date=day.dataset.hbUnreadDate;markSeenMany(unreadItems().filter(i=>String(i.date||'')===date).map(itemId))}}
+function handleUnreadClick(e){const row=e.target?.closest?.('[data-hb-unread-id]');if(row)markSeen(row.dataset.hbUnreadId)}
 function markLocalMutation(){localMutationUntil=Date.now()+2200;setTimeout(()=>{const current=items().filter(eligible);for(const i of current){const id=itemId(i);if(id&&!lastIds.has(id))seenIds.add(id)}saveSeen();lastIds=new Set(current.map(itemId).filter(Boolean));renderUnread()},900)}
 function detectSaveIntent(e){const b=e.target?.closest?.('button,input[type="submit"]');if(!b)return;const text=String(b.textContent||b.value||'').trim().toLowerCase();if(/guardar|crear|añadir|agregar|save|add|hecho/.test(text)&&b.closest('dialog,.modal,form'))markLocalMutation()}
 function hasNotes(item){return String(item?.notes||'').trim().length>0}
