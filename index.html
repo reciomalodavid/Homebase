@@ -1520,6 +1520,7 @@ function matches(item,dateIso){
  return dateIso>=item.date&&dateIso<=(item.endDate||item.date);
 }
 function rosterItemVisible(i){if(i.source!=="roster")return true;if(!state.rosterVisible)return false;const k=i.rosterData?.kind;if(k==="off"&&!state.rosterSettings.showOffs)return false;if(k==="vacation"&&!state.rosterSettings.showVacations)return false;return true}
+function isWorkedOffMarker(value){return /^OFF(?:_|\s+|-)+BEZ$/i.test(String(value||"").trim())}
 function rosterRouteFromData(r){
  const flights=(r?.flights||[]).filter(f=>!f.dh);
  const usable=flights.length?flights:(r?.flights||[]);
@@ -2115,7 +2116,9 @@ function openDetail(id,dateIso){
        right:`${esc(f.depLocal||"")}${f.arrLocal?`–${esc(f.arrLocal)}`:""}`
      });
    }
+   const workedOffDay=!!r.workedOffDay||isWorkedOffMarker(r.code)||(r.activities||[]).some(a=>isWorkedOffMarker(a?.code))||(r.activityLabels||[]).some(isWorkedOffMarker);
    for(const a of (r.activities||[])){
+     if(isWorkedOffMarker(a?.code))continue;
      const code=String(a.code||"Actividad").replaceAll("_"," ");
      const destination=String(a.arr||a.destination||a.extra||"").trim().match(/^[A-Z]{3}$/i)?.[0]?.toUpperCase()||"";
      const origin=String(a.dep||a.airport||"").trim().toUpperCase();
@@ -2131,10 +2134,10 @@ function openDetail(id,dateIso){
    dutySegments.sort((a,b)=>`${a.sortDate}T${a.sortTime}`.localeCompare(`${b.sortDate}T${b.sortTime}`));
    if(dutySegments.length){rows+=`<div class="detail-row"><div class="detail-label">Trayecto del duty</div><div class="detail-value roster-detail duty-timeline">${dutySegments.map(s=>`<div class="duty-segment ${s.type}"><span class="duty-segment-icon" aria-hidden="true">${dutySegmentIcon(s)}</span><span class="duty-segment-main">${s.left}</span><span class="duty-segment-time">${s.right}</span></div>`).join("")}</div></div>`;}
    if(r.coLocal) rows+=detailRow("C/O",r.coLocal);
-   if(r.workedOffDay) rows+=detailRow("Nota","Día libre trabajado · OFF BEZ");
+   if(workedOffDay) rows+=detailRow("Nota","Día libre trabajado · OFF BEZ");
    if(r.debriefLocal) rows+=detailRow("Debriefing",r.debriefLocal);
    if(r.hotel&&state.rosterSettings.showHotels) rows+=detailRow("Noche fuera",r.hotel);
-   if(r.code&&r.code!=="FLD") rows+=detailRow("Código",String(r.code).replaceAll("_"," "));
+   if(r.code&&r.code!=="FLD"&&!isWorkedOffMarker(r.code)) rows+=detailRow("Código",String(r.code).replaceAll("_"," "));
    rows+=detailRow("Horario","Hora local de cada aeropuerto");
    rows+=detailRow("Privacidad","PDF procesado localmente; el documento no se conserva");
    $("detailGrid").innerHTML=rows;$("detailDialog").showModal();return;
@@ -2399,10 +2402,13 @@ function parseRosterDocument(doc){
  const finalize=()=>{
   if(!hasContent(current)){current=null;return}
   const r=ensureArrays(current);
-  if(workedOffDates.has(r.sourceDate))r.workedOffDay=true;
+  if(workedOffDates.has(r.sourceDate)||isWorkedOffMarker(r.code)||r.activities.some(a=>isWorkedOffMarker(a?.code))||r.activityLabels.some(isWorkedOffMarker))r.workedOffDay=true;
+  // OFF BEZ es solo un marcador administrativo de día libre trabajado: nunca forma parte del duty.
+  r.activities=r.activities.filter(a=>!isWorkedOffMarker(a?.code));
+  r.activityLabels=r.activityLabels.filter(x=>!isWorkedOffMarker(x));
   // NetLine añade métricas como DT/BT/DP/FDP después del C/O. Nunca son actividades ni parte del título.
   r.activityLabels=r.activityLabels.filter(x=>!["DT","BT","DP","FDP"].includes(String(x||"").toUpperCase()));
-  // Parser 6.1: no se recuperan vuelos desde notas. Un sector solo se acepta dentro de su bloque de duty.
+  // Parser 6.2: no se recuperan vuelos desde notas. Un sector solo se acepta dentro de su bloque de duty.
   r.flights.sort((a,b)=>(a.sourceDate||r.sourceDate).localeCompare(b.sourceDate||r.sourceDate)||(a.depUtc||'').localeCompare(b.depUtc||''));
   const operationalFlights=r.flights.filter(f=>!f.dh);
   const hasTraining=r.activities.length>0||r.activityLabels.length>0||r.kind==='training';
@@ -2532,9 +2538,9 @@ function parseRosterDocument(doc){
    const simpleDuty=line.match(/^((?:STBY|SBY)[A-Z0-9_/-]*|O_[A-Z0-9_/-]+|U|FREI)(?:\s+R)?(?:\s+([A-Z]{3}))?(?:\s+(\d{4}))?(?:\s+(\d{4}))?\b/i);
    if(simpleDuty){const c=simpleDuty[1].toUpperCase(),kind=classifyRosterCode(c),d=lineDate||activeDate;begin({sourceDate:d,kind,code:c,airport:(simpleDuty[2]||'').toUpperCase(),startUtc:simpleDuty[3]||'',endUtc:simpleDuty[4]||''});if(kind==='off'||kind==='vacation')finalize();continue}
    const timedActivity=line.match(/^([A-Z0-9_/-]+)\s+([A-Z]{3})\s+(\d{4})\s+(\d{4})(?:\s+(.+))?$/i);
-   if(timedActivity){const d=lineDate||activeDate,code=timedActivity[1].toUpperCase();attachOrBeginTraining(d,code,timedActivity[2].toUpperCase(),timedActivity[3],timedActivity[4],timedActivity[5]||'');continue}
+   if(timedActivity){const d=lineDate||activeDate,code=timedActivity[1].toUpperCase();if(isWorkedOffMarker(code)){if(d)workedOffDates.add(d);if(current&&current.sourceDate===d)current.workedOffDay=true;continue}attachOrBeginTraining(d,code,timedActivity[2].toUpperCase(),timedActivity[3],timedActivity[4],timedActivity[5]||'');continue}
    const bareActivity=line.match(/^([A-Z][A-Z0-9_/-]{1,24})$/i);
-   if(bareActivity&&current){addActivityLabel(current,bareActivity[1]);continue}
+   if(bareActivity&&current){const code=bareActivity[1].toUpperCase();if(isWorkedOffMarker(code)){workedOffDates.add(lineDate||activeDate||current.sourceDate);current.workedOffDay=true;continue}addActivityLabel(current,code);continue}
    const code=line.match(/^([A-Z][A-Z0-9_/-]{0,24})(?:\s+R)?(?:\s+([A-Z]{3}))?(?:\s+(\d{4}))?(?:\s+(\d{4}))?\b/i);
    if(code){const c=code[1].toUpperCase(),kind=classifyRosterCode(c),d=lineDate||activeDate;const recognized=kind!=='ground'||hadDate;
     if(recognized&&d){
@@ -2674,7 +2680,7 @@ function renderPendingRoster(plan,doc){
  $("rosterSummary").innerHTML=`<div class="roster-stat"><strong>${r.total}</strong><span>Duties</span></div><div class="roster-stat"><strong>${work}</strong><span>Trabajo</span></div><div class="roster-stat"><strong>${rest}</strong><span>Libres/vac.</span></div><div class="roster-stat"><strong>${r.changes}</strong><span>Cambios</span></div>`;
  const labels={new:"NUEVO",changed:"CAMBIO",same:"IGUAL"};
  $("rosterPreviewList").innerHTML=plan.preview.map(({item,status})=>{const d=item.rosterData;return `<div class="roster-preview-duty"><div class="roster-preview-date">${esc(formatRosterPreviewDate(item.date))}</div><div><div class="roster-preview-title">${esc(rosterDisplayTitle(item,item.title))}</div><div class="roster-preview-meta">${esc(rosterPreviewMeta(d))}</div><span class="sync-pill ${status}">${labels[status]}</span></div><div class="roster-preview-time">${esc(item.time||"Todo el día")}${item.endTime?`–${esc(item.endTime)}`:""}</div></div>`}).join("");
- const diag=[`Homebase: ${window.HOMEBASE_VERSION} · Parser 6.1`,`Archivo: ${plan.fileName}`,`Páginas leídas: ${doc.pageCount}`,`Periodo: ${p.period}`,`Duties detectados: ${r.total}`,`Líneas no interpretadas: ${p.unrecognized.length}`,`Aeropuertos sin zona horaria conocida: ${p.unknownAirports.length?p.unknownAirports.join(", "):"ninguno"}`,`Cambios previstos: ${r.added} nuevos · ${r.changed} modificados · ${r.removed} retirados · ${r.unchanged} iguales`];if(p.unrecognized.length)diag.push("","Líneas a revisar:",...p.unrecognized);
+ const diag=[`Homebase: ${window.HOMEBASE_VERSION} · Parser 6.2`,`Archivo: ${plan.fileName}`,`Páginas leídas: ${doc.pageCount}`,`Periodo: ${p.period}`,`Duties detectados: ${r.total}`,`Líneas no interpretadas: ${p.unrecognized.length}`,`Aeropuertos sin zona horaria conocida: ${p.unknownAirports.length?p.unknownAirports.join(", "):"ninguno"}`,`Cambios previstos: ${r.added} nuevos · ${r.changed} modificados · ${r.removed} retirados · ${r.unchanged} iguales`];if(p.unrecognized.length)diag.push("","Líneas a revisar:",...p.unrecognized);
  $("rosterDiagnosticsBody").textContent=diag.join("\n");$("applyRosterImport").textContent=r.changes?`Aplicar ${r.changes} cambios al calendario`:"Confirmar roster sin cambios";$("applyRosterImport").disabled=false;
 }
 function resetRosterPreview(){state.pendingRosterImport=null;$("rosterPreview").hidden=true;$("rosterSummary").innerHTML="";$("rosterPreviewList").innerHTML="";$("rosterDiagnosticsBody").textContent=""}
@@ -2693,7 +2699,7 @@ function applyPendingRoster(){
  const tombstoneMap=new Map();
  for(const t of [...(plan.tombstones||[]),...removedTombstones]){const key=t.id||rosterUidOf(t);const prev=tombstoneMap.get(key);if(!prev||Number(t.updatedAt||t.deletedAt||0)>Number(prev.updatedAt||prev.deletedAt||0))tombstoneMap.set(key,t)}
  state.items=[...plan.manual,...plan.outside,...tombstoneMap.values(),...incoming];
- state.rosterMeta={period:plan.parsed.period,periodStart:plan.parsed.periodStart,periodEnd:plan.parsed.periodEnd,fileName:plan.fileName,updatedAt:now,parserVersion:"6.1",appVersion:window.HOMEBASE_VERSION,activeRosterUids:incoming.map(rosterUidOf),counts:plan.result};
+ state.rosterMeta={period:plan.parsed.period,periodStart:plan.parsed.periodStart,periodEnd:plan.parsed.periodEnd,fileName:plan.fileName,updatedAt:now,parserVersion:"6.2",appVersion:window.HOMEBASE_VERSION,activeRosterUids:incoming.map(rosterUidOf),counts:plan.result};
  localStorage.setItem("homebase_roster_meta",JSON.stringify(state.rosterMeta));save();
  const r=plan.result;resetRosterPreview();$("rosterImportStatus").className="roster-status ok";$("rosterImportStatus").textContent=`Roster aplicado: ${r.added} nuevos, ${r.changed} modificados y ${r.removed} retirados. Los cambios se sincronizarán con los demás dispositivos. El PDF no se ha guardado.`;renderRosterControls();
 }
