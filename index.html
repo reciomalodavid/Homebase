@@ -2131,6 +2131,7 @@ function openDetail(id,dateIso){
    dutySegments.sort((a,b)=>`${a.sortDate}T${a.sortTime}`.localeCompare(`${b.sortDate}T${b.sortTime}`));
    if(dutySegments.length){rows+=`<div class="detail-row"><div class="detail-label">Trayecto del duty</div><div class="detail-value roster-detail duty-timeline">${dutySegments.map(s=>`<div class="duty-segment ${s.type}"><span class="duty-segment-icon" aria-hidden="true">${dutySegmentIcon(s)}</span><span class="duty-segment-main">${s.left}</span><span class="duty-segment-time">${s.right}</span></div>`).join("")}</div></div>`;}
    if(r.coLocal) rows+=detailRow("C/O",r.coLocal);
+   if(r.workedOffDay) rows+=detailRow("Nota","Día libre trabajado · OFF BEZ");
    if(r.debriefLocal) rows+=detailRow("Debriefing",r.debriefLocal);
    if(r.hotel&&state.rosterSettings.showHotels) rows+=detailRow("Noche fuera",r.hotel);
    if(r.code&&r.code!=="FLD") rows+=detailRow("Código",String(r.code).replaceAll("_"," "));
@@ -2389,7 +2390,7 @@ function parseRosterDocument(doc){
  const sections=[...(doc.sections||[])].sort((a,b)=>a.page-b.page||a.column-b.column);
  const period=parsePeriod(doc.allLines||sections.flatMap(s=>s.lines));
  const hotels=parseHotels(sections);
- const duties=[],unknownAirports=new Set(),unrecognized=[];
+ const duties=[],unknownAirports=new Set(),unrecognized=[],workedOffDates=new Set();
  let current=null,activeDate=null,dateCursor=period.start;
  const resolveDate=key=>{const choices=period.dateMap.get(key)||[];if(!choices.length)return null;if(activeDate&&choices.includes(activeDate))return activeDate;const found=choices.find(d=>d>=dateCursor)||choices.at(-1);dateCursor=found;return found;};
  const hasContent=r=>r&&(r.code||r.flights?.length||r.activities?.length||r.activityLabels?.length||r.ciUtc||r.pickupUtc||r.showUpUtc||r.briefingUtc||r.startUtc||r.coUtc||r.endUtc||r.debriefUtc);
@@ -2398,9 +2399,10 @@ function parseRosterDocument(doc){
  const finalize=()=>{
   if(!hasContent(current)){current=null;return}
   const r=ensureArrays(current);
+  if(workedOffDates.has(r.sourceDate))r.workedOffDay=true;
   // NetLine añade métricas como DT/BT/DP/FDP después del C/O. Nunca son actividades ni parte del título.
   r.activityLabels=r.activityLabels.filter(x=>!["DT","BT","DP","FDP"].includes(String(x||"").toUpperCase()));
-  // Parser 6.0: no se recuperan vuelos desde notas. Un sector solo se acepta dentro de su bloque de duty.
+  // Parser 6.1: no se recuperan vuelos desde notas. Un sector solo se acepta dentro de su bloque de duty.
   r.flights.sort((a,b)=>(a.sourceDate||r.sourceDate).localeCompare(b.sourceDate||r.sourceDate)||(a.depUtc||'').localeCompare(b.depUtc||''));
   const operationalFlights=r.flights.filter(f=>!f.dh);
   const hasTraining=r.activities.length>0||r.activityLabels.length>0||r.kind==='training';
@@ -2479,7 +2481,7 @@ function parseRosterDocument(doc){
   const after=lines.slice(header+1);const stopAt=after.findIndex(l=>STOP_RX.test(String(l).trim()));const candidate=stopAt>=0?after.slice(0,stopAt):after;
   const candidateText=candidate.join('\n');
   if(/(?:crew on event:|cockpit:|cabin:|FO\s+[^\d]+,|ST\s+[^\d]+,)/i.test(candidateText))continue;
-  const hasDutyAnchor=candidate.some(l=>/^(?:(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\d{1,2}\s+)?(?:C\/I\b|S\/U\b|Pick Up\b|Briefing\b|C\/O\b|(?:O_[A-Z0-9_/-]+|U|FREI|STBY[A-Z0-9_/-]*|SBY[A-Z0-9_/-]*|CRM|SEP|REF|OPC|LPC|CBT|SIM_|DT_|ADD_CRM|REC_TRG)\b)/i.test(String(l).trim()));
+  const hasDutyAnchor=candidate.some(l=>/^(?:(?:Mon|Tue|Wed|Thu|Fri|Sat|Sun)\d{1,2}\s+)?(?:C\/I\b|S\/U\b|Pick Up\b|Briefing\b|C\/O\b|OFF(?:_|\s+|-)+BEZ\b|(?:O_[A-Z0-9_/-]+|U|FREI|STBY[A-Z0-9_/-]*|SBY[A-Z0-9_/-]*|CRM|SEP|REF|OPC|LPC|CBT|SIM_|DT_|ADD_CRM|REC_TRG)\b)/i.test(String(l).trim()));
   if(!hasDutyAnchor)continue;
   for(const raw of candidate){
    let line=String(raw||'').replace(/\s+/g,' ').trim();
@@ -2502,6 +2504,9 @@ function parseRosterDocument(doc){
    line=line.replace(/\s+\[(?:DT|BT|DP|FDP)\b.*$/,'').trim();
    if(!line||/^\[(?:DT|BT|DP|FDP)\b/.test(line)||/^\d{2}:\d{2}\]$/.test(line)||/^Landing$/i.test(line))continue;
    if(/^(?:To c\/m:|Ref:|\)|Pilot in Command|Line Check|REC \d|\d{4}-\d{4}z Registration|\d+\. Pilots Meeting)/i.test(line)){if(current)current.notes.push(line);continue}
+   // OFF BEZ / OFF_BEZ es un marcador administrativo: duty realizado en un día originalmente libre.
+   // No representa un OFF real y nunca debe crear una entrada "Libre" independiente.
+   if(/^OFF(?:_|\s+|-)+BEZ\b/i.test(line)){const d=lineDate||activeDate;if(d)workedOffDates.add(d);continue}
    const pickup=line.match(/^Pick Up\s+(\d{4})\b/i);
    if(pickup){begin({sourceDate:lineDate||activeDate,kind:'ground',code:'PICKUP',pickupUtc:pickup[1]});continue}
    const showup=line.match(/^S\/U\s+([A-Z]{3})\s+(\d{4})\b/i);
@@ -2669,7 +2674,7 @@ function renderPendingRoster(plan,doc){
  $("rosterSummary").innerHTML=`<div class="roster-stat"><strong>${r.total}</strong><span>Duties</span></div><div class="roster-stat"><strong>${work}</strong><span>Trabajo</span></div><div class="roster-stat"><strong>${rest}</strong><span>Libres/vac.</span></div><div class="roster-stat"><strong>${r.changes}</strong><span>Cambios</span></div>`;
  const labels={new:"NUEVO",changed:"CAMBIO",same:"IGUAL"};
  $("rosterPreviewList").innerHTML=plan.preview.map(({item,status})=>{const d=item.rosterData;return `<div class="roster-preview-duty"><div class="roster-preview-date">${esc(formatRosterPreviewDate(item.date))}</div><div><div class="roster-preview-title">${esc(rosterDisplayTitle(item,item.title))}</div><div class="roster-preview-meta">${esc(rosterPreviewMeta(d))}</div><span class="sync-pill ${status}">${labels[status]}</span></div><div class="roster-preview-time">${esc(item.time||"Todo el día")}${item.endTime?`–${esc(item.endTime)}`:""}</div></div>`}).join("");
- const diag=[`Homebase: ${window.HOMEBASE_VERSION} · Parser 6.0`,`Archivo: ${plan.fileName}`,`Páginas leídas: ${doc.pageCount}`,`Periodo: ${p.period}`,`Duties detectados: ${r.total}`,`Líneas no interpretadas: ${p.unrecognized.length}`,`Aeropuertos sin zona horaria conocida: ${p.unknownAirports.length?p.unknownAirports.join(", "):"ninguno"}`,`Cambios previstos: ${r.added} nuevos · ${r.changed} modificados · ${r.removed} retirados · ${r.unchanged} iguales`];if(p.unrecognized.length)diag.push("","Líneas a revisar:",...p.unrecognized);
+ const diag=[`Homebase: ${window.HOMEBASE_VERSION} · Parser 6.1`,`Archivo: ${plan.fileName}`,`Páginas leídas: ${doc.pageCount}`,`Periodo: ${p.period}`,`Duties detectados: ${r.total}`,`Líneas no interpretadas: ${p.unrecognized.length}`,`Aeropuertos sin zona horaria conocida: ${p.unknownAirports.length?p.unknownAirports.join(", "):"ninguno"}`,`Cambios previstos: ${r.added} nuevos · ${r.changed} modificados · ${r.removed} retirados · ${r.unchanged} iguales`];if(p.unrecognized.length)diag.push("","Líneas a revisar:",...p.unrecognized);
  $("rosterDiagnosticsBody").textContent=diag.join("\n");$("applyRosterImport").textContent=r.changes?`Aplicar ${r.changes} cambios al calendario`:"Confirmar roster sin cambios";$("applyRosterImport").disabled=false;
 }
 function resetRosterPreview(){state.pendingRosterImport=null;$("rosterPreview").hidden=true;$("rosterSummary").innerHTML="";$("rosterPreviewList").innerHTML="";$("rosterDiagnosticsBody").textContent=""}
@@ -2688,7 +2693,7 @@ function applyPendingRoster(){
  const tombstoneMap=new Map();
  for(const t of [...(plan.tombstones||[]),...removedTombstones]){const key=t.id||rosterUidOf(t);const prev=tombstoneMap.get(key);if(!prev||Number(t.updatedAt||t.deletedAt||0)>Number(prev.updatedAt||prev.deletedAt||0))tombstoneMap.set(key,t)}
  state.items=[...plan.manual,...plan.outside,...tombstoneMap.values(),...incoming];
- state.rosterMeta={period:plan.parsed.period,periodStart:plan.parsed.periodStart,periodEnd:plan.parsed.periodEnd,fileName:plan.fileName,updatedAt:now,parserVersion:"6.0",appVersion:window.HOMEBASE_VERSION,activeRosterUids:incoming.map(rosterUidOf),counts:plan.result};
+ state.rosterMeta={period:plan.parsed.period,periodStart:plan.parsed.periodStart,periodEnd:plan.parsed.periodEnd,fileName:plan.fileName,updatedAt:now,parserVersion:"6.1",appVersion:window.HOMEBASE_VERSION,activeRosterUids:incoming.map(rosterUidOf),counts:plan.result};
  localStorage.setItem("homebase_roster_meta",JSON.stringify(state.rosterMeta));save();
  const r=plan.result;resetRosterPreview();$("rosterImportStatus").className="roster-status ok";$("rosterImportStatus").textContent=`Roster aplicado: ${r.added} nuevos, ${r.changed} modificados y ${r.removed} retirados. Los cambios se sincronizarán con los demás dispositivos. El PDF no se ha guardado.`;renderRosterControls();
 }
